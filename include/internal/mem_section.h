@@ -103,7 +103,7 @@ class local_section : public mem_section {
 class remote_section : public mem_section {
     public:
         int load_public_data (std::vector<string_segment> input,
-                              uuid_t remote_id);
+                              std::string remote_agent);
 
         ~remote_section();
 };

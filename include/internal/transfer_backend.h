@@ -18,6 +18,9 @@ class backend_init_params {
         }
 };
 
+class backend_transfer_handle {
+};
+
 // Main goal of backend_metadata class is to have a common pointer type
 // for different backend metadata
 // Not sure get/set for serializer/deserializer is necessary
@@ -84,16 +87,16 @@ class backend_engine { // maybe rename to transfer_backend_engine
         backend_type_t get_type () const { return backend_type; }
 
         // Can add checks for being public metadata
-        std::string get_public_data (const meta_desc &meta) const {
-            return meta.metadata->get();
+        std::string get_public_data (backend_metadata* &meta) const {
+            return meta->get();
         }
 
         virtual ~backend_engine () {};
 
         // Register and deregister local memory
         virtual int register_mem (basic_desc &mem, memory_type_t mem_type,
-                                  meta_desc &out) = 0;
-        virtual void deregister_mem (meta_desc &desc) = 0;
+                                  backend_metadata* &out) = 0;
+        virtual void deregister_mem (backend_metadata* desc) = 0;
 
         // If we use an external connection manager, the next 3 methods might change
         // Provide the required connection info for remote nodes
@@ -110,16 +113,25 @@ class backend_engine { // maybe rename to transfer_backend_engine
         virtual int listen_for_connection(std::string remote_agent) = 0;
 
         // Add and remove remtoe metadata
-        virtual int load_remote (desc_list<string_desc>& input,
-                                 desc_list<meta_desc>& output,
-                                 uuid_t remote_id) = 0;
-        virtual int remove_remote (desc_list<meta_desc>& input,
-                                   uuid_t remote_id) = 0;
+        virtual int load_remote (string_desc input,
+                                 backend_metadata* &output,
+                                 std::string remote_agent) = 0;
+
+        virtual int remove_remote (backend_metadata* input) = 0;
 
         // Posting a request, to be updated to return an async handler
         virtual int transfer (desc_list<meta_desc> local,
                               desc_list<meta_desc> remote,
-                              transfer_op_t operation) = 0;
+                              transfer_op_t operation,
+                              backend_transfer_handle* &handle) = 0;
+
+        //Use a handle to progress backend engine and see if a transfer is completed or not
+        virtual int check_transfer(backend_transfer_handle* handle) = 0;
+
+        //Force backend engine worker to progress
+        virtual int progress(){
+	    return 0;
+	}
 };
 
 // Example backend initialization data for UCX

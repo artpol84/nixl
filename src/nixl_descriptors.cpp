@@ -36,8 +36,8 @@ basic_desc::basic_desc(const basic_desc& desc){
 
 bool basic_desc::covers (const basic_desc& query) const {
     if (dev_id == query.dev_id) {
-        if (((uint64_t) addr <= (uint64_t) query.addr) &&
-            ((uint64_t) addr + len >= (uint64_t) query.addr + query.len))
+        if (( addr <=  query.addr) &&
+            ( addr + len >= query.addr + query.len))
             return true;
     }
     return false;

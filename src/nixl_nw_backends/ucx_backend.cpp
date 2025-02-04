@@ -1,97 +1,14 @@
-#include "nixl.h"
-// A private metadata has to implement get, and has all the metadata
-class ucx_dram_private_metadata : public backend_metadata {
-    public:
-        uint32_t lkey;
-        void*    registration_handle; // example, if want to keep some handle
-        uint32_t rkey;
+#include "ucx_backend.h"
 
-        ucx_dram_private_metadata
-        : backend_metadata(true) {}
+//not sure if this is the best way to handle init_params
+ucx_engine::ucx_engine (ucx_init_params* init_params)
+: backend_engine ((backend_init_params*) init_params) {
+    std::vector<std::string> devs; /* Empty vector */
+    uint64_t n_addr;
 
-        std::string get() {
-            return std::to_string(rkey);
-        }
-};
-
-// A public metadata has to implement put, and only has the remote metadata
-class ucx_dram_public_metadata : public backend_metadata {
-    public:
-
-        ucx_dram_public_metadata
-        : backend_metadata(false) {}
-
-        int set(std::string) {
-            // check for string being proper and populate rkey
-        };
-};
-
-class ucx_vram_private_metadata : public backend_metadata {
-    public:
-        uint32_t lkey;
-        void*    registration_handle; // example, if want to keep some handle
-        uint32_t rkey;
-
-        ucx_vram_private_metadata
-        : backend_metadata(true) {}
-
-        std::string get() {
-            return std::to_string(rkey);
-        }
-};
-
-class ucx_vram_public_metadata : public backend_metadata {
-    public:
-        uint32_t rkey;
-
-        ucx_vram_public_metadata
-        : backend_metadata(false) {}
-
-        int set(std::string){
-            // check for string being proper and populate rkey
-        };
-};
-
-class ucx_connection : public backend_conn_meta {
-    public:
-        // Extra information required for UCX connections
-};
-
-class ucx_engine : public_backend {
-    private:
-        ucx_init_params init_params;
-        ucx_connection  conn_info;
-
-        // Map of agent name to saved ucx_connection info
-        std::map<std::string, ucx_connection> remote_conn_info;
-
-        // Local private data
-        std::vector<ucx_vram_private_metadata> vram_public;
-        std::vector<ucx_vram_private_metadata> dram_public;
-
-        // Map of remote uuid to a vector of it's public metadata
-        std::map<uuid_t, std::vector<ucx_vram_public_metadata>> vram_public;
-        std::map<uuid_t, std::vector<ucx_vram_public_metadata>> dram_public;
-};
-
-int ucx_engine::register_mem (basic_desc &mem, memory_type_t mem_type,
-                              meta_desc &out) {
-    basic_desc *p = &out;
-    *p = mem;
-    // Register the element with UCX, based on mem_type decide
-    // which metadata to instantiate. Then fill the metadata of out
-    return 0; // Or errors
-}
-
-void ucx_engine::deregister_mem (meta_desc desc) {
-    // based on the memory address and private metadata deregister.
-    // And remove the corresponding metadata object
-}
-
-ucx_engine::ucx_engine (ucx_init_params init_params)
-: backend_engine (UCX, &init_params) {
-    // The initialization process and populates conn_info too
-    // If init params are not useful, we can remove the member from the base class
+    uw = new nixl_ucx_worker(devs);
+    uw->ep_addr(n_addr, worker_size);
+    worker_addr = (void*) n_addr;
 }
 
 // Through parent destructor the unregister will be called.
@@ -99,71 +16,211 @@ ucx_engine::~ucx_engine () {
     // per registered memory deregisters it, which removes the corresponding metadata too
     // parent destructor takes care of the desc list
     // For remote metadata, they should be removed here
+    delete uw;
 }
 
-// To be extended to return an async handler
-int ucx_engine::transfer (desc_list<basic_desc> local,
-                          desc_list<meta_desc> remote,
-                          transfer_op_t operation) {
-    // Finds corresponding metadata in its registered_desc_lists which has the
-    // More complete form of desc_list<local_desc>.
-    // Does final checks for the transfer and initiates the transfer
+/****************************************
+ * Helpers
+*****************************************/
+
+std::string ucx_engine::_bytes_to_string(void *buf, size_t size) const {
+    std::string ret_str;
+
+    char temp[16];
+    uint8_t* bytes = (uint8_t*) buf;
+
+    for(size_t i = 0; i<size; i++) {
+	bytes = (uint8_t*) buf;
+	sprintf(temp, "%02x", bytes[i]);
+	ret_str.append(temp, 2);
+    }
+    return ret_str;
 }
 
-// They might change if we use an external connection manager.
-std::string ucx_engine::get_conn_info() {
-    // return string form of conn_info;
+void * ucx_engine::_string_to_bytes(std::string &s, size_t &size){
+    size = s.size()/2;
+    uint8_t* ret = (uint8_t*) calloc(1, size);
+    char temp[3];
+    const uint8_t* in_str = (uint8_t*) s.c_str();
+
+    for(size_t i = 0; i<(s.size()); i+=2) {
+	memcpy(temp, in_str + i, 2);
+	ret[(i/2)] = (uint8_t) strtoul(temp, NULL, 16);
+    }
+
+    return ret;
 }
+
+/****************************************
+ * Connection management
+*****************************************/
+std::string ucx_engine::get_conn_info() const {
+    return _bytes_to_string(worker_addr, worker_size);
+}
+
 
 int ucx_engine::load_remote_conn_info (std::string remote_agent,
-                                       std::string remote_conn_info) {
-    // From string form of remote_conn_info populate the remote_conn_info
+                                       std::string remote_conn_info)
+{
+    size_t size;
+    ucx_connection conn;
+    int ret;
+    void* addr;
+
+    if(remote_conn_map.find(remote_agent) != remote_conn_map.end()) {
+	//already connected?
+	return -1;
+    }
+
+    addr = _string_to_bytes(remote_conn_info, size);
+    ret = uw->connect(addr, size, conn.ep);
+    if (ret) {
+        // TODO: print error
+        return -1;
+    }
+
+    conn.remote_agent = remote_agent;
+
+    remote_conn_map[remote_agent] = conn;
+
+    return 0;
 }
 
 // Make connection to a remote node accompanied by required info.
 int ucx_engine::make_connection(std::string remote_agent) {
-    // use the string to find the entry in remote_conn_info to initiate a connection
+    // Nothing to do - lazy connection will be established automatically
+    // at first communication
+    return 0;
 }
 
 int ucx_engine::listen_for_connection(std::string remote_agent) {
-    // use the string to find the entry in remote_conn_info and listen to it
+    // Nothing to do - UCX implements one-sided
+    return 0;
 }
 
-// To be cleaned up
-int ucx_engine::load_remote (desc_list<string_desc>& input,
-                             desc_list<meta_desc>& output,
-                             uuid_t remote_id) {
-    meta_desc element;
-    basic_desc *p = &element;
-    if (input.get_type()==DRAM) {
-        ucx_dram_public_metadata new_metadata;
-        for (auto & desc : input.descs){
-            *p = (basic_desc) desc; // typecasting should be fixed
-            new_metadata.set(desc.metadata);
-            remote_dram_meta.push_back(new_metadata);
-            element.meta_data = (backend_metadata *) &remote_dram_meta.back();
-            output.add_desc(element);
-        }
-    } else if (input.get_type()==VRAM) {
-        ucx_vram_public_metadata new_metadata;
-        for (auto & desc : input.descs){
-            *p = (basic_desc) desc;
-            new_metadata.set(desc.metadata);
-            remote_vram_meta.push_back(new_metadata);
-            element.meta_data = (backend_metadata *) &remote_vram_meta.back();
-            output.add_desc(element);
-        }
-    } else {
+int ucx_engine::register_mem (basic_desc &mem, memory_type_t mem_type,
+                              backend_metadata* &out)
+{
+    int ret;
+    ucx_private_metadata *priv = new ucx_private_metadata;
+
+    ret = uw->mem_reg((void*) mem.addr, mem.len, priv->mem);
+    if (ret) {
+        // TODO: err out
         return -1;
     }
+    ret = uw->mem_addr(priv->mem, (uint64_t&) priv->mem_addr, priv->mem_addr_size);
+    if (ret) {
+        // TODO: err out
+        return -1;
+    }
+
+    out = (backend_metadata*) priv; //typecast?
+
+    return 0; // Or errors
 }
 
-int ucx_engine::remove_remote (desc_list<meta_desc>& input,
-                               uuid_t remote_id) {
-    for (auto & desc : input.descs){
-        // remove the elements from remote_dram/vram_meta
-        // Since they're added per input string list, there
-        // should be only 1 instance of each. Not needing
-        // unique_ptr for now.
+void ucx_engine::deregister_mem (backend_metadata* desc)
+{
+    ucx_private_metadata *priv = (ucx_private_metadata*) desc; //typecast?
+
+    uw->mem_dereg(priv->mem);
+    delete priv;
+}
+
+
+// To be cleaned up
+int ucx_engine::load_remote (string_desc input,
+                             backend_metadata* &output,
+                             std::string remote_agent) {
+    void *addr = (void*) input.addr;
+    size_t size = input.len;
+    int ret;
+    ucx_connection conn;
+
+    ucx_public_metadata *md = new ucx_public_metadata;
+
+    auto search = remote_conn_map.find(remote_agent);
+
+    if(search == remote_conn_map.end()) {
+	//TODO: err: remote connection not found
+	return -1;
     }
+    conn = search->second;
+
+    md->conn = conn;
+    ret = uw->rkey_import(conn.ep, addr, size, md->rkey);
+    if (ret) {
+        // TODO: error out. Should we indicate which desc failed or unroll everything prior
+        return -1;
+    }
+    output = (backend_metadata*) md;
+
+    return 0;
+}
+
+int ucx_engine::remove_remote (backend_metadata* input) {
+
+    ucx_public_metadata *md = (ucx_public_metadata*) input; //typecast?
+
+    uw->rkey_destroy(md->rkey);
+    delete md;
+
+    return 0;
+}
+
+// using META desc for local list
+int ucx_engine::transfer (desc_list<meta_desc> local,
+                          desc_list<meta_desc> remote,
+                          transfer_op_t op,
+			  backend_transfer_handle* &handle)
+{
+    size_t lcnt = local.descs.size();
+    size_t rcnt = remote.descs.size();
+    size_t i, ret;
+
+    nixl_ucx_req req;
+
+    if (lcnt != rcnt) {
+        return -1;
+    }
+
+    for(i = 0; i < lcnt; i++) {
+        void *laddr = (void*) local.descs[i].addr;
+        size_t lsize = local.descs[i].len;
+        void *raddr = (void*) remote.descs[i].addr;
+        size_t rsize = remote.descs[i].len;
+
+        ucx_private_metadata *lmd = (ucx_private_metadata*) local.descs[i].metadata;
+        ucx_public_metadata *rmd = (ucx_public_metadata*) remote.descs[i].metadata; //typecast?
+
+        if (lsize != rsize) {
+            // TODO: err output
+            return -1;
+        }
+
+        switch (op) {
+        case READ:
+            ret = uw->read(rmd->conn.ep, (uint64_t) raddr, rmd->rkey, laddr, lmd->mem, lsize, req);
+            break;
+        case WRITE:
+            ret = uw->write(rmd->conn.ep, laddr, lmd->mem, (uint64_t) raddr, rmd->rkey, lsize, req);
+            break;
+        default:
+            return -1;
+        }
+    }
+
+    handle = (backend_transfer_handle*) &req;
+
+    return ret;
+}
+
+int ucx_engine::check_transfer (backend_transfer_handle* handle) {
+    nixl_ucx_req req = *((nixl_ucx_req*) handle);
+    return uw->test(req);
+}
+
+int ucx_engine::progress() {
+    return uw->progress();
 }

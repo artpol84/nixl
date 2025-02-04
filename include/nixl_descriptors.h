@@ -13,9 +13,9 @@ typedef enum {DRAM_SEG, VRAM_SEG, BLK_SEG, FILE_SEG} memory_type_t;
 // A basic descriptor class, with basic operators and math checks
 class basic_desc {
     public:
-        void     *addr;  // Start of buffer
-        size_t   len;    // Buffer length
-        uint32_t dev_id; // Device ID
+        uintptr_t addr;  // Start of buffer
+        size_t    len;    // Buffer length
+        uint32_t  dev_id; // Device ID
 
         friend bool operator==(const basic_desc& lhs, const basic_desc& rhs);
         friend bool operator!=(const basic_desc& lhs, const basic_desc& rhs);
@@ -70,7 +70,7 @@ class desc_list {
         int populate (desc_list<basic_desc> query, desc_list<T>& resp);
 
         template <class Y>
-				friend bool operator==(const desc_list<Y>& lhs, const desc_list<Y>& rhs);
+        friend bool operator==(const desc_list<Y>& lhs, const desc_list<Y>& rhs);
         int get_index(basic_desc query) const;
 };
 #endif

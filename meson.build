@@ -21,9 +21,15 @@ project('nixl', 'CPP',
 # set up some global vars for compiler, platform, configuration, etc.
 cpp = meson.get_compiler('cpp')
 
+ucx_dep = dependency('ucx')
+cuda_dep = dependency('cuda', required : false)
+
+inc_dir = include_directories('include', 'include/internal', 'src')
+
 subdir('include')
 subdir('include/internal')
 subdir('src')
+subdir('test')
 
 #install_headers('include/nixl.h', subdir: 'nixl')
 #install_headers('include/nixl_metadata.h', subdir: 'nixl')

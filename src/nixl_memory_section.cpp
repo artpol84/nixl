@@ -49,7 +49,7 @@ desc_list<string_desc> local_section::get_string_desc (segment input){
 
     for (int i=0; i<input.second.get_desc_count(); ++i) {
         *p = (basic_desc) input.second.descs[i];
-        element.metadata = input.first->get_public_data(input.second.descs[i]);
+        element.metadata = input.first->get_public_data(input.second.descs[i].metadata);
         public_meta.add_desc(element);
     }
     return public_meta;
@@ -75,7 +75,9 @@ int local_section::add_desc_list (desc_list<basic_desc> mem_elems,
         // Register_mem is supposed to add the element to the list
         // If necessary we can get the element and add it here.
         // Explained more in ucx register method.
-        ret = backend->register_mem(elm, mem_type, out);
+
+        // ONLY FILLING metadata NOW
+        ret = backend->register_mem(elm, mem_type, out.metadata);
         if (ret<0)
             // better to deregister the previous entries added
             return ret;
@@ -125,7 +127,7 @@ int local_section::remove_desc_list (desc_list<meta_desc> mem_elements,
 
         meta_desc *p = &target_descs->descs[index2];
         // Backend deregister takes care of metadata destruction,
-        backend->deregister_mem (*p);
+        backend->deregister_mem ((*p).metadata);
 
         target_descs->descs.erase(target_descs->descs.begin() + index2);
 
@@ -157,7 +159,7 @@ local_section::~local_section() {
 }
 
 int remote_section::load_public_data (std::vector<string_segment> input,
-                                      uuid_t remote_id) {
+                                      std::string remote_agent) {
     int res;
     for (auto &elm : input) {
         backend_type_t backend_type = elm.first;
@@ -165,7 +167,17 @@ int remote_section::load_public_data (std::vector<string_segment> input,
         std::vector<segment> *target_list = sec_map[mem_type];
         // Check for error of not being in map
         desc_list<meta_desc> temp (mem_type);
-        res =  backend_map[backend_type]->load_remote(elm.second, temp, remote_id);
+        meta_desc temp2;
+        basic_desc *p = &temp2;
+
+        //the last argument here needs to be a string now
+
+        for(auto &elm2 : (elm.second.descs)) {
+            (*p) = elm2;
+            res =  backend_map[backend_type]->load_remote(elm2, temp2.metadata, remote_agent);
+            temp.add_desc(temp2);
+
+        }
         if (res<0)
             return res;
 

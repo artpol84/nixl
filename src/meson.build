@@ -4,3 +4,6 @@ nixl_lib = library('nixl',
            dependencies: dependency('uuid', required : true),
            include_directories: ['../include', '../include/internal'],
            install: true)
+
+subdir('utils')
+subdir('nixl_nw_backends')
