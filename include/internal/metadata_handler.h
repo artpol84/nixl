@@ -15,11 +15,11 @@ class metadata_handler {
         uint16_t    port;
 
         std::string local_agent;
-        uuid_t      local_segment;
+        std::string local_md_id;
 
     public:
         metadata_handler(std::string& ip_address, uint16_t port,
-                         std::string local_agent, uuid_t local_segment);
+                         std::string local_agent, std::string local_md_id);
         ~metadata_handler();
 
         /** Sync the local section with the metadata server */

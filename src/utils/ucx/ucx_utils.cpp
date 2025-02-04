@@ -15,7 +15,7 @@ nixl_ucx_worker::nixl_ucx_worker(std::vector<std::string> devs)
 
     ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES | UCP_PARAM_FIELD_MT_WORKERS_SHARED |
                             UCP_PARAM_FIELD_ESTIMATED_NUM_EPS;
-    ucp_params.features = UCP_FEATURE_RMA | UCP_FEATURE_AMO32 | UCP_FEATURE_AMO64;
+    ucp_params.features = UCP_FEATURE_RMA | UCP_FEATURE_AMO32 | UCP_FEATURE_AMO64 | UCP_FEATURE_AM;
     ucp_params.mt_workers_shared = 1;
     ucp_params.estimated_num_eps = 3;
     ucp_config_read(NULL, NULL, &ucp_config);
@@ -229,6 +229,72 @@ int nixl_ucx_worker::rkey_import(nixl_ucx_ep &ep, void* addr, size_t size, nixl_
 void nixl_ucx_worker::rkey_destroy(nixl_ucx_rkey &rkey)
 {
     ucp_rkey_destroy(rkey.rkeyh);
+}
+
+/* ===========================================
+ * Active message handling
+ * =========================================== */
+
+int nixl_ucx_worker::reg_am_callback(unsigned msg_id, ucp_am_recv_callback_t cb, void* arg)
+{
+    ucs_status_t status;
+    ucp_am_handler_param_t params = {0};
+
+    params.field_mask = UCP_AM_HANDLER_PARAM_FIELD_ID |
+                       UCP_AM_HANDLER_PARAM_FIELD_CB |
+                       UCP_AM_HANDLER_PARAM_FIELD_ARG;
+
+    params.id = msg_id;
+    params.cb = cb;
+    params.arg = arg;
+
+    status = ucp_worker_set_am_recv_handler(worker, &params);
+
+    if(status != UCS_OK) 
+    {
+        //TODO: error handling
+        return -1;
+    } 
+    return 0;
+}
+
+int nixl_ucx_worker::send_am(nixl_ucx_ep &ep, unsigned msg_id, void* buffer, size_t len, uint32_t flags, nixl_ucx_req &req)
+{
+    ucs_status_ptr_t status;
+    ucp_request_param_t param = {0};
+
+    memset(&hdr, 0, sizeof(struct nixl_ucx_am_hdr));
+    hdr.hdr_id = 0xcee;
+
+    param.op_attr_mask |= UCP_OP_ATTR_FIELD_FLAGS;
+    param.flags         = flags;
+
+    status = ucp_am_send_nbx(ep.eph, msg_id, &hdr, sizeof(hdr), buffer, len, &param);
+
+    if(UCS_PTR_IS_ERR(status)) 
+    {
+        //TODO: error handling
+        return -1;
+    }
+
+    req.reqh = status; 
+   
+    return 0;
+}
+
+int nixl_ucx_worker::get_rndv_data(void* data_desc, void* buffer, size_t len, const ucp_request_param_t *param, nixl_ucx_req &req)
+{
+    ucs_status_ptr_t status;
+    
+    status = ucp_am_recv_data_nbx(worker, data_desc, buffer, len, param);
+    if(UCS_PTR_IS_ERR(status))
+    {
+        //TODO: error handling
+        return -1;
+    }
+    req.reqh = status;
+
+    return 0;
 }
 
 /* ===========================================

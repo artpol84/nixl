@@ -31,7 +31,7 @@ class mem_section {
         // over which backend we choose, and then ask the backend if it supports
         // a dsec_list.
 
-        uuid_t section_id;
+        std::string section_id;
 
         std::vector<segment> dram_mems;
         std::vector<segment> vram_mems;
@@ -70,7 +70,7 @@ class mem_section {
         }
 
     public:
-        mem_section (uuid_t sec_id);
+        mem_section (std::string sec_id);
 
         // Necessary for remote_sections
         int add_backend_handler (backend_engine *backend);

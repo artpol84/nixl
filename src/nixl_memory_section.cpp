@@ -4,8 +4,8 @@
 #include "internal/mem_section.h"
 #include "internal/transfer_backend.h"
 
-mem_section:: mem_section (uuid_t sec_id) {
-    uuid_copy(section_id, sec_id);
+mem_section:: mem_section (std::string sec_id) {
+    section_id = sec_id;
     // For easier navigation. If desired we can put the vectors
     // directly as key and remove them from the class
     sec_map.insert({DRAM_SEG, &dram_mems});
