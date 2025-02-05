@@ -48,6 +48,9 @@ int main()
 	void* addr1 = calloc(1, len);
 	void* addr2 = calloc(1, len);
 
+    memset(addr1, 0xbb, len);
+    memset(addr2, 0, len);
+
 	buff1.addr   = (uintptr_t) addr1;
 	buff1.len    = len;
 	buff1.dev_id = 0;
@@ -120,8 +123,11 @@ int main()
 	    status = ucx1->check_transfer(handle);
 	    ucx2->progress();
 	}
-	// Check the status somehow to wait for the completion of transfer
+
 	// Do some checks on the data.
+    for(size_t i = 0; i<len; i++){
+        assert( ((uint8_t*) addr2)[i] == 0xbb);    
+    }
 
 	// At the end we deregister the memories, by agent knowing all the registered regions
 	ucx1->deregister_mem(local_meta1);
