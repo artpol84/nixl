@@ -258,18 +258,15 @@ int nixl_ucx_worker::reg_am_callback(unsigned msg_id, ucp_am_recv_callback_t cb,
     return 0;
 }
 
-int nixl_ucx_worker::send_am(nixl_ucx_ep &ep, unsigned msg_id, void* buffer, size_t len, uint32_t flags, nixl_ucx_req &req)
+int nixl_ucx_worker::send_am(nixl_ucx_ep &ep, unsigned msg_id, void* hdr, size_t hdr_len, void* buffer, size_t len, uint32_t flags, nixl_ucx_req &req)
 {
     ucs_status_ptr_t status;
     ucp_request_param_t param = {0};
 
-    memset(&hdr, 0, sizeof(struct nixl_ucx_am_hdr));
-    hdr.hdr_id = 0xcee;
-
     param.op_attr_mask |= UCP_OP_ATTR_FIELD_FLAGS;
     param.flags         = flags;
 
-    status = ucp_am_send_nbx(ep.eph, msg_id, &hdr, sizeof(hdr), buffer, len, &param);
+    status = ucp_am_send_nbx(ep.eph, msg_id, hdr, hdr_len, buffer, len, &param);
 
     if(UCS_PTR_IS_ERR(status)) 
     {

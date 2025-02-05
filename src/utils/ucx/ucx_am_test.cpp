@@ -8,16 +8,20 @@
 
 using namespace std;
 
+struct sample_header {
+    uint32_t test;
+};
+
 ucs_status_t check_buffer (void *arg, const void *header,
    		                   size_t header_length, void *data,
 				           size_t length, 
 				           const ucp_am_recv_param_t *param)
 {
-    struct nixl_ucx_am_hdr* hdr = (struct nixl_ucx_am_hdr*) header;
+    struct sample_header* hdr = (struct sample_header*) header;
     //TODO: is data 8 byte aligned?
     uint64_t recv_data = *((uint64_t*) data);
 
-    if(hdr->hdr_id != 0xcee) 
+    if(hdr->test != 0xcee) 
     {
 	    return UCS_ERR_INVALID_PARAM;
     }
@@ -36,7 +40,7 @@ ucs_status_t rndv_test (void *arg, const void *header,
 				           const ucp_am_recv_param_t *param)
 {
 
-    struct nixl_ucx_am_hdr* hdr = (struct nixl_ucx_am_hdr*) header;
+    struct sample_header* hdr = (struct sample_header*) header;
     void* recv_buffer = calloc(1, length);
     nixl_ucx_worker* am_worker = (nixl_ucx_worker*) arg;
     ucp_request_param_t recv_param = {0};
@@ -44,7 +48,7 @@ ucs_status_t rndv_test (void *arg, const void *header,
     nixl_ucx_req req;
     int ret = 0;
 
-    if(hdr->hdr_id != 0xcee) 
+    if(hdr->test != 0xcee) 
     {
 	    return UCS_ERR_INVALID_PARAM;
     }
@@ -81,9 +85,11 @@ int main()
     unsigned check_cb_id = 1, rndv_cb_id = 2;
 
     void* big_buffer = calloc(1, 8192);
+    struct sample_header hdr = {0};
 
     buffer = 0xdeaddeaddeadbeef;
     ((uint64_t*) big_buffer)[0] = 0xdeaddeaddeadbeef;
+    hdr.test = 0xcee;
 
     /* Test control path */
     for(i = 0; i < 2; i++) {
@@ -112,7 +118,7 @@ int main()
     w[0].progress();
 
     /* Test first callback */
-    ret = w[1].send_am(ep[1], check_cb_id, (void*) &buffer, sizeof(buffer), 0, req);
+    ret = w[1].send_am(ep[1], check_cb_id, &hdr, sizeof(struct sample_header), (void*) &buffer, sizeof(buffer), 0, req);
     assert(ret == 0);
 
     while(ret == 0){
@@ -126,7 +132,7 @@ int main()
     uint32_t flags = 0;
     flags |= UCP_AM_SEND_FLAG_RNDV;
 
-    ret = w[1].send_am(ep[1], rndv_cb_id, big_buffer, 8192, flags, req);
+    ret = w[1].send_am(ep[1], rndv_cb_id, &hdr, sizeof(struct sample_header), big_buffer, 8192, flags, req);
     assert(ret == 0);
 
     while(ret == 0){
