@@ -1,7 +1,6 @@
 #ifndef __TRANSFER_BACKEND_H_
 #define __TRANSFER_BACKEND_H_
 
-#include <uuid.h>
 #include <string>
 #include "nixl_descriptors.h"
 
@@ -10,7 +9,7 @@
 typedef enum {READ, WRITE} transfer_op_t;
 
 // A base class to point to backend initialization data
-class backend_init_params {
+class BackendInitParams {
     public:
         backend_type_t backend_type;
         backend_type_t get_type () {
@@ -18,18 +17,18 @@ class backend_init_params {
         }
 };
 
-class backend_transfer_handle {
+class BackendTransferHandle {
 };
 
-// Main goal of backend_metadata class is to have a common pointer type
+// Main goal of BackendMetadata class is to have a common pointer type
 // for different backend metadata
 // Not sure get/set for serializer/deserializer is necessary
 // We can add backend_type and memory_type, but can't see use case
-class backend_metadata {
+class BackendMetadata {
     bool private_metadata = true;
 
     public:
-        backend_metadata(bool is_private){
+        BackendMetadata(bool is_private){
             private_metadata = is_private;
         }
 
@@ -51,35 +50,35 @@ class backend_metadata {
 // Each backend can have different connection requirement
 // This class would include the required information to make
 // a connection to a remote node. Note that local information
-// is passed during the constructor and through backend_init_params
-class backend_conn_meta {
+// is passed during the constructor and through BackendInitParams
+class BackendConnMD {
   public:
     // And some other details
     std::string   dst_ip_address;
     uint16_t      dst_port;
 };
 
-// A pointer required to a metadata object for backends next to each basic_desc
-class meta_desc : public basic_desc {
+// A pointer required to a metadata object for backends next to each BasicDesc
+class MetaDesc : public BasicDesc {
   public:
         // To be able to point to any object
-        backend_metadata *metadata;
+        BackendMetadata *metadata;
 
-        // Main use case is to take the basic_desc from another object, so just
-        // the metadata part is separately copied here, used in desc_list
-        inline void copy_meta (const meta_desc& meta) {
+        // Main use case is to take the BasicDesc from another object, so just
+        // the metadata part is separately copied here, used in DescList
+        inline void copy_meta (const MetaDesc& meta) {
             this->metadata = meta.metadata;
         }
 };
 
 // Base backend engine class, hides away different backend implementaitons
-class backend_engine { // maybe rename to transfer_backend_engine
+class BackendEngine { // maybe rename to transfer_BackendEngine
     private:
         backend_type_t backend_type;
-        backend_init_params *init_params;
+        BackendInitParams *init_params;
 
     public:
-        backend_engine (backend_init_params *init_params) {
+        BackendEngine (BackendInitParams *init_params) {
             this->backend_type = init_params->get_type();
             this->init_params  = init_params;
         }
@@ -87,16 +86,16 @@ class backend_engine { // maybe rename to transfer_backend_engine
         backend_type_t get_type () const { return backend_type; }
 
         // Can add checks for being public metadata
-        std::string get_public_data (backend_metadata* &meta) const {
+        std::string get_public_data (BackendMetadata* &meta) const {
             return meta->get();
         }
 
-        virtual ~backend_engine () {};
+        virtual ~BackendEngine () {};
 
         // Register and deregister local memory
-        virtual int register_mem (basic_desc &mem, memory_type_t mem_type,
-                                  backend_metadata* &out) = 0;
-        virtual void deregister_mem (backend_metadata* desc) = 0;
+        virtual int register_mem (BasicDesc &mem, memory_type_t mem_type,
+                                  BackendMetadata* &out) = 0;
+        virtual void deregister_mem (BackendMetadata* desc) = 0;
 
         // If we use an external connection manager, the next 3 methods might change
         // Provide the required connection info for remote nodes
@@ -113,31 +112,29 @@ class backend_engine { // maybe rename to transfer_backend_engine
         virtual int listen_for_connection(std::string remote_agent) = 0;
 
         // Add and remove remtoe metadata
-        virtual int load_remote (string_desc input,
-                                 backend_metadata* &output,
+        virtual int load_remote (StringDesc input,
+                                 BackendMetadata* &output,
                                  std::string remote_agent) = 0;
 
-        virtual int remove_remote (backend_metadata* input) = 0;
+        virtual int remove_remote (BackendMetadata* input) = 0;
 
         // Posting a request, to be updated to return an async handler
-        virtual int transfer (desc_list<meta_desc> local,
-                              desc_list<meta_desc> remote,
+        virtual int transfer (DescList<MetaDesc> local,
+                              DescList<MetaDesc> remote,
                               transfer_op_t operation,
-                              backend_transfer_handle* &handle) = 0;
+                              std::string notif_msg,
+                              BackendTransferHandle* &handle) = 0;
+
+        // Send the notification message to the target
+        int send_notification(BackendTransferHandle* handle);
 
         //Use a handle to progress backend engine and see if a transfer is completed or not
-        virtual int check_transfer(backend_transfer_handle* handle) = 0;
+        virtual int check_transfer(BackendTransferHandle* handle) = 0;
 
         //Force backend engine worker to progress
         virtual int progress(){
-	    return 0;
-	}
-};
-
-// Example backend initialization data for UCX
-class ucx_init_params : public backend_init_params {
-    public:
-        // TBD: Required parameters to initialize UCX that we need to get from the user
+            return 0;
+        }
 };
 
 #endif

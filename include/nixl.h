@@ -2,66 +2,39 @@
 #ifndef _NIXL_H
 #define _NIXL_H
 
-#include <uuid.h>
 #include "nixl_descriptors.h"
-#include "nixl_metadata.h"
+#include "nixl_params.h"
 #include "internal/transfer_backend.h"
-#include "internal/mem_section.h"
 #include "internal/metadata_handler.h"
 #include "internal/transfer_request.h"
 
 // Main transfer object
 class TransferAgent {
     private:
-        std::string                     name;
-        // Device specfic metadata such as topology/others
-        device_metadata                 device_meta;
-        // Handles to different registered backend engines
-        std::vector<backend_engine>     backend_engines;
-        // Memory section objects for local and list of cached remote objects
-        local_section                   *memory_section;
-        std::vector<remote_section>     remote_sections;
-        // Handler for metadata server access
-        metadata_handler                md_handle;
-        // Transfer connection class handles
-        // Discovery and connection information of different nodes
-        std::vector<backend_conn_meta>  conn_handle;
+		    AgentDataPrivate data;
 
     public:
-        // Populates agent name, section_id and device metadata
-        TransferAgent(const std::string &name, uuid_t section_id,
-                      const device_metadata &devs);
+        // Populates agent name, metadata_id and device metadata
+				// (maybe metadata_id and agent_name can be merged)
+        TransferAgent(const std::string &name, std::string md_id,
+                      const DeviceMetadata &devs);
         ~TransferAgent();
 
-        // Instantiate backend_engine objects, based on corresponding parameters
-        backend_engine *create_backend(backend_init_params *);
+        // Instantiate BackendEngine objects, based on corresponding parameters
+        BackendEngine *create_backend(BackendInitParams *);
         // Register with the backend and populate memory_section
-        int register_mem(const desc_list<basic_desc>& descs, backend_engine *backend);
+        int register_mem(const DescList<BasicDesc>& descs, BackendEngine *backend);
         // Deregister and remove from memory section
-        int deregister_mem(const desc_list<basic_desc>& descs, backend_engine *backend);
+        int deregister_mem(const DescList<BasicDesc>& descs, BackendEngine *backend);
 
         // Make connection to a remote agent
         int make_connection(std::string remote_agent);
 
-        // Invalidate the remote section information cached locally upon receiving
-        // invalidation request.
-        void invalidate_remote_sec_cache(uuid_t section_id);
-
-        // Sends messages to ETCD to invalidate. Also to agents with active
-        // connections. Runtime directs the message to the corresponding process.
-        void invalidate_local_sec_metadata();
-
-        // Populates a remote_sections object, can be used for prefetch.
-        int fetch_metadata (uuid_t &remote_sec_id);
-
-        // Prepares the data to be sent to etcd
-        std::vector<string_segment> get_public_data ();
-
-        // If not already cached, gets remote metadata from etcd. Goes over the elements and
-        // populates the transfer request.
-        TransferRequest *create_transfer_req (desc_list<basic_desc>& local_desc,
-                                              desc_list<basic_desc>& remote_desc,
-                                              uuid_t remote_sec_id,
+         // populates the transfer request.
+        TransferRequest *create_transfer_req (DescList<BasicDesc>& local_desc,
+                                              DescList<BasicDesc>& remote_desc,
+                                              std::string remote_md_id,
+                                              std::string notif_msg,
                                               int direction);
 
         // Invalidate transfer request if we no longer need it.
@@ -71,8 +44,35 @@ class TransferAgent {
         // The async handler is the TransferRequest object
         int post_request(TransferRequest *req);
 
+        // Send the notification message to the target
+        int send_notification(TransferRequest *req);
+
         // Check the status of transfer requests
         transfer_state_t get_status (TransferRequest *req);
+
+        /** Metadata Handling */
+
+        // Invalidate the remote section information cached locally upon receiving
+        // invalidation request.
+        void invalidate_remote_metadata(std::string remote_md_id);
+
+        // Sends messages to ETCD to invalidate. Also to agents with active
+        // connections. Runtime directs the message to the corresponding process.
+        void invalidate_local_metadata();
+
+        // Prepares the data to be sent to etcd
+        NIXLMetadata get_metadata ();
+
+        // Populates a Remote metadata, can be used for prefetch.
+        int fetch_metadata (std::string &remote_md_id);
+
+        // If metadata was received through other channels, it can be loaded into the library
+        int load_metadata (NIXLMetadata remote_metadata);
+
+        // Send the local metadata to remote process/service
+        // Primarily for testing or connecting to remote service to store metadata
+        int send_metadata(std::string &remote_md_id);
+
 };
 
 #endif

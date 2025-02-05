@@ -3,7 +3,7 @@ ucx_backend_dep = declare_dependency(link_with: ucx_backend_lib, include_directo
 
 ucx_backend_example = executable('ucx_backend_example',
            'ucx_backend_example.cpp',
-           dependencies: [dependency('uuid', required : true), nixl_dep, ucx_backend_dep],
+           dependencies: [nixl_dep, ucx_backend_dep],
            include_directories: [inc_dir, '../src/nixl_nw_backends'],
            install: true)
 

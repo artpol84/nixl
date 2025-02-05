@@ -32,11 +32,11 @@ int main()
 {
     vector<string> devs;
     devs.push_back("mlx5_0");
-    nixl_ucx_worker w[2] = { nixl_ucx_worker(devs), nixl_ucx_worker(devs) };
-    nixl_ucx_ep ep[2];
-    nixl_ucx_mem mem[2];
-    nixl_ucx_rkey rkey[2];
-    nixl_ucx_req req;
+    nixlUcxWorker w[2] = { nixlUcxWorker(devs), nixlUcxWorker(devs) };
+    nixlUcxEp ep[2];
+    nixlUcxMem mem[2];
+    nixlUcxRkey rkey[2];
+    nixlUcxReq req;
     uint8_t* buffer[2];
     uint8_t check_buffer[2][128];
     int ret, i;

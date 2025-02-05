@@ -42,10 +42,10 @@ ucs_status_t rndv_test (void *arg, const void *header,
 
     struct sample_header* hdr = (struct sample_header*) header;
     void* recv_buffer = calloc(1, length);
-    nixl_ucx_worker* am_worker = (nixl_ucx_worker*) arg;
+    nixlUcxWorker* am_worker = (nixlUcxWorker*) arg;
     ucp_request_param_t recv_param = {0};
     uint64_t check_data;
-    nixl_ucx_req req;
+    nixlUcxReq req;
     int ret = 0;
 
     if(hdr->test != 0xcee) 
@@ -76,9 +76,9 @@ int main()
 {
     vector<string> devs;
     devs.push_back("mlx5_0");
-    nixl_ucx_worker w[2] = { nixl_ucx_worker(devs), nixl_ucx_worker(devs) };
-    nixl_ucx_ep ep[2];
-    nixl_ucx_req req;
+    nixlUcxWorker w[2] = { nixlUcxWorker(devs), nixlUcxWorker(devs) };
+    nixlUcxEp ep[2];
+    nixlUcxReq req;
     uint64_t buffer;
     int ret, i;
 

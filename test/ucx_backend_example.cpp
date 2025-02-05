@@ -6,20 +6,20 @@
 int main()
 {
 	int ret1, ret2;
-	
+
 	// Example: assuming two agents running on the same machine,
 	// with separate memory regions in DRAM
 	std::string agent1("Agent1");
 	std::string agent2("Agent2");
 
-	ucx_init_params init1, init2;
+	nixlUcxInitParams init1, init2;
 	// populate required/desired inits
 
 	// User would ask each of the agents to create a ucx  backend, and the
 	// agent returns to them these pointers in the form of transfer_backend *
-	backend_engine *ucx1, *ucx2;
-	ucx1 = (backend_engine*) new ucx_engine (&init1);
-	ucx2 = (backend_engine*) new ucx_engine (&init2);
+	BackendEngine *ucx1, *ucx2;
+	ucx1 = (BackendEngine*) new nixlUcxEngine (&init1);
+	ucx2 = (BackendEngine*) new nixlUcxEngine (&init2);
 
 	// We get the required connection info from UCX to be put on the central
 	// location and ask for it for a remote node
@@ -42,8 +42,8 @@ int main()
 
 	// User allocates memories, and passes the corresponding address
 	// and length to register with the backend
-	basic_desc buff1, buff2;
-	backend_metadata* local_meta1, *local_meta2;
+	BasicDesc buff1, buff2;
+	BackendMetadata* local_meta1, *local_meta2;
 	size_t len = 256;
 	void* addr1 = calloc(1, len);
 	void* addr2 = calloc(1, len);
@@ -62,24 +62,24 @@ int main()
 	assert(ret1 == 0);
         assert(ret2 == 0);
 
-	// Agent keeps a desc_list<meta_desc> for the local descriptors, not seen by the backend
+	// Agent keeps a DescList<MetaDesc> for the local descriptors, not seen by the backend
 
 	// Agent asks the backend to output the string per registered region requried for a remote node
-	// And makes a desc_list<string_desc> from that.
-	string_desc ucx_dram_info1;
+	// And makes a DescList<StringDesc> from that.
+	StringDesc ucx_dram_info1;
 	ucx_dram_info1.addr   = (uintptr_t) addr1;
 	ucx_dram_info1.len    = len;
 	ucx_dram_info1.dev_id = 0;
 	ucx_dram_info1.metadata   = ucx1->get_public_data(local_meta1);
 
-	string_desc ucx_dram_info2;
+	StringDesc ucx_dram_info2;
 	ucx_dram_info2.addr   = (uintptr_t) addr2;
 	ucx_dram_info2.len    = len;
 	ucx_dram_info2.dev_id = 0;
 	ucx_dram_info2.metadata   = ucx2->get_public_data(local_meta2);
 
 	// We get the data from the cetnral location and populate the backend, and receive remote_meta
-	backend_metadata* remote_meta1of2, *remote_meta2of1;
+	BackendMetadata* remote_meta1of2, *remote_meta2of1;
 	ret1 = ucx1->load_remote (ucx_dram_info2, remote_meta1of2, agent2);
 	ret2 = ucx2->load_remote (ucx_dram_info1, remote_meta2of1, agent1);
 
@@ -89,18 +89,18 @@ int main()
 	// User creates a request, size of them should match. Example on Agent 1
 	// The agent fills the metadata fields based on local_meta1 and remote_meta1
 	size_t req_size = 8;
-	backend_transfer_handle* handle;
+	BackendTransferHandle* handle;
 
-	desc_list<meta_desc> req_src_descs (DRAM_SEG);
-	meta_desc req_src;
+	DescList<MetaDesc> req_src_descs (DRAM_SEG);
+	MetaDesc req_src;
 	req_src.addr     = (uintptr_t) (((char*) addr1) + 16); //random offset
 	req_src.len      = req_size;
 	req_src.dev_id   = 0;
 	req_src.metadata = local_meta1;
 	req_src_descs.add_desc(req_src);
 
-	desc_list<meta_desc> req_dst_descs (DRAM_SEG);
-	meta_desc req_dst;
+	DescList<MetaDesc> req_dst_descs (DRAM_SEG);
+	MetaDesc req_dst;
 	req_dst.addr   = (uintptr_t) ((char*) addr2) + 8; //random offset
 	req_dst.len    = req_size;
 	req_dst.dev_id = 0;
@@ -111,7 +111,7 @@ int main()
 	// Posting a request, to be updated to return an async handler,
 	// or an ID that later can be used to check the status as a new method
 	// Also maybe we would remove the WRITE and let the backend class decide the op
-	ret1 = ucx1->transfer(req_src_descs, req_dst_descs, WRITE, handle);
+	ret1 = ucx1->transfer(req_src_descs, req_dst_descs, WRITE, "", handle);
 	assert(ret1 == 0);
 
 	int status = 1;

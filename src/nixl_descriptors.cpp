@@ -2,8 +2,8 @@
 #include "nixl_descriptors.h"
 #include "internal/transfer_backend.h"
 
-// No Virtual function in basic_desc, as we want each object to just have the members
-bool operator==(const basic_desc& lhs, const basic_desc& rhs) {
+// No Virtual function in BasicDesc, as we want each object to just have the members
+bool operator==(const BasicDesc& lhs, const BasicDesc& rhs) {
     if ((lhs.addr==rhs.addr) &&
         (lhs.len==rhs.len) &&
         (lhs.dev_id==rhs.dev_id))
@@ -12,11 +12,11 @@ bool operator==(const basic_desc& lhs, const basic_desc& rhs) {
         return false;
 }
 
-bool operator!=(const basic_desc& lhs, const basic_desc& rhs) {
+bool operator!=(const BasicDesc& lhs, const BasicDesc& rhs) {
     return !(lhs==rhs);
 }
 
-basic_desc& basic_desc::operator=(const basic_desc& desc) {
+BasicDesc& BasicDesc::operator=(const BasicDesc& desc) {
     // Check for self-assignment
     if (this != &desc) {
         addr = desc.addr;
@@ -26,7 +26,7 @@ basic_desc& basic_desc::operator=(const basic_desc& desc) {
     return *this;
 }
 
-basic_desc::basic_desc(const basic_desc& desc){
+BasicDesc::BasicDesc(const BasicDesc& desc){
     if (this != &desc) {
         addr = desc.addr;
         len = desc.len;
@@ -34,38 +34,38 @@ basic_desc::basic_desc(const basic_desc& desc){
     }
 }
 
-bool basic_desc::covers (const basic_desc& query) const {
+bool BasicDesc::covers (const BasicDesc& query) const {
     if (dev_id == query.dev_id) {
-        if (( addr <=  query.addr) &&
-            ( addr + len >= query.addr + query.len))
+        if ((addr <=  query.addr) &&
+            (addr + len >= query.addr + query.len))
             return true;
     }
     return false;
 }
 
-bool basic_desc::overlaps (const basic_desc& query) const {
+bool BasicDesc::overlaps (const BasicDesc& query) const {
     // TBD
     return false;
 }
 
-// No ~basic_desc() needed, as there are no memory allocations,
+// No ~BasicDesc() needed, as there are no memory allocations,
 // and the addr being pointer is just a memory address value,
 // not an actual pointer.
 
 
-// The template is used to select from basic_desc/meta_desc/string_desc
+// The template is used to select from BasicDesc/MetaDesc/StringDesc
 // This is the backbone of the library, a desc list centered abstraction.
 // There are no virtual functions, so the object is all data, no pointers.
 
 template <class T>
-desc_list<T>::desc_list (memory_type_t type, bool unified_addr){
-    static_assert(std::is_base_of<basic_desc, T>::value);
+DescList<T>::DescList (memory_type_t type, bool unified_addr){
+    static_assert(std::is_base_of<BasicDesc, T>::value);
     this->type = type;
     this->unified_addressing = unified_addr;
 }
 
 template <class T>
-desc_list<T>::desc_list (const desc_list<T>& t){
+DescList<T>::DescList (const DescList<T>& t){
     this->type = t.get_type();
     this->unified_addressing = t.is_unified_addressing();
     for (auto & elm : t.descs)
@@ -73,26 +73,35 @@ desc_list<T>::desc_list (const desc_list<T>& t){
 }
 
 template <class T>
-int desc_list<T>::add_desc (T desc, bool sorted) {
+int DescList<T>::add_desc (T desc, bool sorted) {
     descs.push_back(desc);
     return 0;
 }
 
 template <class T>
-int desc_list<T>::rem_desc (T desc){
+int DescList<T>::rem_desc (int index){
+    if ((size_t) index >= descs.size())
+        return -1;
+    descs.erase(descs.begin() + index);
+    return 0;
+}
+
+template <class T>
+int DescList<T>::rem_desc (T desc){
+    // Add check for existence
     descs.erase(std::remove(descs.begin(), descs.end(), desc), descs.end());
     return 0;
 }
 
 template <class T>
-int desc_list<T>::populate (desc_list<basic_desc> query, desc_list<T>& resp) {
+int DescList<T>::populate (DescList<BasicDesc> query, DescList<T>& resp) {
     // Populate only makes sense when there is extra metadata
-    if(std::is_same<basic_desc, T>::value)
+    if(std::is_same<BasicDesc, T>::value)
         return -1;
     T new_elm;
-    basic_desc *p = &new_elm;
+    BasicDesc *p = &new_elm;
     int found = 0;
-    for (auto & q : query.descs)
+    for (auto & q : query)
         for (auto & elm : descs)
             if (elm.covers(q)){
                 *p = q;
@@ -101,16 +110,16 @@ int desc_list<T>::populate (desc_list<basic_desc> query, desc_list<T>& resp) {
                 found++;
                 break;
             }
-    if (query.get_desc_count()==found)
+    if (query.desc_count()==found)
         return 0;
     else
         return -1;
 }
 
 template <class T>
-int desc_list<T>::get_index(basic_desc query) const {
+int DescList<T>::get_index(BasicDesc query) const {
     for (size_t i=0; i<descs.size(); ++i){
-        const basic_desc *p = &descs[i];
+        const BasicDesc *p = &descs[i];
         if (*p==query)
             return i;
     }
@@ -118,7 +127,7 @@ int desc_list<T>::get_index(basic_desc query) const {
 }
 
 template <class T>
-bool operator==(const desc_list<T>& lhs, const desc_list<T>& rhs) {
+bool operator==(const DescList<T>& lhs, const DescList<T>& rhs) {
     if (get_type(lhs)!=get_type(rhs))
         return false;
     if (lhs.descs.size() != rhs.descs.size())
@@ -132,6 +141,6 @@ bool operator==(const desc_list<T>& lhs, const desc_list<T>& rhs) {
 }
 
 // Since we implement a template class from header files, this is necessary
-template class desc_list<basic_desc>;
-template class desc_list<meta_desc>;
-template class desc_list<string_desc>;
+template class DescList<BasicDesc>;
+template class DescList<MetaDesc>;
+template class DescList<StringDesc>;

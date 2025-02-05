@@ -8,22 +8,22 @@
 #include "nixl.h"
 #include "internal/transfer_backend.h"
 
-typedef std::pair<backend_engine*, desc_list<meta_desc>  > segment;
-typedef std::pair<backend_type_t,  desc_list<string_desc>> string_segment;
-typedef std::pair<backend_type_t,  std::string>            string_conn_md;
+typedef std::pair<BackendEngine*, DescList<MetaDesc>> Segment;
+typedef std::pair<backend_type_t, DescList<StringDesc>> StringSegment;
+typedef std::pair<backend_type_t, std::string> StringConnMD;
 
-// Merging the desc_list to say what backends support each and the corresponding
-// metadata gets really messy. Hard to find if a desc_list in a submitted request
+// Merging the DescList to say what backends support each and the corresponding
+// metadata gets really messy. Hard to find if a DescList in a submitted request
 // is in which backend, while at the end of the day only a single backend will
-// process it. So separating the desc_lists per backend.
+// process it. So separating the DescLists per backend.
 
 // We don't want to search the descriptors once, and extract the requried metadata
 // separately, so merged the calls by asking the backends to populate the desired
 // descriptor and see if they succeed.
-class mem_section {
+class MemSection {
     protected:
         // Per each type of memory, pointer to a backend that supports it, and
-        // which index in that backend. Not keeping any actual memory in mem_section.
+        // which index in that backend. Not keeping any actual memory in MemSection.
         // When a call to send data to metadata server arrives, we get the required
         // info from each backend and send them together.
 
@@ -33,18 +33,18 @@ class mem_section {
 
         std::string section_id;
 
-        std::vector<segment> dram_mems;
-        std::vector<segment> vram_mems;
-        std::vector<segment> block_mems;
-        std::vector<segment> file_mems;
+        std::vector<Segment> dram_mems;
+        std::vector<Segment> vram_mems;
+        std::vector<Segment> block_mems;
+        std::vector<Segment> file_mems;
 
-        std::map<memory_type_t,  std::vector<segment>*> sec_map;
-        std::map<backend_type_t, backend_engine*>       backend_map;
+        std::map<memory_type_t, std::vector<Segment>*> sec_map;
+        std::map<backend_type_t, BackendEngine*> backend_map;
 
-        desc_list<meta_desc>* locate_desc_list (memory_type_t mem_type,
-                                                backend_engine *backend)
-        {
-                std::vector<segment> *target_list = sec_map[mem_type];
+        DescList<MetaDesc>* locate_DescList (memory_type_t mem_type,
+                                             BackendEngine *backend) {
+
+                std::vector<Segment> *target_list = sec_map[mem_type];
                 int index = 0;
 
                 for (size_t i=0; i<target_list->size(); ++i)
@@ -59,9 +59,10 @@ class mem_section {
                 return &((*target_list)[index].second);
         }
 
-        int populate (desc_list<basic_desc> query, desc_list<meta_desc>& resp,
-                                                   backend_engine *backend) {
-                desc_list<meta_desc>* found = locate_desc_list(query.get_type(),
+        int populate (DescList<BasicDesc> query, DescList<MetaDesc>& resp,
+                                                 BackendEngine *backend) {
+
+                DescList<MetaDesc>* found = locate_DescList(query.get_type(),
                                                                backend);
                 if (found == nullptr)
                     return -1;
@@ -70,42 +71,42 @@ class mem_section {
         }
 
     public:
-        mem_section (std::string sec_id);
+        MemSection (std::string sec_id);
 
-        // Necessary for remote_sections
-        int add_backend_handler (backend_engine *backend);
+        // Necessary for RemoteSections
+        int add_backend_handler (BackendEngine *backend);
 
-        // Find a basic_desc in the section, if available fills the resp based
+        // Find a BasicDesc in the section, if available fills the resp based
         // on that, and returns the backend that can use the resp
-        backend_engine* find_query (desc_list<basic_desc> query,
-                                    desc_list<meta_desc>& resp);
-        ~mem_section ();
+        BackendEngine* find_query (DescList<BasicDesc> query,
+                                   DescList<MetaDesc>& resp);
+        ~MemSection ();
 };
 
-class local_section : public mem_section {
+class LocalSection : public MemSection {
     private:
-        desc_list<string_desc> get_string_desc (segment input);
+        DescList<StringDesc> get_StringDesc (Segment input);
 
     public:
-        int add_desc_list (desc_list<basic_desc> mem_elms,
-                           backend_engine *backend);
+        int add_DescList (DescList<BasicDesc> mem_elms,
+                          BackendEngine *backend);
 
-        // Per each basic_desc, the full region that got registered should be deregistered
-        int remove_desc_list (desc_list<meta_desc> mem_elements,
-                              backend_engine *backend);
+        // Per each BasicDesc, the full region that got registered should be deregistered
+        int remove_DescList (DescList<MetaDesc> mem_elements,
+                             BackendEngine *backend);
 
         // Function that extracts the information for metadata server
-        std::vector<string_segment> get_public_data ();
+        std::vector<StringSegment> get_public_data ();
 
-        ~local_section();
+        ~LocalSection();
 };
 
-class remote_section : public mem_section {
+class RemoteSection : public MemSection {
     public:
-        int load_public_data (std::vector<string_segment> input,
+        int load_public_data (std::vector<StringSegment> input,
                               std::string remote_agent);
 
-        ~remote_section();
+        ~RemoteSection();
 };
 
 #endif

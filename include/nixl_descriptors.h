@@ -11,33 +11,33 @@ typedef enum {UCX, GPUDIRECTIO, NVMe, NVMeoF} backend_type_t;
 typedef enum {DRAM_SEG, VRAM_SEG, BLK_SEG, FILE_SEG} memory_type_t;
 
 // A basic descriptor class, with basic operators and math checks
-class basic_desc {
+class BasicDesc {
     public:
         uintptr_t addr;  // Start of buffer
         size_t    len;    // Buffer length
         uint32_t  dev_id; // Device ID
 
-        friend bool operator==(const basic_desc& lhs, const basic_desc& rhs);
-        friend bool operator!=(const basic_desc& lhs, const basic_desc& rhs);
+        friend bool operator==(const BasicDesc& lhs, const BasicDesc& rhs);
+        friend bool operator!=(const BasicDesc& lhs, const BasicDesc& rhs);
 
-        basic_desc& operator=(const basic_desc& desc);
-        basic_desc(const basic_desc& desc);
-        // no metadata in basic_desc
-        void copy_meta (const basic_desc& desc) {};
+        BasicDesc& operator=(const BasicDesc& desc);
+        BasicDesc(const BasicDesc& desc);
+        // no metadata in BasicDesc
+        void copy_meta (const BasicDesc& desc) {};
 
-        bool covers (const basic_desc& query) const;
-        bool overlaps (const basic_desc& query) const;
+        bool covers (const BasicDesc& query) const;
+        bool overlaps (const BasicDesc& query) const;
 
-        basic_desc() {};
-        ~basic_desc() {};
+        BasicDesc() {};
+        ~BasicDesc() {};
 };
 
-// String of metadata next to each basic_desc, used to import/export
+// String of metadata next to each BasicDesc, used to import/export
 // memory sections to the metadata server.
-class string_desc : public basic_desc {
+class StringDesc : public BasicDesc {
     public:
         std::string metadata;
-        inline void copy_meta (const string_desc& meta){
+        inline void copy_meta (const StringDesc& meta){
             this->metadata = meta.metadata;
         }
 };
@@ -46,31 +46,38 @@ class string_desc : public basic_desc {
 // from. It has some additional methods to help with keeping backend
 // metadata information as well.
 template<class T>
-class desc_list {
+class DescList {
     private:
-        memory_type_t type;
-        bool          unified_addressing;
-
-    public:
+        memory_type_t  type;
+        bool           unified_addressing;
         std::vector<T> descs;
 
-        desc_list (memory_type_t type, bool unified_addr = true);
-        desc_list (const desc_list<T>& t);
+    public:
+        DescList (memory_type_t type, bool unified_addr = true);
+        DescList (const DescList<T>& t);
         void clear() { descs.clear(); }
-        ~desc_list () { descs.clear(); };
+        ~DescList () { descs.clear(); };
 
-        inline memory_type_t get_type() const { return type; };
-        inline bool is_unified_addressing() const { return unified_addressing; };
-        inline int get_desc_count() const { return descs.size(); };
-        inline bool is_empty () const { return (descs.size()==0);}
+        inline memory_type_t get_type() const { return type; }
+        inline bool is_unified_addressing() const { return unified_addressing; }
+        inline int desc_count() const { return descs.size(); }
+        inline bool is_empty() const { return (descs.size()==0);}
+
+        inline T& operator[](int index) { return descs[index]; }
+        inline const T& operator[](int index) const { return descs[index]; }
+        inline typename std::vector<T>::iterator begin() { return descs.begin(); }
+        inline typename std::vector<T>::const_iterator begin() const { return descs.begin(); }
+        inline typename std::vector<T>::iterator end() { return descs.end(); }
+        inline typename std::vector<T>::const_iterator end() const { return descs.end(); }
 
         int add_desc (T desc, bool sorted=false);
-        // Removing descriptor by value instead of index
+        // Removing descriptor by index or value
+        int rem_desc (int index);
         int rem_desc (T desc);
-        int populate (desc_list<basic_desc> query, desc_list<T>& resp);
+        int populate (DescList<BasicDesc> query, DescList<T>& resp);
 
         template <class Y>
-        friend bool operator==(const desc_list<Y>& lhs, const desc_list<Y>& rhs);
-        int get_index(basic_desc query) const;
+        friend bool operator==(const DescList<Y>& lhs, const DescList<Y>& rhs);
+        int get_index(BasicDesc query) const;
 };
 #endif
