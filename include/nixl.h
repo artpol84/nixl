@@ -11,11 +11,13 @@
 // Main transfer object
 class TransferAgent {
     private:
-		    AgentDataPrivate data;
+        AgentDataPrivate data;
 
     public:
+
+        /*** Initialization and Regsitering Methods ***/
+
         // Populates agent name, metadata_id and device metadata
-				// (maybe metadata_id and agent_name can be merged)
         TransferAgent(const std::string &name, std::string md_id,
                       const DeviceMetadata &devs);
         ~TransferAgent();
@@ -27,10 +29,13 @@ class TransferAgent {
         // Deregister and remove from memory section
         int deregister_mem(const DescList<BasicDesc>& descs, BackendEngine *backend);
 
-        // Make connection to a remote agent
+        // Make connection to a remote agent proactively, instead of at transfer time
         int make_connection(std::string remote_agent);
 
-         // populates the transfer request.
+
+        /*** Transfer Request Handling ***/
+
+        // populates the transfer request.
         TransferRequest *create_transfer_req (DescList<BasicDesc>& local_desc,
                                               DescList<BasicDesc>& remote_desc,
                                               std::string remote_md_id,
@@ -50,29 +55,29 @@ class TransferAgent {
         // Check the status of transfer requests
         transfer_state_t get_status (TransferRequest *req);
 
-        /** Metadata Handling */
 
-        // Invalidate the remote section information cached locally upon receiving
-        // invalidation request.
-        void invalidate_remote_metadata(std::string remote_md_id);
+        /*** Metadata handling through side channel ***/
 
-        // Sends messages to ETCD to invalidate. Also to agents with active
-        // connections. Runtime directs the message to the corresponding process.
-        void invalidate_local_metadata();
-
-        // Prepares the data to be sent to etcd
+        // Get nixl_metadata for this agent
         NIXLMetadata get_metadata ();
 
-        // Populates a Remote metadata, can be used for prefetch.
-        int fetch_metadata (std::string &remote_md_id);
-
-        // If metadata was received through other channels, it can be loaded into the library
+        // Load other agent's metadata and unpack it internally
         int load_metadata (NIXLMetadata remote_metadata);
 
-        // Send the local metadata to remote process/service
-        // Primarily for testing or connecting to remote service to store metadata
+        // Invalidate the remote section information cached locally
+        void invalidate_remote_metadata(std::string remote_md_id);
+
+
+        /*** Metadata handling through central kv service, or single peer for test ***/
+
+        // Send the local metadata to kv service to store it
         int send_metadata(std::string &remote_md_id);
 
+        // Request for a remote Agent's metadata, can be used for proactive prefetch
+        int fetch_metadata (std::string &remote_md_id);
+
+        // Sends messages to kv service to invalidate this Agent's metadata
+        void invalidate_local_metadata();
 };
 
 #endif
