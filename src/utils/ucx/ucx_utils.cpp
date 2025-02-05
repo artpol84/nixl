@@ -179,7 +179,7 @@ int nixlUcxWorker::mem_reg(void *addr, size_t size, nixlUcxMem &mem)
 }
 
 
-size_t nixlUcxWorker::mem_addr(nixlUcxMem &mem, uint64_t &addr, size_t size)
+size_t nixlUcxWorker::mem_addr(nixlUcxMem &mem, uint64_t &addr, size_t &size)
 {
     ucs_status_t status;
     void *rkey_buf;
@@ -370,6 +370,11 @@ int nixlUcxWorker::test(nixlUcxReq &req)
         return 0;
     }
 
-    ucp_request_free(req.reqh);
-    return 1;
+    if (status == UCS_OK ) {
+        ucp_request_free(req.reqh);
+        return 1;
+    } else {
+        //TODO: error
+        return -1;
+    }
 }

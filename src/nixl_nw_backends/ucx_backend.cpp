@@ -51,6 +51,10 @@ void * nixlUcxEngine::_string_to_bytes(std::string &s, size_t &size){
     return ret;
 }
 
+std::string nixlUcxEngine::get_public_data(BackendMetadata* &meta) const {
+    return ((nixlUcxPrivateMetadata*) meta)->get(); 
+}
+
 /****************************************
  * Connection management
 *****************************************/
@@ -83,6 +87,8 @@ int nixlUcxEngine::load_remote_conn_info (std::string remote_agent,
 
     remote_conn_map[remote_agent] = conn;
 
+    free(addr);
+
     return 0;
 }
 
@@ -103,17 +109,20 @@ int nixlUcxEngine::register_mem (BasicDesc &mem, memory_type_t mem_type,
 {
     int ret;
     nixlUcxPrivateMetadata *priv = new nixlUcxPrivateMetadata;
+    uint64_t mem_addr;
+    size_t size;
 
     ret = uw->mem_reg((void*) mem.addr, mem.len, priv->mem);
     if (ret) {
         // TODO: err out
         return -1;
     }
-    ret = uw->mem_addr(priv->mem, (uint64_t&) priv->mem_addr, priv->mem_addr_size);
+    ret = uw->mem_addr(priv->mem, mem_addr, size);
     if (ret) {
         // TODO: err out
         return -1;
     }
+    priv->rkey_str = _bytes_to_string((void*) mem_addr, size);
 
     out = (BackendMetadata*) priv; //typecast?
 
@@ -133,8 +142,8 @@ void nixlUcxEngine::deregister_mem (BackendMetadata* desc)
 int nixlUcxEngine::load_remote (StringDesc input,
                              BackendMetadata* &output,
                              std::string remote_agent) {
-    void *addr = (void*) input.addr;
-    size_t size = input.len;
+    void *addr;
+    size_t size;
     int ret;
     nixlUcxConnection conn;
 
@@ -148,6 +157,8 @@ int nixlUcxEngine::load_remote (StringDesc input,
     }
     conn = search->second;
 
+    addr = _string_to_bytes(input.metadata, size);
+
     md->conn = conn;
     ret = uw->rkey_import(conn.ep, addr, size, md->rkey);
     if (ret) {
@@ -155,7 +166,8 @@ int nixlUcxEngine::load_remote (StringDesc input,
         return -1;
     }
     output = (BackendMetadata*) md;
-
+    
+    free(addr);
     return 0;
 }
 
@@ -212,13 +224,14 @@ int nixlUcxEngine::transfer (DescList<MetaDesc> local,
         }
     }
 
-    handle = (BackendTransferHandle*) &req;
+    handle = (BackendTransferHandle*) req.reqh;
 
     return ret;
 }
 
 int nixlUcxEngine::check_transfer (BackendTransferHandle* handle) {
-    nixlUcxReq req = *((nixlUcxReq*) handle);
+    nixlUcxReq req;
+    req.reqh = (void*) handle;
     return uw->test(req);
 }
 

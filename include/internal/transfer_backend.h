@@ -95,7 +95,7 @@ class BackendEngine { // maybe rename to transfer_BackendEngine
         backend_type_t get_type () const { return backend_type; }
 
         // Can add checks for being public metadata
-        std::string get_public_data (BackendMetadata* &meta) const {
+        virtual std::string get_public_data (BackendMetadata* &meta) const {
             return meta->get();
         }
 

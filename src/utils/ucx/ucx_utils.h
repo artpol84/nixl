@@ -30,9 +30,9 @@ public:
 class nixlUcxReq : public BackendTransferHandle {
 private:
     int complete;
-    void* reqh;
 
 public:
+    void* reqh;
     nixlUcxReq() {
         complete = 0;
     }
@@ -63,7 +63,7 @@ public:
 
     /* Memory management */
     int mem_reg(void *addr, size_t size, nixlUcxMem &mem);
-    size_t mem_addr(nixlUcxMem &mem, uint64_t &addr, size_t size);
+    size_t mem_addr(nixlUcxMem &mem, uint64_t &addr, size_t &size);
     void mem_dereg(nixlUcxMem &mem);
 
     /* Rkey */

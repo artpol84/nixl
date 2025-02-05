@@ -25,18 +25,17 @@ class nixlUcxConnection : public BackendConnMD {
 
 // A private metadata has to implement get, and has all the metadata
 class nixlUcxPrivateMetadata : public BackendMetadata {
+    private:
         nixlUcxMem mem;
-        void *mem_addr;
-        size_t mem_addr_size;
+        std::string rkey_str;
 
     public:
         nixlUcxPrivateMetadata() : BackendMetadata(true) {
         }
 
-        //std::string get() {
-        //this is probably not correct
-        //    return std::to_string((uint64_t) (&mem));
-        //}
+        std::string get() {
+            return rkey_str;
+        }
 
     friend class nixlUcxEngine;
 };
@@ -84,6 +83,8 @@ class nixlUcxEngine : BackendEngine {
         nixlUcxEngine(nixlUcxInitParams* init_params);
 
         ~nixlUcxEngine();
+
+        std::string get_public_data(BackendMetadata* &meta) const;
 
         std::string get_conn_info() const;
         int load_remote_conn_info (std::string remote_agent, std::string remote_conn_info);

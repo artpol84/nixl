@@ -79,9 +79,8 @@ int main()
 
     ret = 0;
     while(ret == 0) {
-	ret = w[0].test(req);
-	w[0].progress();
-	w[1].progress();
+        ret = w[0].test(req);
+	    w[1].progress();
     }
     assert(ret > 0);
 
@@ -113,9 +112,8 @@ int main()
 
     ret = 0;
     while( ret == 0) {
-	ret = w[0].test(req);
-	w[0].progress();
-	w[1].progress();
+        ret = w[0].test(req);
+        w[1].progress();
     }
     assert(ret > 0);
 
