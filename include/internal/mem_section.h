@@ -8,19 +8,19 @@
 #include "nixl.h"
 #include "internal/transfer_backend.h"
 
-typedef std::pair<BackendEngine*, DescList<MetaDesc>> Segment;
-typedef std::pair<backend_type_t, DescList<StringDesc>> StringSegment;
-typedef std::pair<backend_type_t, std::string> StringConnMD;
+typedef std::pair<nixlBackendEngine*, nixlDescList<nixlMetaDesc>> nixlSegment;
+typedef std::pair<backend_type_t, nixlDescList<nixlStringDesc>> nixlStringSegment;
+typedef std::pair<backend_type_t, std::string> nixlStringConnMD;
 
-// Merging the DescList to say what backends support each and the corresponding
-// metadata gets really messy. Hard to find if a DescList in a submitted request
+// Merging the nixlDescList to say what backends support each and the corresponding
+// metadata gets really messy. Hard to find if a nixlDescList in a submitted request
 // is in which backend, while at the end of the day only a single backend will
-// process it. So separating the DescLists per backend.
+// process it. So separating the nixlDescLists per backend.
 
 // We don't want to search the descriptors once, and extract the requried metadata
 // separately, so merged the calls by asking the backends to populate the desired
 // descriptor and see if they succeed.
-class MemSection {
+class nixlMemSection {
     protected:
         // Per each type of memory, pointer to a backend that supports it, and
         // which index in that backend. Not keeping any actual memory in MemSection.
@@ -31,20 +31,20 @@ class MemSection {
         // over which backend we choose, and then ask the backend if it supports
         // a dsec_list.
 
-        std::string agent_name;
+        std::string agentName;
 
-        std::vector<Segment> dram_mems;
-        std::vector<Segment> vram_mems;
-        std::vector<Segment> block_mems;
-        std::vector<Segment> file_mems;
+        std::vector<nixlSegment> dramMems;
+        std::vector<nixlSegment> vramMems;
+        std::vector<nixlSegment> blockMems;
+        std::vector<nixlSegment> fileMems;
 
-        std::map<memory_type_t, std::vector<Segment>*> sec_map;
-        std::map<backend_type_t, BackendEngine*> backend_map;
+        std::map<memory_type_t, std::vector<nixlSegment>*> secMap;
+        std::map<backend_type_t, nixlBackendEngine*> backendMap;
 
-        DescList<MetaDesc>* locate_DescList (memory_type_t mem_type,
-                                             BackendEngine *backend) {
+        nixlDescList<nixlMetaDesc>* locateDescList (memory_type_t mem_type,
+                                                    nixlBackendEngine *backend) {
 
-                std::vector<Segment> *target_list = sec_map[mem_type];
+                std::vector<nixlSegment> *target_list = secMap[mem_type];
                 int index = 0;
 
                 for (size_t i=0; i<target_list->size(); ++i)
@@ -59,11 +59,11 @@ class MemSection {
                 return &((*target_list)[index].second);
         }
 
-        int populate (DescList<BasicDesc> query, DescList<MetaDesc>& resp,
-                                                 BackendEngine *backend) {
+        int populate (nixlDescList<nixlBasicDesc> query, 
+                      nixlDescList<nixlMetaDesc>& resp,
+                      nixlBackendEngine *backend) {
 
-                DescList<MetaDesc>* found = locate_DescList(query.get_type(),
-                                                            backend);
+                nixlDescList<nixlMetaDesc>* found = locateDescList(query.get_type(), backend);
                 if (found == nullptr)
                     return -1;
                 else
@@ -71,42 +71,42 @@ class MemSection {
         }
 
     public:
-        MemSection (std::string agent_name);
+        nixlMemSection (std::string agent_name);
 
         // Necessary for RemoteSections
-        int add_backend_handler (BackendEngine *backend);
+        int addBackendHandler (nixlBackendEngine *backend);
 
-        // Find a BasicDesc in the section, if available fills the resp based
+        // Find a nixlBasicDesc in the section, if available fills the resp based
         // on that, and returns the backend that can use the resp
-        BackendEngine* find_query (DescList<BasicDesc> query,
-                                   DescList<MetaDesc>& resp);
-        ~MemSection ();
+        nixlBackendEngine* findQuery (nixlDescList<nixlBasicDesc> query,
+                                      nixlDescList<nixlMetaDesc>& resp);
+        ~nixlMemSection ();
 };
 
-class LocalSection : public MemSection {
+class nixlLocalSection : public nixlMemSection {
     private:
-        DescList<StringDesc> get_StringDesc (Segment input);
+        nixlDescList<nixlStringDesc> getStringDesc (nixlSegment input);
 
     public:
-        int add_DescList (DescList<BasicDesc> mem_elms,
-                          BackendEngine *backend);
+        int addDescList (nixlDescList<nixlBasicDesc> mem_elms,
+                         nixlBackendEngine *backend);
 
-        // Per each BasicDesc, the full region that got registered should be deregistered
-        int remove_DescList (DescList<MetaDesc> mem_elements,
-                             BackendEngine *backend);
+        // Per each nixlBasicDesc, the full region that got registered should be deregistered
+        int removeDescList (nixlDescList<nixlMetaDesc> mem_elements,
+                            nixlBackendEngine *backend);
 
         // Function that extracts the information for metadata server
-        std::vector<StringSegment> get_public_data ();
+        std::vector<nixlStringSegment> getPublicData ();
 
-        ~LocalSection();
+        ~nixlLocalSection();
 };
 
-class RemoteSection : public MemSection {
+class nixlRemoteSection : public nixlMemSection {
     public:
-        int load_public_data (std::vector<StringSegment> input,
-                              std::string remote_agent);
+        int loadPublicData (std::vector<nixlStringSegment> input,
+                            std::string remote_agent);
 
-        ~RemoteSection();
+        ~nixlRemoteSection();
 };
 
 #endif

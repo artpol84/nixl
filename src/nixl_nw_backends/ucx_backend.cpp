@@ -2,13 +2,13 @@
 
 //not sure if this is the best way to handle init_params
 nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params)
-: BackendEngine ((BackendInitParams*) init_params) {
+: nixlBackendEngine ((nixlBackendInitParams*) init_params) {
     std::vector<std::string> devs; /* Empty vector */
     uint64_t n_addr;
 
     uw = new nixlUcxWorker(devs);
-    uw->epAddr(n_addr, worker_size);
-    worker_addr = (void*) n_addr;
+    uw->epAddr(n_addr, workerSize);
+    workerAddr = (void*) n_addr;
 }
 
 // Through parent destructor the unregister will be called.
@@ -54,20 +54,20 @@ void * nixlUcxEngine::_stringToBytes(std::string &s, size_t &size){
 /****************************************
  * Connection management
 *****************************************/
-std::string nixlUcxEngine::get_conn_info() const {
-    return _bytesToString(worker_addr, worker_size);
+std::string nixlUcxEngine::getConnInfo() const {
+    return _bytesToString(workerAddr, workerSize);
 }
 
 
-int nixlUcxEngine::load_remote_conn_info (std::string remote_agent,
-                                          std::string remote_conn_info)
+int nixlUcxEngine::loadRemoteConnInfo (std::string remote_agent,
+                                       std::string remote_conn_info)
 {
     size_t size;
     nixlUcxConnection conn;
     int ret;
     void* addr;
 
-    if(remote_conn_map.find(remote_agent) != remote_conn_map.end()) {
+    if(remoteConnMap.find(remote_agent) != remoteConnMap.end()) {
         //already connected?
         return -1;
     }
@@ -79,9 +79,9 @@ int nixlUcxEngine::load_remote_conn_info (std::string remote_agent,
         return -1;
     }
 
-    conn.remote_agent = remote_agent;
+    conn.remoteAgent = remote_agent;
 
-    remote_conn_map[remote_agent] = conn;
+    remoteConnMap[remote_agent] = conn;
 
     free(addr);
 
@@ -89,20 +89,20 @@ int nixlUcxEngine::load_remote_conn_info (std::string remote_agent,
 }
 
 // Make connection to a remote node accompanied by required info.
-int nixlUcxEngine::make_connection(std::string remote_agent) {
+int nixlUcxEngine::makeConnection(std::string remote_agent) {
     // Nothing to do - lazy connection will be established automatically
     // at first communication
     return 0;
 }
 
-int nixlUcxEngine::listen_for_connection(std::string remote_agent) {
+int nixlUcxEngine::listenForConnection(std::string remote_agent) {
     // Nothing to do - UCX implements one-sided
     return 0;
 }
 
-int nixlUcxEngine::register_mem (BasicDesc &mem, 
-                                 memory_type_t mem_type, 
-                                 BackendMetadata* &out)
+int nixlUcxEngine::registerMem (nixlBasicDesc &mem, 
+                                memory_type_t mem_type, 
+                                nixlBackendMetadata* &out)
 {
     int ret;
     nixlUcxPrivateMetadata *priv = new nixlUcxPrivateMetadata;
@@ -119,14 +119,14 @@ int nixlUcxEngine::register_mem (BasicDesc &mem,
         // TODO: err out
         return -1;
     }
-    priv->rkey_str = _bytesToString((void*) rkey_addr, rkey_size);
+    priv->rkeyStr = _bytesToString((void*) rkey_addr, rkey_size);
 
-    out = (BackendMetadata*) priv; //typecast?
+    out = (nixlBackendMetadata*) priv; //typecast?
 
     return 0; // Or errors
 }
 
-void nixlUcxEngine::deregister_mem (BackendMetadata* desc)
+void nixlUcxEngine::deregisterMem (nixlBackendMetadata* desc)
 {
     nixlUcxPrivateMetadata *priv = (nixlUcxPrivateMetadata*) desc; //typecast?
 
@@ -136,9 +136,9 @@ void nixlUcxEngine::deregister_mem (BackendMetadata* desc)
 
 
 // To be cleaned up
-int nixlUcxEngine::load_remote (StringDesc input,
-                                BackendMetadata* &output,
-                                std::string remote_agent) {
+int nixlUcxEngine::loadRemote (nixlStringDesc input,
+                               nixlBackendMetadata* &output,
+                               std::string remote_agent) {
     void *addr;
     size_t size;
     int ret;
@@ -146,9 +146,9 @@ int nixlUcxEngine::load_remote (StringDesc input,
 
     nixlUcxPublicMetadata *md = new nixlUcxPublicMetadata;
 
-    auto search = remote_conn_map.find(remote_agent);
+    auto search = remoteConnMap.find(remote_agent);
 
-    if(search == remote_conn_map.end()) {
+    if(search == remoteConnMap.end()) {
         //TODO: err: remote connection not found
         return -1;
     }
@@ -162,13 +162,13 @@ int nixlUcxEngine::load_remote (StringDesc input,
         // TODO: error out. Should we indicate which desc failed or unroll everything prior
         return -1;
     }
-    output = (BackendMetadata*) md;
+    output = (nixlBackendMetadata*) md;
     
     free(addr);
     return 0;
 }
 
-int nixlUcxEngine::remove_remote (BackendMetadata* input) {
+int nixlUcxEngine::removeRemote (nixlBackendMetadata* input) {
 
     nixlUcxPublicMetadata *md = (nixlUcxPublicMetadata*) input; //typecast?
 
@@ -179,14 +179,14 @@ int nixlUcxEngine::remove_remote (BackendMetadata* input) {
 }
 
 // using META desc for local list
-int nixlUcxEngine::transfer (DescList<MetaDesc> local,
-                             DescList<MetaDesc> remote,
+int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
+                             nixlDescList<nixlMetaDesc> remote,
                              transfer_op_t op,
                              std::string notif_msg,
-                             BackendTransferHandle* &handle)
+                             nixlBackendTransferHandle* &handle)
 {
-    size_t lcnt = local.desc_count();
-    size_t rcnt = remote.desc_count();
+    size_t lcnt = local.descCount();
+    size_t rcnt = remote.descCount();
     size_t i, ret;
 
     nixlUcxReq req;
@@ -221,12 +221,12 @@ int nixlUcxEngine::transfer (DescList<MetaDesc> local,
         }
     }
 
-    handle = (BackendTransferHandle*) req.reqh;
+    handle = (nixlBackendTransferHandle*) req.reqh;
 
     return ret;
 }
 
-int nixlUcxEngine::check_transfer (BackendTransferHandle* handle) {
+int nixlUcxEngine::checkTransfer (nixlBackendTransferHandle* handle) {
     nixlUcxReq req;
     req.reqh = (void*) handle;
     return uw->test(req);

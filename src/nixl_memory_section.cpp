@@ -4,28 +4,28 @@
 #include "internal/mem_section.h"
 #include "internal/transfer_backend.h"
 
-MemSection:: MemSection (std::string agent_name) {
-    this->agent_name = agent_name;
+nixlMemSection:: nixlMemSection (std::string agent_name) {
+    this->agentName = agent_name;
     // For easier navigation. If desired we can put the vectors
     // directly as key and remove them from the class
-    sec_map.insert({DRAM_SEG, &dram_mems});
-    sec_map.insert({VRAM_SEG, &vram_mems});
-    sec_map.insert({BLK_SEG,  &block_mems});
-    sec_map.insert({FILE_SEG, &file_mems});
+    secMap.insert({DRAM_SEG, &dramMems});
+    secMap.insert({VRAM_SEG, &vramMems});
+    secMap.insert({BLK_SEG,  &blockMems});
+    secMap.insert({FILE_SEG, &fileMems});
 }
 
 // Necessary for RemoteSections
-int MemSection::add_backend_handler (BackendEngine *backend) {
+int nixlMemSection::addBackendHandler (nixlBackendEngine *backend) {
     // check for error in get_type
-    backend_map.insert({backend->get_type(), backend});
+    backendMap.insert({backend->getType(), backend});
     return 0;
 }
 
-// Find a BasicDesc in the section, if available fills the resp based
+// Find a nixlBasicDesc in the section, if available fills the resp based
 // on that, and returns the backend that can use the resp
-BackendEngine* MemSection::find_query (DescList<BasicDesc> query,
-                                         DescList<MetaDesc>& resp) {
-    std::vector<Segment> *target_list = sec_map[query.get_type()];
+nixlBackendEngine* nixlMemSection::findQuery (nixlDescList<nixlBasicDesc> query,
+                                              nixlDescList<nixlMetaDesc>& resp) {
+    std::vector<nixlSegment> *target_list = secMap[query.get_type()];
     // We can have preference over backends, for now just looping over
     for (auto & elm : *target_list)
         if (populate(query, resp, elm.first) == 0)
@@ -33,33 +33,33 @@ BackendEngine* MemSection::find_query (DescList<BasicDesc> query,
     return nullptr;
 }
 
-MemSection::~MemSection () {
-    dram_mems.clear();
-    vram_mems.clear();
-    block_mems.clear();
-    file_mems.clear();
-    sec_map.clear();
-    backend_map.clear();
+nixlMemSection::~nixlMemSection () {
+    dramMems.clear();
+    vramMems.clear();
+    blockMems.clear();
+    fileMems.clear();
+    secMap.clear();
+    backendMap.clear();
 }
 
-DescList<StringDesc> LocalSection::get_StringDesc (Segment input){
-    StringDesc element;
-    BasicDesc *p = &element;
-    DescList<StringDesc> public_meta(input.second.get_type());
+nixlDescList<nixlStringDesc> nixlLocalSection::getStringDesc (nixlSegment input){
+    nixlStringDesc element;
+    nixlBasicDesc *p = &element;
+    nixlDescList<nixlStringDesc> public_meta(input.second.get_type());
 
-    for (int i=0; i<input.second.desc_count(); ++i) {
-        *p = (BasicDesc) input.second[i];
-        element.metadata = input.first->get_public_data(input.second[i].metadata);
-        public_meta.add_desc(element);
+    for (int i=0; i<input.second.descCount(); ++i) {
+        *p = (nixlBasicDesc) input.second[i];
+        element.metadata = input.first->getPublicData(input.second[i].metadata);
+        public_meta.addDesc(element);
     }
     return public_meta;
 }
 
 
-int LocalSection::add_DescList (DescList<BasicDesc> mem_elems,
-                                  BackendEngine *backend) {
+int nixlLocalSection::addDescList (nixlDescList<nixlBasicDesc> mem_elems,
+                                       nixlBackendEngine *backend) {
     memory_type_t mem_type = mem_elems.get_type();
-    std::vector<Segment> *target_list = sec_map[mem_type]; // add checks
+    std::vector<nixlSegment> *target_list = secMap[mem_type]; // add checks
     int index = -1;
 
     for (size_t i=0; i<target_list->size(); ++i)
@@ -69,15 +69,15 @@ int LocalSection::add_DescList (DescList<BasicDesc> mem_elems,
         }
 
     int ret;
-    MetaDesc out;
+    nixlMetaDesc out;
     for (auto & elm : mem_elems) {
         // We can add checks for not overlapping previous elements
-        // Register_mem is supposed to add the element to the list
+        // RegisterMem is supposed to add the element to the list
         // If necessary we can get the element and add it here.
         // Explained more in ucx register method.
 
         // ONLY FILLING metadata NOW
-        ret = backend->register_mem(elm, mem_type, out.metadata);
+        ret = backend->registerMem(elm, mem_type, out.metadata);
         if (ret<0)
             // better to deregister the previous entries added
             return ret;
@@ -85,25 +85,25 @@ int LocalSection::add_DescList (DescList<BasicDesc> mem_elems,
         // First time adding this backend for this type of memory
         if (index < 0){
             index = target_list->size();
-            DescList<MetaDesc> new_desc(mem_type);
-            new_desc.add_desc(out);
+            nixlDescList<nixlMetaDesc> new_desc(mem_type);
+            new_desc.addDesc(out);
             target_list->push_back(std::make_pair(backend, new_desc));
             // Overrides are fine, assuming single instance
-            backend_map.insert({backend->get_type(),backend});
+            backendMap.insert({backend->getType(),backend});
         } else {
             // If sorting is desired and not using set, we should do it here
-            (*target_list)[index].second.add_desc(out);
+            (*target_list)[index].second.addDesc(out);
         }
     }
     return 0;
 }
 
-// Per each BasicDesc, the full region that got registered should be deregistered
-int LocalSection::remove_DescList (DescList<MetaDesc> mem_elements,
-                                     BackendEngine *backend) {
+// Per each nixlBasicDesc, the full region that got registered should be deregistered
+int nixlLocalSection::removeDescList (nixlDescList<nixlMetaDesc> mem_elements,
+                                          nixlBackendEngine *backend) {
     memory_type_t mem_type = mem_elements.get_type();
-    std::vector<Segment> *target_list = sec_map[mem_type];
-    DescList<MetaDesc> * target_descs;
+    std::vector<nixlSegment> *target_list = secMap[mem_type];
+    nixlDescList<nixlMetaDesc> * target_descs;
     int index1 = -1;
     int index2 = -1;
 
@@ -120,19 +120,19 @@ int LocalSection::remove_DescList (DescList<MetaDesc> mem_elements,
     target_descs = &(*target_list)[index1].second;
 
     for (auto & elm : mem_elements) {
-        index2 = target_descs->get_index(elm);
+        index2 = target_descs->getIndex(elm);
         if (index2<0)
             // Errorful situation, not sure helpful to deregister the rest, best try
             return -1;
 
-        MetaDesc *p = &(*target_descs)[index2];
+        nixlMetaDesc *p = &(*target_descs)[index2];
         // Backend deregister takes care of metadata destruction,
-        backend->deregister_mem ((*p).metadata);
+        backend->deregisterMem ((*p).metadata);
 
-        target_descs->rem_desc(index2);
+        target_descs->remDesc(index2);
 
-        if (target_descs->desc_count()==0)
-            // No need to remove from backend_map, assuming backends are alive
+        if (target_descs->descCount()==0)
+            // No need to remove from backendMap, assuming backends are alive
             target_list->erase(target_list->begin() + index1);
     }
 
@@ -140,49 +140,49 @@ int LocalSection::remove_DescList (DescList<MetaDesc> mem_elements,
 }
 
 // Function that extracts the information for metadata server
-std::vector<StringSegment> LocalSection::get_public_data () {
-    std::vector<StringSegment> output;
-    StringDesc element;
+std::vector<nixlStringSegment> nixlLocalSection::getPublicData () {
+    std::vector<nixlStringSegment> output;
+    nixlStringDesc element;
 
-    for (auto &seg : sec_map) // Iterate over mem_type vectors
+    for (auto &seg : secMap) // Iterate over mem_type vectors
         for (auto &elm : *seg.second) // Iterate over segments
-            output.push_back(std::make_pair(elm.first->get_type(),
-                                            get_StringDesc(elm)));
+            output.push_back(std::make_pair(elm.first->getType(),
+                                            getStringDesc(elm)));
 
     return output;
 }
 
-LocalSection::~LocalSection() {
-    for (auto &seg : sec_map) // Iterate over mem_type vectors
+nixlLocalSection::~nixlLocalSection() {
+    for (auto &seg : secMap) // Iterate over mem_type vectors
         for (auto &elm : *seg.second) // Iterate over segments
-            remove_DescList (elm.second, elm.first);
+            removeDescList (elm.second, elm.first);
 }
 
-int RemoteSection::load_public_data (std::vector<StringSegment> input,
-                                      std::string remote_agent) {
+int nixlRemoteSection::loadPublicData (std::vector<nixlStringSegment> input,
+                                     std::string remote_agent) {
     int res;
     for (auto &elm : input) {
         backend_type_t backend_type = elm.first;
         memory_type_t mem_type = elm.second.get_type();
-        std::vector<Segment> *target_list = sec_map[mem_type];
+        std::vector<nixlSegment> *target_list = secMap[mem_type];
         // Check for error of not being in map
-        DescList<MetaDesc> temp (mem_type);
-        MetaDesc temp2;
-        BasicDesc *p = &temp2;
+        nixlDescList<nixlMetaDesc> temp (mem_type);
+        nixlMetaDesc temp2;
+        nixlBasicDesc *p = &temp2;
 
         for(auto &elm2 : elm.second) {
             (*p) = elm2;
-            res =  backend_map[backend_type]->load_remote(elm2, temp2.metadata, remote_agent);
-            temp.add_desc(temp2);
+            res =  backendMap[backend_type]->loadRemote(elm2, temp2.metadata, remote_agent);
+            temp.addDesc(temp2);
 
         }
         if (res<0)
             return res;
 
-        target_list->push_back(std::make_pair(backend_map[backend_type], temp));
+        target_list->push_back(std::make_pair(backendMap[backend_type], temp));
     }
     return 0;
 }
 
-RemoteSection::~RemoteSection() {
+nixlRemoteSection::~nixlRemoteSection() {
 }

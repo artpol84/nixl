@@ -3,51 +3,51 @@
 
 #include "mem_section.h"
 
-class NIXLMetadata {
+class nixlMetadata {
     public:
-        std::string                agent_name;
-        std::vector<StringSegment> sec_md;
-        std::vector<StringConnMD>  conn_md;
+        std::string                    agentName;
+        std::vector<nixlStringSegment> secMd;
+        std::vector<nixlStringConnMD>  connMd;
 };
 
 // This class talks to the metadata server.
-class MetadataHandler {
+class nixlMetadataHandler {
     private:
         // Maybe the connection information should go to Agent,
         // to add p2p support
-        std::string   ip_address;
+        std::string   ipAddress;
         uint16_t      port;
 
     public:
         // Creates the connection to the metadata server
-        MetadataHandler(std::string& ip_address, uint16_t port);
-        ~MetadataHandler();
+        nixlMetadataHandler(std::string& ip_address, uint16_t port);
+        ~nixlMetadataHandler();
 
         /** Sync the local section with the metadata server */
-        int send_local_metadata(NIXLMetadata& local_md);
+        int sendLocalMetadata(nixlMetadata& local_md);
 
         // Get a remote section from the metadata server
-        NIXLMetadata get_remote_md(std::string remote_agent);
+        nixlMetadata getRemoteMd(std::string remote_agent);
 
         // Invalidating the information in the metadata server
-        int remove_local_metadata(std::string local_agent);
+        int removeLocalMetadata(std::string local_agent);
 };
 
-class AgentDataPrivate {
+class nixlAgentDataPrivate {
     public:
-        std::string                    name;
+        std::string                        name;
         // Device specfic metadata such as topology/others
-        DeviceMetadata                 device_meta;
+        nixlDeviceMetadata                 deviceMeta;
         // Handles to different registered backend engines
-        std::vector<BackendEngine *>   BackendEngines;
+        std::vector<nixlBackendEngine *>   nixlBackendEngines;
         // Memory section objects for local and list of cached remote objects
-        LocalSection                   *memory_section;
+        nixlLocalSection                   *memorySection;
         // Handler for metadata server access
-        MetadataHandler                md_handler;
+        nixlMetadataHandler                mdHandler;
         // Remote section(s) for Transfer Agent stored locally.
-        std::vector<RemoteSection *>   RemoteSections;
+        std::vector<nixlRemoteSection *>   RemoteSections;
 
-        NIXLMetadata  local_metadata;
+        nixlMetadata  localMetadata;
 
         // // Transfer connection class handles
         // // Discovery and connection information of different nodes

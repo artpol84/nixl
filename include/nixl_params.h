@@ -5,24 +5,24 @@
 #include <cstdint>
 #include "internal/transfer_backend.h"
 
-class SystemTopology {
+class nixlSystemTopology {
     // System Topology class TBD
 };
 
 // Per node device metadata information
-class DeviceMetadata {
+class nixlDeviceMetadata {
     // Information about the node that needs to be sent to ETCD
     // Such as list of devices and their type, assigned IP to ETCD
     // Some topology info might be added as well (Ryan's comment)
     // TBD: Like Topology class - to get system specific information/tuning
     public:
-        SystemTopology topology;
-        std::string    src_ip_address;
-        uint16_t       src_port;
+        nixlSystemTopology topology;
+        std::string    srcIpAddress;
+        uint16_t       srcPort;
 };
 
 // Example backend initialization data for UCX
-class nixlUcxInitParams : public BackendInitParams {
+class nixlUcxInitParams : public nixlBackendInitParams {
     public:
         // TBD: Required parameters to initialize UCX that we need to get from the user
 };

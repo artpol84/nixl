@@ -5,16 +5,16 @@
 
 #include "utils/ucx/ucx_utils.h"
 
-class nixlUcxTransferHandle : public BackendTransferHandle {
+class nixlUcxTransferHandle : public nixlBackendTransferHandle {
     private:
         nixlUcxReq req;
 
     friend class nixlUcxEngine;
 };
 
-class nixlUcxConnection : public BackendConnMD {
+class nixlUcxConnection : public nixlBackendConnMD {
     private:
-        std::string remote_agent;
+        std::string remoteAgent;
         nixlUcxEp ep;
 
     public:
@@ -24,33 +24,33 @@ class nixlUcxConnection : public BackendConnMD {
 };
 
 // A private metadata has to implement get, and has all the metadata
-class nixlUcxPrivateMetadata : public BackendMetadata {
+class nixlUcxPrivateMetadata : public nixlBackendMetadata {
     private:
         nixlUcxMem mem;
-        std::string rkey_str;
+        std::string rkeyStr;
 
     public:
-        nixlUcxPrivateMetadata() : BackendMetadata(true) {
+        nixlUcxPrivateMetadata() : nixlBackendMetadata(true) {
         }
 
         ~nixlUcxPrivateMetadata(){
         }
 
         std::string get() const {
-            return rkey_str;
+            return rkeyStr;
         }
 
     friend class nixlUcxEngine;
 };
 
 // A public metadata has to implement put, and only has the remote metadata
-class nixlUcxPublicMetadata : public BackendMetadata {
+class nixlUcxPublicMetadata : public nixlBackendMetadata {
 
     public:
         nixlUcxRkey rkey;
         nixlUcxConnection conn;
 
-        nixlUcxPublicMetadata() : BackendMetadata(false) {}
+        nixlUcxPublicMetadata() : nixlBackendMetadata(false) {}
 
         ~nixlUcxPublicMetadata(){
         }
@@ -61,15 +61,15 @@ class nixlUcxPublicMetadata : public BackendMetadata {
         // }
 };
 
-class nixlUcxEngine : BackendEngine {
+class nixlUcxEngine : nixlBackendEngine {
     private:
-        nixlUcxInitParams init_params;
+        nixlUcxInitParams initParams;
         nixlUcxWorker* uw;
-        void *worker_addr;
-        size_t worker_size;
+        void *workerAddr;
+        size_t workerSize;
 
         // Map of agent name to saved nixlUcxConnection info
-        std::map<std::string, nixlUcxConnection> remote_conn_map;
+        std::map<std::string, nixlUcxConnection> remoteConnMap;
 
         // Local private data
         //std::vector<nixlUcxPrivateMetadata> vram_public;
@@ -86,26 +86,26 @@ class nixlUcxEngine : BackendEngine {
         void *_stringToBytes(std::string &s, size_t &size);
 
     public:
-        nixlUcxEngine(nixlUcxInitParams* init_params);
+        nixlUcxEngine(nixlUcxInitParams* initParams);
 
         ~nixlUcxEngine();
 
-        std::string get_conn_info() const;
-        int load_remote_conn_info (std::string remote_agent, std::string remote_conn_info);
-        int make_connection(std::string remote_agent);
-        int listen_for_connection(std::string remote_agent);
+        std::string getConnInfo() const;
+        int loadRemoteConnInfo (std::string remote_agent, std::string remote_conn_info);
+        int makeConnection(std::string remote_agent);
+        int listenForConnection(std::string remote_agent);
 
-        int register_mem (BasicDesc &mem, memory_type_t mem_type, BackendMetadata* &out );
-        void deregister_mem (BackendMetadata* desc);
+        int registerMem (nixlBasicDesc &mem, memory_type_t mem_type, nixlBackendMetadata* &out );
+        void deregisterMem (nixlBackendMetadata* desc);
 
-        int load_remote (StringDesc input, BackendMetadata* &output, std::string remote_agent);
+        int loadRemote (nixlStringDesc input, nixlBackendMetadata* &output, std::string remote_agent);
 
-        int remove_remote (BackendMetadata* input);
+        int removeRemote (nixlBackendMetadata* input);
 
         //MetaDesc instead of basic for local
-        int transfer (DescList<MetaDesc> local, DescList<MetaDesc> remote, transfer_op_t op, std::string notif_msg, BackendTransferHandle* &handle);
+        int transfer (nixlDescList<nixlMetaDesc> local, nixlDescList<nixlMetaDesc> remote, transfer_op_t op, std::string notif_msg, nixlBackendTransferHandle* &handle);
 
-        int check_transfer (BackendTransferHandle* handle);
+        int checkTransfer (nixlBackendTransferHandle* handle);
 
         int progress();
 };

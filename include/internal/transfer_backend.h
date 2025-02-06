@@ -9,34 +9,34 @@
 typedef enum {READ, WRITE} transfer_op_t;
 
 // A base class to point to backend initialization data
-class BackendInitParams {
+class nixlBackendInitParams {
     public:
-        backend_type_t backend_type;
-        backend_type_t get_type () {
-            return backend_type;
+        backend_type_t backendType;
+        backend_type_t getType () {
+            return backendType;
         }
 };
 
-class BackendTransferHandle {
+class nixlBackendTransferHandle {
 };
 
 // Main goal of BackendMetadata class is to have a common pointer type
 // for different backend metadata
 // Not sure get/set for serializer/deserializer is necessary
 // We can add backend_type and memory_type, but can't see use case
-class BackendMetadata {
-    bool private_metadata = true;
+class nixlBackendMetadata {
+    bool privateMetadata = true;
 
     public:
-        BackendMetadata(bool is_private){
-            private_metadata = is_private;
+        nixlBackendMetadata(bool isPrivate){
+            privateMetadata = isPrivate;
         }
 
-        virtual ~BackendMetadata(){
+        virtual ~nixlBackendMetadata(){
         }
 
-        bool is_private () const { return  private_metadata; }
-        bool is_public  () const { return !private_metadata; }
+        bool isPrivate () const { return  privateMetadata; }
+        bool isPublic  () const { return !privateMetadata; }
 
         // Desired serializer instead of std::string
         virtual std::string get() const {
@@ -54,94 +54,94 @@ class BackendMetadata {
 // This class would include the required information to make
 // a connection to a remote node. Note that local information
 // is passed during the constructor and through BackendInitParams
-class BackendConnMD {
+class nixlBackendConnMD {
   public:
     // And some other details
-    std::string   dst_ip_address;
-    uint16_t      dst_port;
+    std::string   dstIpAddress;
+    uint16_t      dstPort;
 };
 
 // A pointer required to a metadata object for backends next to each BasicDesc
-class MetaDesc : public BasicDesc {
+class nixlMetaDesc : public nixlBasicDesc {
   public:
         // To be able to point to any object
-        BackendMetadata *metadata;
+        nixlBackendMetadata *metadata;
 
         // Main use case is to take the BasicDesc from another object, so just
         // the metadata part is separately copied here, used in DescList
-        inline void copy_meta (const MetaDesc& meta) {
+        inline void copyMeta (const nixlMetaDesc& meta) {
             this->metadata = meta.metadata;
         }
 };
 
 // String of metadata next to each BasicDesc, used to import/export
-class StringDesc : public BasicDesc {
+class nixlStringDesc : public nixlBasicDesc {
     public:
         std::string metadata;
-        inline void copy_meta (const StringDesc& meta){
+        inline void copyMeta (const nixlStringDesc& meta){
             this->metadata = meta.metadata;
         }
 };
 
 // Base backend engine class, hides away different backend implementaitons
-class BackendEngine { // maybe rename to transfer_BackendEngine
+class nixlBackendEngine { // maybe rename to transfer_BackendEngine
     private:
-        backend_type_t backend_type;
-        BackendInitParams *init_params;
+        backend_type_t backendType;
+        nixlBackendInitParams *initParams;
 
     public:
-        BackendEngine (BackendInitParams *init_params) {
-            this->backend_type = init_params->get_type();
-            this->init_params  = init_params;
+        nixlBackendEngine (nixlBackendInitParams *initParams) {
+            this->backendType = initParams->getType();
+            this->initParams  = initParams;
         }
 
-        backend_type_t get_type () const { return backend_type; }
+        backend_type_t getType () const { return backendType; }
 
         // Can add checks for being public metadata
-        std::string get_public_data (BackendMetadata* &meta) const {
+        std::string getPublicData (nixlBackendMetadata* &meta) const {
             return meta->get();
         }
 
-        virtual ~BackendEngine () {};
+        virtual ~nixlBackendEngine () {};
 
         // Register and deregister local memory
-        virtual int register_mem (BasicDesc &mem, memory_type_t mem_type,
-                                  BackendMetadata* &out) = 0;
-        virtual void deregister_mem (BackendMetadata* desc) = 0;
+        virtual int registerMem (nixlBasicDesc &mem, memory_type_t mem_type,
+                                 nixlBackendMetadata* &out) = 0;
+        virtual void deregisterMem (nixlBackendMetadata* desc) = 0;
 
         // If we use an external connection manager, the next 3 methods might change
         // Provide the required connection info for remote nodes
-        virtual std::string get_conn_info() const = 0;
+        virtual std::string getConnInfo() const = 0;
 
         // Deserialize from string the connection info for a remote node
-        virtual int load_remote_conn_info (std::string remote_agent,
-                                           std::string remote_conn_info) = 0;
+        virtual int loadRemoteConnInfo (std::string remote_agent,
+                                        std::string remote_conn_info) = 0;
 
         // Make connection to a remote node identified by the name into loaded conn infos
-        virtual int make_connection(std::string remote_agent) = 0;
+        virtual int makeConnection(std::string remote_agent) = 0;
 
         // Listen for connections from a remote agent
-        virtual int listen_for_connection(std::string remote_agent) = 0;
+        virtual int listenForConnection(std::string remote_agent) = 0;
 
         // Add and remove remtoe metadata
-        virtual int load_remote (StringDesc input,
-                                 BackendMetadata* &output,
-                                 std::string remote_agent) = 0;
+        virtual int loadRemote (nixlStringDesc input,
+                                nixlBackendMetadata* &output,
+                                std::string remote_agent) = 0;
 
-        virtual int remove_remote (BackendMetadata* input) = 0;
+        virtual int removeRemote (nixlBackendMetadata* input) = 0;
 
         // Posting a request, to be updated to return an async handler
-        virtual int transfer (DescList<MetaDesc> local,
-                              DescList<MetaDesc> remote,
+        virtual int transfer (nixlDescList<nixlMetaDesc> local,
+                              nixlDescList<nixlMetaDesc> remote,
                               transfer_op_t operation,
                               std::string notif_msg,
-                              BackendTransferHandle* &handle) = 0;
+                              nixlBackendTransferHandle* &handle) = 0;
 
         // Send the notification message to the target
-        int send_notification(BackendTransferHandle* handle);
+        int sendNotification(nixlBackendTransferHandle* handle);
 
         //Use a handle to progress backend engine and see if a transfer is completed or not
-        virtual int check_transfer(BackendTransferHandle* handle) = 0;
+        virtual int checkTransfer(nixlBackendTransferHandle* handle) = 0;
 
         //Force backend engine worker to progress
         virtual int progress(){
