@@ -5,6 +5,12 @@
 
 #include "utils/ucx/ucx_utils.h"
 
+typedef enum {CONN_CHECK, TRANSFER_STR} ucx_cb_op_t;
+
+struct nixl_ucx_am_hdr {
+    ucx_cb_op_t op;
+};
+
 class nixlUcxTransferHandle : public nixlBackendTransferHandle {
     private:
         nixlUcxReq req;
@@ -18,6 +24,7 @@ class nixlUcxConnection : public nixlBackendConnMD {
         nixlUcxEp ep;
 
     public:
+        volatile bool connected;
         // Extra information required for UCX connections
 
     friend class nixlUcxEngine;
@@ -92,7 +99,7 @@ class nixlUcxEngine : nixlBackendEngine {
 
         std::string getConnInfo() const;
         int loadRemoteConnInfo (std::string remote_agent, std::string remote_conn_info);
-        int makeConnection(std::string remote_agent);
+        int makeConnection(std::string local_agent, std::string remote_agent);
         int listenForConnection(std::string remote_agent);
 
         int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type, nixlBackendMetadata* &out);
@@ -108,5 +115,8 @@ class nixlUcxEngine : nixlBackendEngine {
         transfer_state_t checkTransfer (nixlBackendTransferHandle* handle);
 
         int progress();
+
+        //public function for UCX worker to mark connections as connected
+        int updateConnMap(std::string remote_agent);
 };
 

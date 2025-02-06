@@ -151,7 +151,7 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
                                         std::string remote_conn_info) = 0;
 
         // Make connection to a remote node identified by the name into loaded conn infos
-        virtual int makeConnection(std::string remote_agent) = 0;
+        virtual int makeConnection(std::string local_agent, std::string remote_agent) = 0;
 
         // Listen for connections from a remote agent
         virtual int listenForConnection(std::string remote_agent) = 0;

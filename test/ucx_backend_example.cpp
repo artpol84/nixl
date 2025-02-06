@@ -35,7 +35,7 @@ int main()
 
     // One side gets to listen, one side to initiate. Same string is passed as the last 2 steps
     ret1 = ucx1-> listenForConnection(agent2);
-    ret2 = ucx2-> makeConnection(agent1);
+    ret2 = ucx2-> makeConnection(agent2, agent1);
 
     assert(ret1 == 0);
     assert(ret2 == 0);
