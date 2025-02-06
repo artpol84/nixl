@@ -56,12 +56,12 @@ int main()
     for(i = 0; i < 2; i++) {
         uint64_t addr;
         size_t size;
-        assert(0 == w[i].ep_addr(addr, size));
+        assert(0 == w[i].epAddr(addr, size));
         assert(0 == w[!i].connect((void*) addr, size, ep[!i]));
         free((void*) addr);
-        assert(0 == w[i].mem_reg(buffer[i], 128, mem[i]));
-        assert(0 == w[i].mem_addr(mem[i], addr, size));
-        assert(0 == w[!i].rkey_import(ep[!i], (void*) addr, size, rkey[!i]));
+        assert(0 == w[i].memReg(buffer[i], 128, mem[i]));
+        assert(0 == w[i].packRkey(mem[i], addr, size));
+        assert(0 == w[!i].rkeyImport(ep[!i], (void*) addr, size, rkey[!i]));
         free((void*) addr);
     }
 
@@ -132,8 +132,8 @@ int main()
 
     /* Test shutdown */
     for(i = 0; i < 2; i++) {
-        w[i].rkey_destroy(rkey[i]);
-        w[i].mem_dereg(mem[i]);
+        w[i].rkeyDestroy(rkey[i]);
+        w[i].memDereg(mem[i]);
         assert(0 == w[i].disconnect(ep[i]));
     }
 

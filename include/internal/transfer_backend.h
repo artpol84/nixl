@@ -32,14 +32,17 @@ class BackendMetadata {
             private_metadata = is_private;
         }
 
+        virtual ~BackendMetadata(){
+        }
+
         bool is_private () const { return  private_metadata; }
         bool is_public  () const { return !private_metadata; }
 
         // Desired serializer instead of std::string
-        std::string get() const {
+        virtual std::string get() const {
             std::string err = "Not Implemented";
             return err;
-        };
+        }
 
         // To be able to populate when receiving data
         int set(std::string) {
@@ -95,7 +98,7 @@ class BackendEngine { // maybe rename to transfer_BackendEngine
         backend_type_t get_type () const { return backend_type; }
 
         // Can add checks for being public metadata
-        virtual std::string get_public_data (BackendMetadata* &meta) const {
+        std::string get_public_data (BackendMetadata* &meta) const {
             return meta->get();
         }
 

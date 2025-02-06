@@ -57,7 +57,7 @@ ucs_status_t rndv_test (void *arg, const void *header,
     
     assert(param->recv_attr & UCP_AM_RECV_ATTR_FLAG_RNDV);
    
-    ret = am_worker->get_rndv_data(data, recv_buffer, length, &recv_param, req);
+    ret = am_worker->getRndvData(data, recv_buffer, length, &recv_param, req);
     assert(ret == 0);
 
     while(ret == 0){
@@ -95,7 +95,7 @@ int main()
     for(i = 0; i < 2; i++) {
         uint64_t addr;
         size_t size;
-        assert(0 == w[i].ep_addr(addr, size));
+        assert(0 == w[i].epAddr(addr, size));
         assert(0 == w[!i].connect((void*) addr, size, ep[!i]));
 	
 	//no need for mem_reg with active messages
@@ -106,19 +106,19 @@ int main()
     }
 
     /* Register active message callbacks */
-    ret = w[0].reg_am_callback(check_cb_id, check_buffer, NULL);
+    ret = w[0].regAmCallback(check_cb_id, check_buffer, NULL);
     assert(ret == 0);
 
     w[0].progress();
     w[1].progress();
 
-    ret = w[0].reg_am_callback(rndv_cb_id, rndv_test, &(w[0]));
+    ret = w[0].regAmCallback(rndv_cb_id, rndv_test, &(w[0]));
     assert(ret == 0);
     
     w[0].progress();
 
     /* Test first callback */
-    ret = w[1].send_am(ep[1], check_cb_id, &hdr, sizeof(struct sample_header), (void*) &buffer, sizeof(buffer), 0, req);
+    ret = w[1].sendAm(ep[1], check_cb_id, &hdr, sizeof(struct sample_header), (void*) &buffer, sizeof(buffer), 0, req);
     assert(ret == 0);
 
     while(ret == 0){
@@ -132,7 +132,7 @@ int main()
     uint32_t flags = 0;
     flags |= UCP_AM_SEND_FLAG_RNDV;
 
-    ret = w[1].send_am(ep[1], rndv_cb_id, &hdr, sizeof(struct sample_header), big_buffer, 8192, flags, req);
+    ret = w[1].sendAm(ep[1], rndv_cb_id, &hdr, sizeof(struct sample_header), big_buffer, 8192, flags, req);
     assert(ret == 0);
 
     while(ret == 0){

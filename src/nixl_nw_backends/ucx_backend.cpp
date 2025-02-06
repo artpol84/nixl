@@ -7,7 +7,7 @@ nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params)
     uint64_t n_addr;
 
     uw = new nixlUcxWorker(devs);
-    uw->ep_addr(n_addr, worker_size);
+    uw->epAddr(n_addr, worker_size);
     worker_addr = (void*) n_addr;
 }
 
@@ -23,7 +23,7 @@ nixlUcxEngine::~nixlUcxEngine () {
  * Helpers
 *****************************************/
 
-std::string nixlUcxEngine::_bytes_to_string(void *buf, size_t size) const {
+std::string nixlUcxEngine::_bytesToString(void *buf, size_t size) const {
     std::string ret_str;
 
     char temp[16];
@@ -37,7 +37,7 @@ std::string nixlUcxEngine::_bytes_to_string(void *buf, size_t size) const {
     return ret_str;
 }
 
-void * nixlUcxEngine::_string_to_bytes(std::string &s, size_t &size){
+void * nixlUcxEngine::_stringToBytes(std::string &s, size_t &size){
     size = s.size()/2;
     uint8_t* ret = (uint8_t*) calloc(1, size);
     char temp[3];
@@ -51,20 +51,16 @@ void * nixlUcxEngine::_string_to_bytes(std::string &s, size_t &size){
     return ret;
 }
 
-std::string nixlUcxEngine::get_public_data(BackendMetadata* &meta) const {
-    return ((nixlUcxPrivateMetadata*) meta)->get(); 
-}
-
 /****************************************
  * Connection management
 *****************************************/
 std::string nixlUcxEngine::get_conn_info() const {
-    return _bytes_to_string(worker_addr, worker_size);
+    return _bytesToString(worker_addr, worker_size);
 }
 
 
 int nixlUcxEngine::load_remote_conn_info (std::string remote_agent,
-                                       std::string remote_conn_info)
+                                          std::string remote_conn_info)
 {
     size_t size;
     nixlUcxConnection conn;
@@ -76,7 +72,7 @@ int nixlUcxEngine::load_remote_conn_info (std::string remote_agent,
         return -1;
     }
 
-    addr = _string_to_bytes(remote_conn_info, size);
+    addr = _stringToBytes(remote_conn_info, size);
     ret = uw->connect(addr, size, conn.ep);
     if (ret) {
         // TODO: print error
@@ -104,25 +100,26 @@ int nixlUcxEngine::listen_for_connection(std::string remote_agent) {
     return 0;
 }
 
-int nixlUcxEngine::register_mem (BasicDesc &mem, memory_type_t mem_type,
-                              BackendMetadata* &out)
+int nixlUcxEngine::register_mem (BasicDesc &mem, 
+                                 memory_type_t mem_type, 
+                                 BackendMetadata* &out)
 {
     int ret;
     nixlUcxPrivateMetadata *priv = new nixlUcxPrivateMetadata;
-    uint64_t mem_addr;
-    size_t size;
+    uint64_t rkey_addr;
+    size_t rkey_size;
 
-    ret = uw->mem_reg((void*) mem.addr, mem.len, priv->mem);
+    ret = uw->memReg((void*) mem.addr, mem.len, priv->mem);
     if (ret) {
         // TODO: err out
         return -1;
     }
-    ret = uw->mem_addr(priv->mem, mem_addr, size);
+    ret = uw->packRkey(priv->mem, rkey_addr, rkey_size);
     if (ret) {
         // TODO: err out
         return -1;
     }
-    priv->rkey_str = _bytes_to_string((void*) mem_addr, size);
+    priv->rkey_str = _bytesToString((void*) rkey_addr, rkey_size);
 
     out = (BackendMetadata*) priv; //typecast?
 
@@ -133,15 +130,15 @@ void nixlUcxEngine::deregister_mem (BackendMetadata* desc)
 {
     nixlUcxPrivateMetadata *priv = (nixlUcxPrivateMetadata*) desc; //typecast?
 
-    uw->mem_dereg(priv->mem);
+    uw->memDereg(priv->mem);
     delete priv;
 }
 
 
 // To be cleaned up
 int nixlUcxEngine::load_remote (StringDesc input,
-                             BackendMetadata* &output,
-                             std::string remote_agent) {
+                                BackendMetadata* &output,
+                                std::string remote_agent) {
     void *addr;
     size_t size;
     int ret;
@@ -157,10 +154,10 @@ int nixlUcxEngine::load_remote (StringDesc input,
     }
     conn = search->second;
 
-    addr = _string_to_bytes(input.metadata, size);
+    addr = _stringToBytes(input.metadata, size);
 
     md->conn = conn;
-    ret = uw->rkey_import(conn.ep, addr, size, md->rkey);
+    ret = uw->rkeyImport(conn.ep, addr, size, md->rkey);
     if (ret) {
         // TODO: error out. Should we indicate which desc failed or unroll everything prior
         return -1;
@@ -175,7 +172,7 @@ int nixlUcxEngine::remove_remote (BackendMetadata* input) {
 
     nixlUcxPublicMetadata *md = (nixlUcxPublicMetadata*) input; //typecast?
 
-    uw->rkey_destroy(md->rkey);
+    uw->rkeyDestroy(md->rkey);
     delete md;
 
     return 0;
@@ -183,10 +180,10 @@ int nixlUcxEngine::remove_remote (BackendMetadata* input) {
 
 // using META desc for local list
 int nixlUcxEngine::transfer (DescList<MetaDesc> local,
-                          DescList<MetaDesc> remote,
-                          transfer_op_t op,
-                          std::string notif_msg,
-                          BackendTransferHandle* &handle)
+                             DescList<MetaDesc> remote,
+                             transfer_op_t op,
+                             std::string notif_msg,
+                             BackendTransferHandle* &handle)
 {
     size_t lcnt = local.desc_count();
     size_t rcnt = remote.desc_count();

@@ -59,7 +59,7 @@ nixlUcxWorker::~nixlUcxWorker()
     ucp_cleanup(ctx);
 }
 
-int nixlUcxWorker::ep_addr(uint64_t &addr, size_t &size)
+int nixlUcxWorker::epAddr(uint64_t &addr, size_t &size)
 {
     ucp_worker_attr_t wattr;
     ucs_status_t status;
@@ -153,7 +153,7 @@ int nixlUcxWorker::disconnect(nixlUcxEp &ep)
  * =========================================== */
 
 
-int nixlUcxWorker::mem_reg(void *addr, size_t size, nixlUcxMem &mem)
+int nixlUcxWorker::memReg(void *addr, size_t size, nixlUcxMem &mem)
 {
     ucs_status_t status;
 
@@ -179,7 +179,7 @@ int nixlUcxWorker::mem_reg(void *addr, size_t size, nixlUcxMem &mem)
 }
 
 
-size_t nixlUcxWorker::mem_addr(nixlUcxMem &mem, uint64_t &addr, size_t &size)
+size_t nixlUcxWorker::packRkey(nixlUcxMem &mem, uint64_t &addr, size_t &size)
 {
     ucs_status_t status;
     void *rkey_buf;
@@ -203,7 +203,7 @@ size_t nixlUcxWorker::mem_addr(nixlUcxMem &mem, uint64_t &addr, size_t &size)
     return 0;
 }
 
-void nixlUcxWorker::mem_dereg(nixlUcxMem &mem)
+void nixlUcxWorker::memDereg(nixlUcxMem &mem)
 {
     ucp_mem_unmap(ctx, mem.memh);
 }
@@ -212,7 +212,7 @@ void nixlUcxWorker::mem_dereg(nixlUcxMem &mem)
  * RKey management
  * =========================================== */
 
-int nixlUcxWorker::rkey_import(nixlUcxEp &ep, void* addr, size_t size, nixlUcxRkey &rkey)
+int nixlUcxWorker::rkeyImport(nixlUcxEp &ep, void* addr, size_t size, nixlUcxRkey &rkey)
 {
     ucs_status_t status;
 
@@ -226,7 +226,7 @@ int nixlUcxWorker::rkey_import(nixlUcxEp &ep, void* addr, size_t size, nixlUcxRk
     return 0;
 }
 
-void nixlUcxWorker::rkey_destroy(nixlUcxRkey &rkey)
+void nixlUcxWorker::rkeyDestroy(nixlUcxRkey &rkey)
 {
     ucp_rkey_destroy(rkey.rkeyh);
 }
@@ -235,7 +235,7 @@ void nixlUcxWorker::rkey_destroy(nixlUcxRkey &rkey)
  * Active message handling
  * =========================================== */
 
-int nixlUcxWorker::reg_am_callback(unsigned msg_id, ucp_am_recv_callback_t cb, void* arg)
+int nixlUcxWorker::regAmCallback(unsigned msg_id, ucp_am_recv_callback_t cb, void* arg)
 {
     ucs_status_t status;
     ucp_am_handler_param_t params = {0};
@@ -258,7 +258,7 @@ int nixlUcxWorker::reg_am_callback(unsigned msg_id, ucp_am_recv_callback_t cb, v
     return 0;
 }
 
-int nixlUcxWorker::send_am(nixlUcxEp &ep, unsigned msg_id, void* hdr, size_t hdr_len, void* buffer, size_t len, uint32_t flags, nixlUcxReq &req)
+int nixlUcxWorker::sendAm(nixlUcxEp &ep, unsigned msg_id, void* hdr, size_t hdr_len, void* buffer, size_t len, uint32_t flags, nixlUcxReq &req)
 {
     ucs_status_ptr_t status;
     ucp_request_param_t param = {0};
@@ -279,7 +279,7 @@ int nixlUcxWorker::send_am(nixlUcxEp &ep, unsigned msg_id, void* hdr, size_t hdr
     return 0;
 }
 
-int nixlUcxWorker::get_rndv_data(void* data_desc, void* buffer, size_t len, const ucp_request_param_t *param, nixlUcxReq &req)
+int nixlUcxWorker::getRndvData(void* data_desc, void* buffer, size_t len, const ucp_request_param_t *param, nixlUcxReq &req)
 {
     ucs_status_ptr_t status;
     

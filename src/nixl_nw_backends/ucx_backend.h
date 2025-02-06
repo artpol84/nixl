@@ -33,7 +33,10 @@ class nixlUcxPrivateMetadata : public BackendMetadata {
         nixlUcxPrivateMetadata() : BackendMetadata(true) {
         }
 
-        std::string get() {
+        ~nixlUcxPrivateMetadata(){
+        }
+
+        std::string get() const {
             return rkey_str;
         }
 
@@ -48,6 +51,9 @@ class nixlUcxPublicMetadata : public BackendMetadata {
         nixlUcxConnection conn;
 
         nixlUcxPublicMetadata() : BackendMetadata(false) {}
+
+        ~nixlUcxPublicMetadata(){
+        }
 
         // int set(std::string) {
         //     // check for string being proper and populate rkey
@@ -76,15 +82,13 @@ class nixlUcxEngine : BackendEngine {
         /* TODO: Implement conversion of the arbitrary buffer into a string
            the naive way is to replace each byte with its 2-character hex representation
            We can figure out a better way later */
-        std::string _bytes_to_string(void *buf, size_t size) const;
-            void *_string_to_bytes(std::string &s, size_t &size);
+        std::string _bytesToString(void *buf, size_t size) const;
+        void *_stringToBytes(std::string &s, size_t &size);
 
     public:
         nixlUcxEngine(nixlUcxInitParams* init_params);
 
         ~nixlUcxEngine();
-
-        std::string get_public_data(BackendMetadata* &meta) const;
 
         std::string get_conn_info() const;
         int load_remote_conn_info (std::string remote_agent, std::string remote_conn_info);
@@ -99,8 +103,7 @@ class nixlUcxEngine : BackendEngine {
         int remove_remote (BackendMetadata* input);
 
         //MetaDesc instead of basic for local
-        int transfer (DescList<MetaDesc> local, DescList<MetaDesc> remote,
-                      transfer_op_t op, std::string notif_msg, BackendTransferHandle* &handle);
+        int transfer (DescList<MetaDesc> local, DescList<MetaDesc> remote, transfer_op_t op, std::string notif_msg, BackendTransferHandle* &handle);
 
         int check_transfer (BackendTransferHandle* handle);
 
