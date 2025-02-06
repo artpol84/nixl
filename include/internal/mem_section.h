@@ -31,7 +31,7 @@ class MemSection {
         // over which backend we choose, and then ask the backend if it supports
         // a dsec_list.
 
-        std::string section_id;
+        std::string agent_name;
 
         std::vector<Segment> dram_mems;
         std::vector<Segment> vram_mems;
@@ -63,15 +63,15 @@ class MemSection {
                                                  BackendEngine *backend) {
 
                 DescList<MetaDesc>* found = locate_DescList(query.get_type(),
-                                                               backend);
+                                                            backend);
                 if (found == nullptr)
                     return -1;
                 else
-                return found->populate(query,resp);
+                    return found->populate(query,resp);
         }
 
     public:
-        MemSection (std::string sec_id);
+        MemSection (std::string agent_name);
 
         // Necessary for RemoteSections
         int add_backend_handler (BackendEngine *backend);

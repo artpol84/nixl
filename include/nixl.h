@@ -17,9 +17,8 @@ class TransferAgent {
 
         /*** Initialization and Regsitering Methods ***/
 
-        // Populates agent name, metadata_id and device metadata
-        TransferAgent(const std::string &name, std::string md_id,
-                      const DeviceMetadata &devs);
+        // Populates agent name and device metadata
+        TransferAgent(const std::string &name, const DeviceMetadata &devs);
         ~TransferAgent();
 
         // Instantiate BackendEngine objects, based on corresponding parameters
@@ -38,7 +37,7 @@ class TransferAgent {
         // populates the transfer request.
         TransferRequest *create_transfer_req (DescList<BasicDesc>& local_desc,
                                               DescList<BasicDesc>& remote_desc,
-                                              std::string remote_md_id,
+                                              std::string remote_agent,
                                               std::string notif_msg,
                                               int direction);
 
@@ -65,16 +64,16 @@ class TransferAgent {
         int load_metadata (NIXLMetadata remote_metadata);
 
         // Invalidate the remote section information cached locally
-        void invalidate_remote_metadata(std::string remote_md_id);
+        void invalidate_remote_metadata(std::string remote_agent);
 
 
         /*** Metadata handling through central kv service, or single peer for test ***/
 
         // Send the local metadata to kv service to store it
-        int send_metadata(std::string &remote_md_id);
+        int send_metadata();
 
         // Request for a remote Agent's metadata, can be used for proactive prefetch
-        int fetch_metadata (std::string &remote_md_id);
+        int fetch_metadata (std::string &remote_agent);
 
         // Sends messages to kv service to invalidate this Agent's metadata
         void invalidate_local_metadata();

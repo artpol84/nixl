@@ -32,19 +32,8 @@ class BasicDesc {
         ~BasicDesc() {};
 };
 
-// String of metadata next to each BasicDesc, used to import/export
-// memory sections to the metadata server.
-class StringDesc : public BasicDesc {
-    public:
-        std::string metadata;
-        inline void copy_meta (const StringDesc& meta){
-            this->metadata = meta.metadata;
-        }
-};
-
-// A class for a list of descriptors, where transfer requests are made
-// from. It has some additional methods to help with keeping backend
-// metadata information as well.
+// A class for a list of descriptors, where transfer requests are made from.
+// It has some additional methods to help with creation and population.
 template<class T>
 class DescList {
     private:
@@ -80,4 +69,5 @@ class DescList {
         friend bool operator==(const DescList<Y>& lhs, const DescList<Y>& rhs);
         int get_index(BasicDesc query) const;
 };
+
 #endif

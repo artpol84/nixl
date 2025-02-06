@@ -4,8 +4,8 @@
 #include "internal/mem_section.h"
 #include "internal/transfer_backend.h"
 
-MemSection:: MemSection (std::string sec_id) {
-    section_id = sec_id;
+MemSection:: MemSection (std::string agent_name) {
+    this->agent_name = agent_name;
     // For easier navigation. If desired we can put the vectors
     // directly as key and remove them from the class
     sec_map.insert({DRAM_SEG, &dram_mems});
@@ -169,8 +169,6 @@ int RemoteSection::load_public_data (std::vector<StringSegment> input,
         DescList<MetaDesc> temp (mem_type);
         MetaDesc temp2;
         BasicDesc *p = &temp2;
-
-        //the last argument here needs to be a string now
 
         for(auto &elm2 : elm.second) {
             (*p) = elm2;

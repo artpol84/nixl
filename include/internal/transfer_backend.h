@@ -71,6 +71,15 @@ class MetaDesc : public BasicDesc {
         }
 };
 
+// String of metadata next to each BasicDesc, used to import/export
+class StringDesc : public BasicDesc {
+    public:
+        std::string metadata;
+        inline void copy_meta (const StringDesc& meta){
+            this->metadata = meta.metadata;
+        }
+};
+
 // Base backend engine class, hides away different backend implementaitons
 class BackendEngine { // maybe rename to transfer_BackendEngine
     private:
