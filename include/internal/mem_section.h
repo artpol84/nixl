@@ -41,70 +41,50 @@ class nixlMemSection {
         std::map<memory_type_t, std::vector<nixlSegment>*> secMap;
         std::map<backend_type_t, nixlBackendEngine*> backendMap;
 
-        nixlDescList<nixlMetaDesc>* locateDescList (memory_type_t mem_type,
-                                                    nixlBackendEngine *backend) {
+        // Next two functions should become const, skipping for now due to compile errors
+        nixlDescList<nixlMetaDesc>* locateDescList (const memory_type_t mem_type,
+                                                    const nixlBackendEngine *backend);
 
-                std::vector<nixlSegment> *target_list = secMap[mem_type];
-                int index = 0;
-
-                for (size_t i=0; i<target_list->size(); ++i)
-                    if ((*target_list)[i].first == backend){
-                        index = i;
-                        break;
-                }
-
-                if (index < 0)
-                    return nullptr;
-
-                return &((*target_list)[index].second);
-        }
-
-        int populate (nixlDescList<nixlBasicDesc> query, 
+        int populate (const nixlDescList<nixlBasicDesc> query,
                       nixlDescList<nixlMetaDesc>& resp,
-                      nixlBackendEngine *backend) {
-
-                nixlDescList<nixlMetaDesc>* found = locateDescList(query.getType(), backend);
-                if (found == nullptr)
-                    return -1;
-                else
-                    return found->populate(query,resp);
-        }
+                      const nixlBackendEngine *backend);
 
     public:
-        nixlMemSection (std::string agent_name);
+        nixlMemSection (const std::string agent_name);
 
         // Necessary for RemoteSections
         int addBackendHandler (nixlBackendEngine *backend);
 
         // Find a nixlBasicDesc in the section, if available fills the resp based
         // on that, and returns the backend that can use the resp
-        nixlBackendEngine* findQuery (nixlDescList<nixlBasicDesc> query,
+        // Should become const
+        nixlBackendEngine* findQuery (const nixlDescList<nixlBasicDesc> query,
                                       nixlDescList<nixlMetaDesc>& resp);
         ~nixlMemSection ();
 };
 
 class nixlLocalSection : public nixlMemSection {
     private:
-        nixlDescList<nixlStringDesc> getStringDesc (nixlSegment input);
+        nixlDescList<nixlStringDesc> getStringDesc (const nixlSegment &input) const;
 
     public:
         int addDescList (const nixlDescList<nixlBasicDesc> mem_elms,
                          nixlBackendEngine *backend);
 
         // Per each nixlBasicDesc, the full region that got registered should be deregistered
-        int removeDescList (nixlDescList<nixlMetaDesc> mem_elements,
+        int removeDescList (const nixlDescList<nixlMetaDesc> mem_elements,
                             nixlBackendEngine *backend);
 
         // Function that extracts the information for metadata server
-        std::vector<nixlStringSegment> getPublicData ();
+        std::vector<nixlStringSegment> getPublicData() const;
 
         ~nixlLocalSection();
 };
 
 class nixlRemoteSection : public nixlMemSection {
     public:
-        int loadPublicData (std::vector<nixlStringSegment> input,
-                            std::string remote_agent);
+        int loadPublicData (const std::vector<nixlStringSegment> input,
+                            const std::string remote_agent);
 
         ~nixlRemoteSection();
 };
