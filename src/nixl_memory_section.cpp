@@ -16,7 +16,7 @@ nixlMemSection:: nixlMemSection (std::string agent_name) {
 
 // Necessary for RemoteSections
 int nixlMemSection::addBackendHandler (nixlBackendEngine *backend) {
-    // check for error in get_type
+    // check for error in getType
     backendMap.insert({backend->getType(), backend});
     return 0;
 }
@@ -25,7 +25,7 @@ int nixlMemSection::addBackendHandler (nixlBackendEngine *backend) {
 // on that, and returns the backend that can use the resp
 nixlBackendEngine* nixlMemSection::findQuery (nixlDescList<nixlBasicDesc> query,
                                               nixlDescList<nixlMetaDesc>& resp) {
-    std::vector<nixlSegment> *target_list = secMap[query.get_type()];
+    std::vector<nixlSegment> *target_list = secMap[query.getType()];
     // We can have preference over backends, for now just looping over
     for (auto & elm : *target_list)
         if (populate(query, resp, elm.first) == 0)
@@ -45,7 +45,7 @@ nixlMemSection::~nixlMemSection () {
 nixlDescList<nixlStringDesc> nixlLocalSection::getStringDesc (nixlSegment input){
     nixlStringDesc element;
     nixlBasicDesc *p = &element;
-    nixlDescList<nixlStringDesc> public_meta(input.second.get_type());
+    nixlDescList<nixlStringDesc> public_meta(input.second.getType());
 
     for (int i=0; i<input.second.descCount(); ++i) {
         *p = (nixlBasicDesc) input.second[i];
@@ -56,9 +56,9 @@ nixlDescList<nixlStringDesc> nixlLocalSection::getStringDesc (nixlSegment input)
 }
 
 
-int nixlLocalSection::addDescList (nixlDescList<nixlBasicDesc> mem_elems,
-                                       nixlBackendEngine *backend) {
-    memory_type_t mem_type = mem_elems.get_type();
+int nixlLocalSection::addDescList (const nixlDescList<nixlBasicDesc> mem_elems,
+                                   nixlBackendEngine *backend) {
+    memory_type_t mem_type = mem_elems.getType();
     std::vector<nixlSegment> *target_list = secMap[mem_type]; // add checks
     int index = -1;
 
@@ -101,7 +101,7 @@ int nixlLocalSection::addDescList (nixlDescList<nixlBasicDesc> mem_elems,
 // Per each nixlBasicDesc, the full region that got registered should be deregistered
 int nixlLocalSection::removeDescList (nixlDescList<nixlMetaDesc> mem_elements,
                                           nixlBackendEngine *backend) {
-    memory_type_t mem_type = mem_elements.get_type();
+    memory_type_t mem_type = mem_elements.getType();
     std::vector<nixlSegment> *target_list = secMap[mem_type];
     nixlDescList<nixlMetaDesc> * target_descs;
     int index1 = -1;
@@ -125,7 +125,7 @@ int nixlLocalSection::removeDescList (nixlDescList<nixlMetaDesc> mem_elements,
             // Errorful situation, not sure helpful to deregister the rest, best try
             return -1;
 
-        nixlMetaDesc *p = &(*target_descs)[index2];
+        const nixlMetaDesc *p = &(*target_descs)[index2];
         // Backend deregister takes care of metadata destruction,
         backend->deregisterMem ((*p).metadata);
 
@@ -163,7 +163,7 @@ int nixlRemoteSection::loadPublicData (std::vector<nixlStringSegment> input,
     int res;
     for (auto &elm : input) {
         backend_type_t backend_type = elm.first;
-        memory_type_t mem_type = elm.second.get_type();
+        memory_type_t mem_type = elm.second.getType();
         std::vector<nixlSegment> *target_list = secMap[mem_type];
         // Check for error of not being in map
         nixlDescList<nixlMetaDesc> temp (mem_type);

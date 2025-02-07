@@ -100,8 +100,8 @@ int nixlUcxEngine::listenForConnection(std::string remote_agent) {
     return 0;
 }
 
-int nixlUcxEngine::registerMem (nixlBasicDesc &mem, 
-                                memory_type_t mem_type, 
+int nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
+                                memory_type_t mem_type,
                                 nixlBackendMetadata* &out)
 {
     int ret;
@@ -163,7 +163,7 @@ int nixlUcxEngine::loadRemote (nixlStringDesc input,
         return -1;
     }
     output = (nixlBackendMetadata*) md;
-    
+
     free(addr);
     return 0;
 }

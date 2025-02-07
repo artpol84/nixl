@@ -95,7 +95,7 @@ class nixlUcxEngine : nixlBackendEngine {
         int makeConnection(std::string remote_agent);
         int listenForConnection(std::string remote_agent);
 
-        int registerMem (nixlBasicDesc &mem, memory_type_t mem_type, nixlBackendMetadata* &out );
+        int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type, nixlBackendMetadata* &out);
         void deregisterMem (nixlBackendMetadata* desc);
 
         int loadRemote (nixlStringDesc input, nixlBackendMetadata* &output, std::string remote_agent);

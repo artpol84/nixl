@@ -67,10 +67,18 @@ class nixlMetaDesc : public nixlBasicDesc {
         // To be able to point to any object
         nixlBackendMetadata *metadata;
 
+        // Reuse parent constructor without the metadata
+        using nixlBasicDesc::nixlBasicDesc;
+
         // Main use case is to take the BasicDesc from another object, so just
         // the metadata part is separately copied here, used in DescList
         inline void copyMeta (const nixlMetaDesc& meta) {
             this->metadata = meta.metadata;
+        }
+
+        inline void printDesc(const std::string suffix) const {
+            nixlBasicDesc::printDesc(", Backend ptr val: " +
+                                     std::to_string((uintptr_t)metadata) + suffix);
         }
 };
 
@@ -78,8 +86,16 @@ class nixlMetaDesc : public nixlBasicDesc {
 class nixlStringDesc : public nixlBasicDesc {
     public:
         std::string metadata;
+
+        // Reuse parent constructor without the metadata
+        using nixlBasicDesc::nixlBasicDesc;
+
         inline void copyMeta (const nixlStringDesc& meta){
             this->metadata = meta.metadata;
+        }
+
+        inline void printDesc(const std::string suffix) const {
+            nixlBasicDesc::printDesc(", Metadata: " + metadata + suffix);
         }
 };
 
@@ -98,14 +114,14 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
         backend_type_t getType () const { return backendType; }
 
         // Can add checks for being public metadata
-        std::string getPublicData (nixlBackendMetadata* &meta) const {
+        std::string getPublicData (const nixlBackendMetadata* meta) const {
             return meta->get();
         }
 
         virtual ~nixlBackendEngine () {};
 
         // Register and deregister local memory
-        virtual int registerMem (nixlBasicDesc &mem, memory_type_t mem_type,
+        virtual int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type,
                                  nixlBackendMetadata* &out) = 0;
         virtual void deregisterMem (nixlBackendMetadata* desc) = 0;
 

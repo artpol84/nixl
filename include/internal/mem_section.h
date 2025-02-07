@@ -63,7 +63,7 @@ class nixlMemSection {
                       nixlDescList<nixlMetaDesc>& resp,
                       nixlBackendEngine *backend) {
 
-                nixlDescList<nixlMetaDesc>* found = locateDescList(query.get_type(), backend);
+                nixlDescList<nixlMetaDesc>* found = locateDescList(query.getType(), backend);
                 if (found == nullptr)
                     return -1;
                 else
@@ -88,7 +88,7 @@ class nixlLocalSection : public nixlMemSection {
         nixlDescList<nixlStringDesc> getStringDesc (nixlSegment input);
 
     public:
-        int addDescList (nixlDescList<nixlBasicDesc> mem_elms,
+        int addDescList (const nixlDescList<nixlBasicDesc> mem_elms,
                          nixlBackendEngine *backend);
 
         // Per each nixlBasicDesc, the full region that got registered should be deregistered

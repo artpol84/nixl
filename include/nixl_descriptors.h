@@ -17,19 +17,19 @@ class nixlBasicDesc {
         size_t    len;    // Buffer length
         uint32_t  devId; // Device ID
 
+        nixlBasicDesc() {};
+        nixlBasicDesc(uintptr_t addr, size_t len, uint32_t dev_id);
+        nixlBasicDesc(const nixlBasicDesc& desc);
+        nixlBasicDesc& operator=(const nixlBasicDesc& desc);
+        ~nixlBasicDesc() {};
+
         friend bool operator==(const nixlBasicDesc& lhs, const nixlBasicDesc& rhs);
         friend bool operator!=(const nixlBasicDesc& lhs, const nixlBasicDesc& rhs);
-
-        nixlBasicDesc& operator=(const nixlBasicDesc& desc);
-        nixlBasicDesc(const nixlBasicDesc& desc);
-        // no metadata in BasicDesc
-        void copyMeta (const nixlBasicDesc& desc) {};
-
         bool covers (const nixlBasicDesc& query) const;
         bool overlaps (const nixlBasicDesc& query) const;
 
-        nixlBasicDesc() {};
-        ~nixlBasicDesc() {};
+        void copyMeta (const nixlBasicDesc& desc) {}; // No metadata in BasicDesc
+        void printDesc(const std::string suffix) const; // For debugging
 };
 
 // A class for a list of descriptors, where transfer requests are made from.
@@ -38,36 +38,43 @@ template<class T>
 class nixlDescList {
     private:
         memory_type_t  type;
-        bool           unifiedAddressing;
+        bool           unifiedAddr;
+        bool           sorted;
         std::vector<T> descs;
 
     public:
-        nixlDescList (memory_type_t type, bool unifiedAddr = true);
-        nixlDescList (const nixlDescList<T>& t);
-        void clear() { descs.clear(); }
+        nixlDescList (memory_type_t type, bool unifiedAddr=true, bool sorted=false);
+        nixlDescList (const nixlDescList<T>& d_list);
+        nixlDescList& operator=(const nixlDescList<T>& d_list);
         ~nixlDescList () { descs.clear(); };
 
-        inline memory_type_t get_type() const { return type; }
-        inline bool isUnifiedAddressing() const { return unifiedAddressing; }
+        inline memory_type_t getType() const { return type; }
+        inline bool isUnifiedAddr() const { return unifiedAddr; }
         inline int descCount() const { return descs.size(); }
-        inline bool isEmpty() const { return (descs.size()==0);}
+        inline bool isEmpty() const { return (descs.size()==0); }
+        inline bool isSorted() const { return sorted; }
 
-        inline T& operator[](int index) { return descs[index]; }
         inline const T& operator[](int index) const { return descs[index]; }
-        inline typename std::vector<T>::iterator begin() { return descs.begin(); }
         inline typename std::vector<T>::const_iterator begin() const { return descs.begin(); }
-        inline typename std::vector<T>::iterator end() { return descs.end(); }
         inline typename std::vector<T>::const_iterator end() const { return descs.end(); }
 
-        int addDesc (T desc, bool sorted=false);
+        // Not allowing external non-const operations
+        // inline T& operator[](int index) { return descs[index]; }
+        // inline typename std::vector<T>::iterator begin() { return descs.begin(); }
+        // inline typename std::vector<T>::iterator end() { return descs.end(); }
+
+        // addDesc is the only method to add new individual entries, checks for no overlap
+        int addDesc (const T& desc);
         // Removing descriptor by index or value
         int remDesc (int index);
-        int remDesc (T desc);
-        int populate (nixlDescList<nixlBasicDesc> query, nixlDescList<T>& resp);
+        int remDesc (const T& desc);
+        int populate (const nixlDescList<nixlBasicDesc>& query, nixlDescList<T>& resp) const;
+        void clear() { descs.clear(); }
 
-        template <class Y>
-        friend bool operator==(const nixlDescList<Y>& lhs, const nixlDescList<Y>& rhs);
         int getIndex(nixlBasicDesc query) const;
+        void printDescList() const;
+        template <class Y> friend bool operator==(const nixlDescList<Y>& lhs,
+                                                  const nixlDescList<Y>& rhs);
 };
 
 #endif
