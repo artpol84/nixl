@@ -38,8 +38,7 @@ int nixlMemSection::populate (const nixlDescList<nixlBasicDesc> query,
         return found->populate(query, resp);
 }
 
-nixlMemSection:: nixlMemSection (const std::string agent_name) {
-    this->agentName = agent_name;
+nixlMemSection:: nixlMemSection () {
     // For easier navigation. If desired we can put the vectors
     // directly as key and remove them from the class
     // This map should be exposed if going the plugin path
@@ -59,7 +58,7 @@ int nixlMemSection::addBackendHandler (nixlBackendEngine *backend) {
 
 // Find a nixlBasicDesc in the section, if available fills the resp based
 // on that, and returns the backend that can use the resp
-nixlBackendEngine* nixlMemSection::findQuery (const nixlDescList<nixlBasicDesc> query,
+nixlBackendEngine* nixlMemSection::findQuery (const nixlDescList<nixlBasicDesc>& query,
                                               nixlDescList<nixlMetaDesc>& resp) {
     std::vector<nixlSegment> *target_list = secMap[query.getType()];
     // We can have preference over backends, for now just looping over
@@ -95,7 +94,7 @@ nixlDescList<nixlStringDesc> nixlLocalSection::getStringDesc (const nixlSegment 
 }
 
 // TBD, refactor code by using locateDescList
-int nixlLocalSection::addDescList (const nixlDescList<nixlBasicDesc> mem_elems,
+int nixlLocalSection::addDescList (const nixlDescList<nixlBasicDesc>& mem_elems,
                                    nixlBackendEngine *backend) {
     memory_type_t mem_type = mem_elems.getType();
     if (secMap.count(mem_type)==0)
@@ -141,8 +140,8 @@ int nixlLocalSection::addDescList (const nixlDescList<nixlBasicDesc> mem_elems,
 
 // TBD, refactor code by using locateDescList
 // Per each nixlBasicDesc, the full region that got registered should be deregistered
-int nixlLocalSection::removeDescList (const nixlDescList<nixlMetaDesc> mem_elements,
-                                      nixlBackendEngine *backend) {
+int nixlLocalSection::remDescList (const nixlDescList<nixlMetaDesc>& mem_elements,
+                                   nixlBackendEngine *backend) {
     memory_type_t mem_type = mem_elements.getType();
     if (secMap.count(mem_type)==0)
         return -1;
@@ -199,7 +198,7 @@ std::vector<nixlStringSegment> nixlLocalSection::getPublicData() const {
 nixlLocalSection::~nixlLocalSection() {
     for (auto &seg : secMap) // Iterate over mem_type vectors
         for (auto &elm : *seg.second) // Iterate over segments
-            removeDescList (elm.second, elm.first);
+            remDescList (elm.second, elm.first);
 }
 
 int nixlRemoteSection::loadPublicData (const std::vector<nixlStringSegment> input,

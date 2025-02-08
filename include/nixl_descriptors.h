@@ -48,6 +48,7 @@ class nixlDescList {
 
     public:
         nixlDescList (memory_type_t type, bool unifiedAddr=true, bool sorted=false);
+        nixlDescList(nixlSerDes* deserializor);
         nixlDescList (const nixlDescList<T>& d_list);
         nixlDescList& operator=(const nixlDescList<T>& d_list);
         ~nixlDescList () { descs.clear(); };
@@ -62,26 +63,18 @@ class nixlDescList {
         inline typename std::vector<T>::const_iterator begin() const { return descs.begin(); }
         inline typename std::vector<T>::const_iterator end() const { return descs.end(); }
 
-        // Not allowing external non-const operations
-        // inline T& operator[](int index) { return descs[index]; }
-        // inline typename std::vector<T>::iterator begin() { return descs.begin(); }
-        // inline typename std::vector<T>::iterator end() { return descs.end(); }
-
         // addDesc is the only method to add new individual entries, checks for no overlap
         int addDesc (const T& desc);
-        // Removing descriptor by index or value
         int remDesc (int index);
         int remDesc (const T& desc);
         int populate (const nixlDescList<nixlBasicDesc>& query, nixlDescList<T>& resp) const;
         void clear() { descs.clear(); }
 
         int getIndex(nixlBasicDesc query) const;
+        int serialize(nixlSerDes* serializor); // Is const
         void printDescList() const;
         template <class Y> friend bool operator==(const nixlDescList<Y>& lhs,
                                                   const nixlDescList<Y>& rhs);
-
-        int serialize(nixlSerDes* serializor);
-        int deserialize(nixlSerDes* deserializor);
 };
 
 #endif

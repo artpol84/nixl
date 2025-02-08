@@ -195,14 +195,12 @@ int main()
     dlist20.addDesc(s4);
 
     assert(dlist10.serialize(ser_des3) == 0);
-    nixlDescList<nixlBasicDesc> importList (DRAM_SEG);;
-    assert(importList.deserialize(ser_des3) == 0);
-    //assert(importList == dlist10);
+    nixlDescList<nixlBasicDesc> importList (ser_des3);;
+    assert(importList == dlist10);
 
     assert(dlist20.serialize(ser_des4) == 0);
-    nixlDescList<nixlStringDesc> importSList (DRAM_SEG);
-    assert(importSList.deserialize(ser_des4) == 0);
-    //assert(importSList == dlist20);
+    nixlDescList<nixlStringDesc> importSList (ser_des4);
+    assert(importSList == dlist20);
 
     dlist10.printDescList();
     std::cout << "this should be a copy:\n";

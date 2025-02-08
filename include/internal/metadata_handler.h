@@ -3,13 +3,6 @@
 
 #include "mem_section.h"
 
-class nixlMetadata {
-    public:
-        std::string                    agentName;
-        std::vector<nixlStringSegment> secMd;
-        std::vector<nixlStringConnMD>  connMd;
-};
-
 // This class talks to the metadata server.
 class nixlMetadataHandler {
     private:
@@ -20,14 +13,15 @@ class nixlMetadataHandler {
 
     public:
         // Creates the connection to the metadata server
+        nixlMetadataHandler() {}
         nixlMetadataHandler(std::string& ip_address, uint16_t port);
         ~nixlMetadataHandler();
 
         /** Sync the local section with the metadata server */
-        int sendLocalMetadata(nixlMetadata& local_md);
+        int sendLocalMetadata(std::string& local_md);
 
         // Get a remote section from the metadata server
-        nixlMetadata getRemoteMd(std::string remote_agent);
+        std::string getRemoteMd(std::string remote_agent);
 
         // Invalidating the information in the metadata server
         int removeLocalMetadata(std::string local_agent);
@@ -35,22 +29,26 @@ class nixlMetadataHandler {
 
 class nixlAgentDataPrivate {
     public:
-        std::string                        name;
+        std::string                                name;
         // Device specfic metadata such as topology/others
-        nixlDeviceMetadata                 deviceMeta;
+        nixlDeviceMetadata                         deviceMeta;
         // Handles to different registered backend engines
-        std::vector<nixlBackendEngine *>   nixlBackendEngines;
+        std::vector<nixlBackendEngine *>           nixlBackendEngines;
         // Memory section objects for local and list of cached remote objects
-        nixlLocalSection                   *memorySection;
+        nixlLocalSection                           memorySection;
         // Handler for metadata server access
-        nixlMetadataHandler                mdHandler;
+        nixlMetadataHandler                        mdHandler;
         // Remote section(s) for Transfer Agent stored locally.
-        std::vector<nixlRemoteSection *>   RemoteSections;
-
-        nixlMetadata  localMetadata;
+        std::map<std::string, nixlRemoteSection *> remoteSections;
+        // local section strings after serialization
+        std::vector<nixlStringSegment>             sectionMd;
+        // local conn strings after serialization
+        std::vector<nixlStringConnMD>              connMd;
 
         // // Transfer connection class handles
         // // Discovery and connection information of different nodes
+        nixlAgentDataPrivate() {}
+        ~nixlAgentDataPrivate() {}
 };
 
 #endif

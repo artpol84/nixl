@@ -8,3 +8,5 @@ serdes_test_bin = executable('serdes_test',
            include_directories: inc_dir,
            link_with: serdes_lib,
            install: true)
+
+serdes_interface = declare_dependency(link_with: serdes_lib)

@@ -6,3 +6,5 @@ ucx_backend_lib = library('ucx_backend',
            dependencies: [ucx_utils_dep, nixl_dep],
            include_directories: inc_dir,
            install: true)
+
+ucx_backend_interface = declare_dependency(link_with: ucx_backend_lib)

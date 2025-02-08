@@ -34,12 +34,9 @@ nixlBasicDesc& nixlBasicDesc::operator=(const nixlBasicDesc& desc) {
 }
 
 bool operator==(const nixlBasicDesc& lhs, const nixlBasicDesc& rhs) {
-    if ((lhs.addr  == rhs.addr ) &&
-        (lhs.len   == rhs.len  ) &&
-        (lhs.devId == rhs.devId))
-        return true;
-    else
-        return false;
+    return ((lhs.addr  == rhs.addr ) &&
+            (lhs.len   == rhs.len  ) &&
+            (lhs.devId == rhs.devId));
 }
 
 bool operator!=(const nixlBasicDesc& lhs, const nixlBasicDesc& rhs) {
@@ -100,7 +97,7 @@ int nixlBasicDesc::deserialize(nixlSerDes* deserializor) {
 }
 
 int nixlStringDesc::serialize(nixlSerDes* serializor) {
-    
+
     int ret;
     ret = nixlBasicDesc::serialize(serializor);
     if(ret) return ret;
@@ -138,13 +135,45 @@ nixlDescList<T>::nixlDescList (memory_type_t type, bool unified_addr, bool sorte
 }
 
 template <class T>
+nixlDescList<T>::nixlDescList(nixlSerDes* deserializor) {
+    int ret, n_desc;
+
+    if(std::is_same<nixlMetaDesc, T>::value){
+        // nixlMetaDesc should be internall and not be serialized
+        return;
+    }
+
+    ret = deserializor->getBuf("type", &type, sizeof(type));
+    if (ret) return;
+
+    ret = deserializor->getBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
+    if(ret) return;
+
+    ret = deserializor->getBuf("sorted", &sorted, sizeof(sorted));
+    if(ret) return;
+
+    ret = deserializor->getBuf("n_desc", &n_desc, sizeof(int));
+    if(ret) return;
+
+    for(int i = 0; i<n_desc; i++) {
+        T elm;
+        ret = elm.deserialize(deserializor);
+        if (ret) {
+            descs.clear();
+            return;
+        }
+
+        descs.push_back(elm);
+    }
+}
+
+template <class T>
 nixlDescList<T>::nixlDescList (const nixlDescList<T>& d_list) {
     if (this != &d_list) {
         this->type = d_list.getType();
         this->unifiedAddr = d_list.isUnifiedAddr();
         this->sorted = d_list.isSorted();
-        for (auto & elm : d_list.descs)
-            descs.push_back(elm);
+        descs = d_list.descs;
     }
 }
 
@@ -154,24 +183,20 @@ nixlDescList<T>& nixlDescList<T>::operator=(const nixlDescList<T>& d_list) {
         this->type = d_list.getType();
         this->unifiedAddr = d_list.isUnifiedAddr();
         this->sorted = d_list.isSorted();
-        for (auto & elm : d_list.descs)
-            descs.push_back(elm);
+        descs = d_list.descs;
     }
     return *this;
 }
 
 // Internal function used for sorting the Vector and logarithmic search
 bool descAddrCompare (const nixlBasicDesc& a, const nixlBasicDesc& b, bool unifiedAddr) {
-    if (unifiedAddr) { // Ignore devId
+    if (unifiedAddr) // Ignore devId
         return (a.addr < b.addr);
-    } else {
-        if (a.devId < b.devId)
-            return true;
-        else if (a.devId == b.devId)
-            return (a.addr < b.addr);
-        else
-            return false;
-    }
+    if (a.devId < b.devId)
+        return true;
+    if (a.devId == b.devId)
+        return (a.addr < b.addr);
+    return false;
 }
 
 #define desc_comparator_f [&](const nixlBasicDesc& a, const nixlBasicDesc& b) {\
@@ -183,10 +208,11 @@ bool descAddrCompare (const nixlBasicDesc& a, const nixlBasicDesc& b, bool unifi
 template <class T>
 int nixlDescList<T>::addDesc (const T& desc) {
     if (!sorted) {
-        for (auto & elm : descs)
+        for (auto & elm : descs) {
             // No overlap is allowed among descs of a list
             if (elm.overlaps(desc))
                 return -1;
+        }
         descs.push_back(desc);
     } else {
         // Since vector is kept soted, we can use upper_bound
@@ -318,26 +344,27 @@ void nixlDescList<T>::printDescList() const {
 
 template <class T>
 bool operator==(const nixlDescList<T>& lhs, const nixlDescList<T>& rhs) {
-    if ((lhs.getType()       != rhs.getType())      ||
+    if ((lhs.getType()       != rhs.getType())       ||
         (lhs.descCount()     != rhs.descCount())     ||
         (lhs.isUnifiedAddr() != rhs.isUnifiedAddr()) ||
         (lhs.isSorted()      != rhs.isSorted()))
         return false;
 
-    for (int i=0; i<lhs.descs.size(); ++i)
+    for (size_t i=0; i<lhs.descs.size(); ++i)
         if (lhs.descs[i] != rhs.descs[i])
             return false;
     return true;
 }
 
+// Can't be const due to void* usage
 template <class T>
 int nixlDescList<T>::serialize(nixlSerDes* serializor) {
-    
+
     int ret, n_desc;
     n_desc = descs.size();
 
     if(std::is_same<nixlMetaDesc, T>::value){
-        //MetaDesc not supported
+        // nixlMetaDesc should be internall and not be serialized
         return -1;
     }
 
@@ -350,9 +377,6 @@ int nixlDescList<T>::serialize(nixlSerDes* serializor) {
     ret = serializor->addBuf("sorted", &sorted, sizeof(sorted));
     if(ret) return ret;
 
-    ret = serializor->addBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
-    if(ret) return ret;
-
     ret = serializor->addBuf("n_desc", &(n_desc), sizeof(int));
     if(ret) return ret;
 
@@ -361,46 +385,17 @@ int nixlDescList<T>::serialize(nixlSerDes* serializor) {
         if(ret) return ret;
     }
 
-
     return 0;
 }
-
-template <class T>
-int nixlDescList<T>::deserialize(nixlSerDes* deserializor) {
-    int ret, n_desc;
-
-    if(std::is_same<nixlMetaDesc, T>::value){
-        //MetaDesc not supported
-        return -1;
-    }
-
-    ret = deserializor->getBuf("type", &type, sizeof(type));
-    if(ret) return ret;
-
-    ret = deserializor->getBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
-    if(ret) return ret;
-
-    ret = deserializor->getBuf("sorted", &sorted, sizeof(sorted));
-    if(ret) return ret;
-
-    ret = deserializor->getBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
-    if(ret) return ret;
-
-    ret = deserializor->getBuf("n_desc", &n_desc, sizeof(int));
-    if(ret) return ret;
-
-    for(int i = 0; i<n_desc; i++) {
-        T elm;
-        ret = elm.deserialize(deserializor);
-        if(ret) return ret;
-
-        descs.push_back(elm);
-    }
-    return 0;
-}
-
 
 // Since we implement a template class declared in a header files, this is necessary
 template class nixlDescList<nixlBasicDesc>;
 template class nixlDescList<nixlMetaDesc>;
 template class nixlDescList<nixlStringDesc>;
+
+template bool operator==<nixlBasicDesc> (const nixlDescList<nixlBasicDesc>& lhs,
+                                         const nixlDescList<nixlBasicDesc>& rhs);
+template bool operator==<nixlMetaDesc>  (const nixlDescList<nixlMetaDesc>& lhs,
+                                         const nixlDescList<nixlMetaDesc>& rhs);
+template bool operator==<nixlStringDesc>(const nixlDescList<nixlStringDesc>& lhs,
+                                         const nixlDescList<nixlStringDesc>& rhs);
