@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include "serdes.h"
 
 typedef enum {UCX, GPUDIRECTIO, NVMe, NVMeoF} backend_type_t;
 typedef enum {DRAM_SEG, VRAM_SEG, BLK_SEG, FILE_SEG} memory_type_t;
@@ -30,6 +31,9 @@ class nixlBasicDesc {
 
         void copyMeta (const nixlBasicDesc& desc) {}; // No metadata in BasicDesc
         void printDesc(const std::string suffix) const; // For debugging
+
+        int serialize(nixlSerDes* serializor);
+        int deserialize(nixlSerDes* deserializor);
 };
 
 // A class for a list of descriptors, where transfer requests are made from.
@@ -75,6 +79,9 @@ class nixlDescList {
         void printDescList() const;
         template <class Y> friend bool operator==(const nixlDescList<Y>& lhs,
                                                   const nixlDescList<Y>& rhs);
+
+        int serialize(nixlSerDes* serializor);
+        int deserialize(nixlSerDes* deserializor);
 };
 
 #endif

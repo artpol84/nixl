@@ -10,5 +10,6 @@ ucx_backend_example = executable('ucx_backend_example',
 desc_example = executable('desc_example',
            'desc_example.cpp',
            dependencies: [nixl_dep],
-           include_directories: [inc_dir],
+           include_directories: [inc_dir, '../src/utils/serdes'],
+           link_with: [serdes_lib],
            install: true)

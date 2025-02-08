@@ -68,6 +68,62 @@ void nixlBasicDesc::printDesc(const std::string suffix) const {
               << ") from devID " << devId << suffix << "\n";
 }
 
+int nixlBasicDesc::serialize(nixlSerDes* serializor) {
+
+    int ret;
+
+    ret = serializor->addBuf("addr", &addr, sizeof(addr));
+    if(ret) return ret;
+
+    ret = serializor->addBuf("len", &len, sizeof(len));
+    if(ret) return ret;
+
+    ret = serializor->addBuf("devId", &devId, sizeof(devId));
+    if(ret) return ret;
+
+    return 0;
+}
+
+int nixlBasicDesc::deserialize(nixlSerDes* deserializor) {
+   int ret;
+
+   ret = deserializor->getBuf("addr", &addr, sizeof(addr));
+   if(ret) return ret;
+
+   ret = deserializor->getBuf("len", &len, sizeof(len));
+   if(ret) return ret;
+
+   ret = deserializor->getBuf("devId", &devId, sizeof(devId));
+   if(ret) return ret;
+
+   return 0;
+}
+
+int nixlStringDesc::serialize(nixlSerDes* serializor) {
+    
+    int ret;
+    ret = nixlBasicDesc::serialize(serializor);
+    if(ret) return ret;
+
+    ret = serializor->addStr("metadata", metadata);
+    if(ret) return ret;
+
+    return 0;
+}
+
+int nixlStringDesc::deserialize(nixlSerDes* deserializor) {
+   int ret;
+
+   ret = nixlBasicDesc::deserialize(deserializor);
+   if(ret) return ret;
+
+   metadata = deserializor->getStr("metadata");
+   if(metadata.size() == 0) return -1;
+
+   return 0;
+}
+
+
 /*** Class nixlDescList implementation ***/
 
 // The template is used to select from nixlBasicDesc/nixlMetaDesc/nixlStringDesc
@@ -273,6 +329,76 @@ bool operator==(const nixlDescList<T>& lhs, const nixlDescList<T>& rhs) {
             return false;
     return true;
 }
+
+template <class T>
+int nixlDescList<T>::serialize(nixlSerDes* serializor) {
+    
+    int ret, n_desc;
+    n_desc = descs.size();
+
+    if(std::is_same<nixlMetaDesc, T>::value){
+        //MetaDesc not supported
+        return -1;
+    }
+
+    ret = serializor->addBuf("type", &type, sizeof(type));
+    if(ret) return ret;
+
+    ret = serializor->addBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
+    if(ret) return ret;
+
+    ret = serializor->addBuf("sorted", &sorted, sizeof(sorted));
+    if(ret) return ret;
+
+    ret = serializor->addBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
+    if(ret) return ret;
+
+    ret = serializor->addBuf("n_desc", &(n_desc), sizeof(int));
+    if(ret) return ret;
+
+    for(auto & elm : descs) {
+        ret = elm.serialize(serializor);
+        if(ret) return ret;
+    }
+
+
+    return 0;
+}
+
+template <class T>
+int nixlDescList<T>::deserialize(nixlSerDes* deserializor) {
+    int ret, n_desc;
+
+    if(std::is_same<nixlMetaDesc, T>::value){
+        //MetaDesc not supported
+        return -1;
+    }
+
+    ret = deserializor->getBuf("type", &type, sizeof(type));
+    if(ret) return ret;
+
+    ret = deserializor->getBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
+    if(ret) return ret;
+
+    ret = deserializor->getBuf("sorted", &sorted, sizeof(sorted));
+    if(ret) return ret;
+
+    ret = deserializor->getBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
+    if(ret) return ret;
+
+    ret = deserializor->getBuf("n_desc", &n_desc, sizeof(int));
+    if(ret) return ret;
+
+    for(int i = 0; i<n_desc; i++) {
+        T elm;
+        ret = elm.deserialize(deserializor);
+        if(ret) return ret;
+
+        descs.push_back(elm);
+    }
+    return 0;
+}
+
 
 // Since we implement a template class declared in a header files, this is necessary
 template class nixlDescList<nixlBasicDesc>;

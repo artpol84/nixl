@@ -1,1 +1,2 @@
 subdir('ucx')
+subdir('serdes')

@@ -97,6 +97,9 @@ class nixlStringDesc : public nixlBasicDesc {
         inline void printDesc(const std::string suffix) const {
             nixlBasicDesc::printDesc(", Metadata: " + metadata + suffix);
         }
+
+        int serialize(nixlSerDes* serializor);
+        int deserialize(nixlSerDes* deserializor);
 };
 
 // Base backend engine class, hides away different backend implementaitons

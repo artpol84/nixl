@@ -5,6 +5,11 @@
 
 int main()
 {
+    nixlSerDes* ser_des = new nixlSerDes();
+    nixlSerDes* ser_des2 = new nixlSerDes();
+    nixlSerDes* ser_des3 = new nixlSerDes();
+    nixlSerDes* ser_des4 = new nixlSerDes();
+
     // nixlBasicDesc functionality
     nixlBasicDesc buff1;
     buff1.addr   = (uintptr_t) 1000;
@@ -20,6 +25,11 @@ int main()
     nixlBasicDesc buff6 (1010,30,4);
     nixlBasicDesc buff7 (1010,30,0);
     nixlBasicDesc buff8 (1010,31,0);
+
+    assert(buff2.serialize(ser_des) == 0);
+    nixlBasicDesc importDesc;
+    assert(importDesc.deserialize(ser_des) == 0);
+    assert(buff2 == importDesc);
 
     assert (buff3==buff2);
     assert (buff4==buff1);
@@ -46,6 +56,12 @@ int main()
     stringd1.len    = 23;
     stringd1.devId  = 4;
     stringd1.metadata = std::string("567");
+
+    assert(stringd1.serialize(ser_des2) == 0);
+    nixlStringDesc importStringD;
+    assert(importStringD.deserialize(ser_des2) == 0);
+    assert(stringd1 == importStringD);
+    assert(stringd1.metadata.compare(importStringD.metadata) == 0);
 
     nixlStringDesc stringd2;
     stringd2.addr   = 1010;
@@ -178,12 +194,26 @@ int main()
     dlist20.addDesc(s3);
     dlist20.addDesc(s4);
 
+    assert(dlist10.serialize(ser_des3) == 0);
+    nixlDescList<nixlBasicDesc> importList (DRAM_SEG);;
+    assert(importList.deserialize(ser_des3) == 0);
+    //assert(importList == dlist10);
+
+    assert(dlist20.serialize(ser_des4) == 0);
+    nixlDescList<nixlStringDesc> importSList (DRAM_SEG);
+    assert(importSList.deserialize(ser_des4) == 0);
+    //assert(importSList == dlist20);
+
     dlist10.printDescList();
+    std::cout << "this should be a copy:\n";
+    importList.printDescList();
     dlist11.printDescList();
     dlist12.printDescList();
     dlist13.printDescList();
     dlist14.printDescList();
     dlist20.printDescList();
+    std::cout << "this should be a copy:\n";
+    importSList.printDescList();
 
     nixlDescList<nixlStringDesc> dlist21 (DRAM_SEG, false,  false);
     nixlDescList<nixlStringDesc> dlist22 (DRAM_SEG, false,  false);
