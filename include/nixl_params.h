@@ -24,6 +24,7 @@ class nixlDeviceMetadata {
 // Example backend initialization data for UCX
 class nixlUcxInitParams : public nixlBackendInitParams {
     public:
+        backend_type_t getType () { return UCX; }
         // TBD: Required parameters to initialize UCX that we need to get from the user
 };
 

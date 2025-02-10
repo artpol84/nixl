@@ -16,6 +16,10 @@ nixlBasicDesc::nixlBasicDesc(uintptr_t addr, size_t len, uint32_t dev_id) {
     this->devId = dev_id;
 }
 
+nixlBasicDesc::nixlBasicDesc(const std::string& str) {
+    str.copy(reinterpret_cast<char*>(this), sizeof(nixlBasicDesc));
+}
+
 nixlBasicDesc::nixlBasicDesc(const nixlBasicDesc& desc) {
     if (this != &desc) {
         addr  = desc.addr;
@@ -60,66 +64,23 @@ bool nixlBasicDesc::overlaps (const nixlBasicDesc& query) const {
     return true;
 }
 
-void nixlBasicDesc::printDesc(const std::string suffix) const {
+std::string nixlBasicDesc::serialize() const {
+    return std::string(reinterpret_cast<const char*>(this),
+                       sizeof(nixlBasicDesc));
+}
+
+void nixlBasicDesc::print(const std::string suffix) const {
     std::cout << "DEBUG: Desc (" << addr << ", " << len
               << ") from devID " << devId << suffix << "\n";
 }
 
-int nixlBasicDesc::serialize(nixlSerDes* serializor) {
-
-    int ret;
-
-    ret = serializor->addBuf("addr", &addr, sizeof(addr));
-    if(ret) return ret;
-
-    ret = serializor->addBuf("len", &len, sizeof(len));
-    if(ret) return ret;
-
-    ret = serializor->addBuf("devId", &devId, sizeof(devId));
-    if(ret) return ret;
-
-    return 0;
+nixlStringDesc::nixlStringDesc(const std::string& str) {
+    size_t meta_size = str.size() - sizeof(nixlBasicDesc);
+    metadata.resize(meta_size);
+    str.copy(reinterpret_cast<char*>(this), sizeof(nixlBasicDesc));
+    str.copy(reinterpret_cast<char*>(&metadata[0]),
+             meta_size, sizeof(nixlBasicDesc));
 }
-
-int nixlBasicDesc::deserialize(nixlSerDes* deserializor) {
-   int ret;
-
-   ret = deserializor->getBuf("addr", &addr, sizeof(addr));
-   if(ret) return ret;
-
-   ret = deserializor->getBuf("len", &len, sizeof(len));
-   if(ret) return ret;
-
-   ret = deserializor->getBuf("devId", &devId, sizeof(devId));
-   if(ret) return ret;
-
-   return 0;
-}
-
-int nixlStringDesc::serialize(nixlSerDes* serializor) {
-
-    int ret;
-    ret = nixlBasicDesc::serialize(serializor);
-    if(ret) return ret;
-
-    ret = serializor->addStr("metadata", metadata);
-    if(ret) return ret;
-
-    return 0;
-}
-
-int nixlStringDesc::deserialize(nixlSerDes* deserializor) {
-   int ret;
-
-   ret = nixlBasicDesc::deserialize(deserializor);
-   if(ret) return ret;
-
-   metadata = deserializor->getStr("metadata");
-   if(metadata.size() == 0) return -1;
-
-   return 0;
-}
-
 
 /*** Class nixlDescList implementation ***/
 
@@ -135,61 +96,77 @@ nixlDescList<T>::nixlDescList (memory_type_t type, bool unified_addr, bool sorte
 }
 
 template <class T>
-nixlDescList<T>::nixlDescList(nixlSerDes* deserializor) {
-    int ret, n_desc;
+nixlDescList<T>::nixlDescList(nixlSerDes* deserializer) {
+    size_t n_desc;
+    std::string str;
 
-    if(std::is_same<nixlMetaDesc, T>::value){
-        // nixlMetaDesc should be internall and not be serialized
+    str = deserializer->getStr("nixlDList"); // Object type
+    if (str.size()==0)
         return;
-    }
 
-    ret = deserializor->getBuf("type", &type, sizeof(type));
-    if (ret) return;
+    // nixlMetaDesc should be internall and not be serialized
+    if ((str == "nixlMDList") || (std::is_same<nixlMetaDesc, T>::value))
+        return;
 
-    ret = deserializor->getBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
-    if(ret) return;
+    if (deserializer->getBuf("t", &type, sizeof(type)))
+        return;
+    if (deserializer->getBuf("u", &unifiedAddr, sizeof(unifiedAddr)))
+        return;
+    if (deserializer->getBuf("s", &sorted, sizeof(sorted)))
+        return;
+    if (deserializer->getBuf("n", &n_desc, sizeof(n_desc)))
+        return;
 
-    ret = deserializor->getBuf("sorted", &sorted, sizeof(sorted));
-    if(ret) return;
-
-    ret = deserializor->getBuf("n_desc", &n_desc, sizeof(int));
-    if(ret) return;
-
-    for(int i = 0; i<n_desc; i++) {
-        T elm;
-        ret = elm.deserialize(deserializor);
-        if (ret) {
-            descs.clear();
+    if (std::is_same<nixlBasicDesc, T>::value) {
+        // Contiguous in memory, so no need for per elm deserialization
+        if (str!="nixlBDList")
             return;
+        str = deserializer->getStr("");
+        if (str.size()!= n_desc * sizeof(nixlBasicDesc))
+            return;
+        descs.resize(n_desc);
+        str.copy(reinterpret_cast<char*>(descs.data()), str.size());
+    } else if(std::is_same<nixlStringDesc, T>::value) {
+        if (str!="nixlSDList")
+            return;
+        for (size_t i=0; i<n_desc; ++i) {
+            str = deserializer->getStr("");
+            if (str.size()==0) {
+                descs.clear();
+                return;
+            }
+            T elm(str);
+            descs.push_back(elm);
         }
-
-        descs.push_back(elm);
+    } else {
+        return; // Unknown type, error
     }
 }
 
 template <class T>
 nixlDescList<T>::nixlDescList (const nixlDescList<T>& d_list) {
     if (this != &d_list) {
-        this->type = d_list.getType();
-        this->unifiedAddr = d_list.isUnifiedAddr();
-        this->sorted = d_list.isSorted();
-        descs = d_list.descs;
+        this->type        = d_list.type;
+        this->unifiedAddr = d_list.unifiedAddr;
+        this->sorted      = d_list.sorted;
+        this->descs       = d_list.descs;
     }
 }
 
 template <class T>
 nixlDescList<T>& nixlDescList<T>::operator=(const nixlDescList<T>& d_list) {
     if (this != &d_list) {
-        this->type = d_list.getType();
-        this->unifiedAddr = d_list.isUnifiedAddr();
-        this->sorted = d_list.isSorted();
-        descs = d_list.descs;
+        this->type        = d_list.type;
+        this->unifiedAddr = d_list.unifiedAddr;
+        this->sorted      = d_list.sorted;
+        this->descs       = d_list.descs;
     }
     return *this;
 }
 
 // Internal function used for sorting the Vector and logarithmic search
-bool descAddrCompare (const nixlBasicDesc& a, const nixlBasicDesc& b, bool unifiedAddr) {
+bool descAddrCompare (const nixlBasicDesc& a, const nixlBasicDesc& b,
+                      bool unifiedAddr) {
     if (unifiedAddr) // Ignore devId
         return (a.addr < b.addr);
     if (a.devId < b.devId)
@@ -216,7 +193,8 @@ int nixlDescList<T>::addDesc (const T& desc) {
         descs.push_back(desc);
     } else {
         // Since vector is kept soted, we can use upper_bound
-        auto itr = std::upper_bound(descs.begin(), descs.end(), desc, desc_comparator_f);
+        auto itr = std::upper_bound(descs.begin(), descs.end(),
+                                    desc, desc_comparator_f);
         if (itr == descs.end())
             descs.push_back(desc);
         else if ((*itr).overlaps(desc))
@@ -255,7 +233,8 @@ int nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc>& query,
     if ((type != query.getType()) || (type != resp.getType()))
         return -1;
 
-    if ((unifiedAddr != query.isUnifiedAddr()) || (unifiedAddr != resp.isUnifiedAddr()))
+    if ((unifiedAddr != query.isUnifiedAddr()) ||
+        (unifiedAddr != resp.isUnifiedAddr()))
         return -1;
 
     T new_elm;
@@ -278,7 +257,8 @@ int nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc>& query,
 
         for (auto & q : query) {
             found = false;
-            auto itr = std::lower_bound(descs.begin(), descs.end(), q, desc_comparator_f);
+            auto itr = std::lower_bound(descs.begin(), descs.end(),
+                                        q, desc_comparator_f);
 
             // Same start address case
             if (itr != descs.end()){
@@ -322,7 +302,8 @@ int nixlDescList<T>::getIndex(nixlBasicDesc query) const {
             return -1; // not found
         return itr - descs.begin();
     } else {
-        auto itr = std::lower_bound(descs.begin(), descs.end(), query, desc_comparator_f);
+        auto itr = std::lower_bound(descs.begin(), descs.end(),
+                                    query, desc_comparator_f);
         if (itr == descs.end())
             return -1; // not found
         if (*itr == query)
@@ -331,14 +312,64 @@ int nixlDescList<T>::getIndex(nixlBasicDesc query) const {
     return -1;
 }
 
+// Can't be const due to void* usage
 template <class T>
-void nixlDescList<T>::printDescList() const {
+int nixlDescList<T>::serialize(nixlSerDes* serializer) {
+
+    int ret;
+    size_t n_desc = descs.size();
+
+    // nixlMetaDesc should be internall and not be serialized
+    if(std::is_same<nixlMetaDesc, T>::value)
+        return -1;
+
+    if (std::is_same<nixlBasicDesc, T>::value)
+        ret = serializer->addStr("nixlDList", "nixlBDList");
+    else if (std::is_same<nixlStringDesc, T>::value)
+        ret = serializer->addStr("nixlDList", "nixlSDList");
+    else
+        return -1;
+    if (ret) return ret;
+
+    ret = serializer->addBuf("t", &type, sizeof(type));
+    if (ret) return ret;
+
+    ret = serializer->addBuf("u", &unifiedAddr, sizeof(unifiedAddr));
+    if (ret) return ret;
+
+    ret = serializer->addBuf("s", &sorted, sizeof(sorted));
+    if (ret) return ret;
+
+    ret = serializer->addBuf("n", &(n_desc), sizeof(n_desc));
+    if (ret) return ret;
+
+    if (n_desc==0)
+        return 0; // Unusual, but supporting it
+
+    if (std::is_same<nixlBasicDesc, T>::value) {
+        // Contiguous in memory, so no need for per elm serialization
+        ret = serializer->addStr("", std::string(
+                                 reinterpret_cast<const char*>(descs.data()),
+                                 n_desc * sizeof(nixlBasicDesc)));
+        if (ret) return ret;
+    } else { // already checked it can be only nixlStringDesc
+        for(auto & elm : descs) {
+            ret = serializer->addStr("", elm.serialize());
+            if(ret) return ret;
+        }
+    }
+
+    return 0;
+}
+
+template <class T>
+void nixlDescList<T>::print() const {
     std::cout << "DEBUG: DescList of mem type " << type
               << (unifiedAddr ? " with" : " without") << " unified addressing and "
               << (sorted ? "sorted" : "unsorted") << "\n";
     for (auto & elm : descs) {
         std::cout << "    ";
-        elm.printDesc("");
+        elm.print("");
     }
 }
 
@@ -354,38 +385,6 @@ bool operator==(const nixlDescList<T>& lhs, const nixlDescList<T>& rhs) {
         if (lhs.descs[i] != rhs.descs[i])
             return false;
     return true;
-}
-
-// Can't be const due to void* usage
-template <class T>
-int nixlDescList<T>::serialize(nixlSerDes* serializor) {
-
-    int ret, n_desc;
-    n_desc = descs.size();
-
-    if(std::is_same<nixlMetaDesc, T>::value){
-        // nixlMetaDesc should be internall and not be serialized
-        return -1;
-    }
-
-    ret = serializor->addBuf("type", &type, sizeof(type));
-    if(ret) return ret;
-
-    ret = serializor->addBuf("unifiedAddr", &unifiedAddr, sizeof(unifiedAddr));
-    if(ret) return ret;
-
-    ret = serializor->addBuf("sorted", &sorted, sizeof(sorted));
-    if(ret) return ret;
-
-    ret = serializor->addBuf("n_desc", &(n_desc), sizeof(int));
-    if(ret) return ret;
-
-    for(auto & elm : descs) {
-        ret = elm.serialize(serializor);
-        if(ret) return ret;
-    }
-
-    return 0;
 }
 
 // Since we implement a template class declared in a header files, this is necessary

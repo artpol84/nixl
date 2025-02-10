@@ -5,11 +5,6 @@
 
 int main()
 {
-    nixlSerDes* ser_des = new nixlSerDes();
-    nixlSerDes* ser_des2 = new nixlSerDes();
-    nixlSerDes* ser_des3 = new nixlSerDes();
-    nixlSerDes* ser_des4 = new nixlSerDes();
-
     // nixlBasicDesc functionality
     nixlBasicDesc buff1;
     buff1.addr   = (uintptr_t) 1000;
@@ -26,9 +21,7 @@ int main()
     nixlBasicDesc buff7 (1010,30,0);
     nixlBasicDesc buff8 (1010,31,0);
 
-    assert(buff2.serialize(ser_des) == 0);
-    nixlBasicDesc importDesc;
-    assert(importDesc.deserialize(ser_des) == 0);
+    nixlBasicDesc importDesc(buff2.serialize());
     assert(buff2 == importDesc);
 
     assert (buff3==buff2);
@@ -57,11 +50,19 @@ int main()
     stringd1.devId  = 4;
     stringd1.metadata = std::string("567");
 
-    assert(stringd1.serialize(ser_des2) == 0);
-    nixlStringDesc importStringD;
-    assert(importStringD.deserialize(ser_des2) == 0);
+    nixlStringDesc importStringD(stringd1.serialize());
     assert(stringd1 == importStringD);
     assert(stringd1.metadata.compare(importStringD.metadata) == 0);
+
+    std::cout << "\nSerDes Desc tests:\n";
+    buff2.print("");
+    std::cout << "this should be a copy:\n";
+    importDesc.print("");
+    std::cout << "\n";
+    stringd1.print("");
+    std::cout << "this should be a copy:\n";
+    importStringD.print("");
+    std::cout << "\n";
 
     nixlStringDesc stringd2;
     stringd2.addr   = 1010;
@@ -85,11 +86,11 @@ int main()
     assert (stringd2==buff8);
     nixlBasicDesc buff9 (stringd1);
 
-    buff1.printDesc("");
-    buff2.printDesc("");
-    buff9.printDesc("");
-    stringd1.printDesc("");
-    stringd2.printDesc("");
+    buff1.print("");
+    buff2.print("");
+    buff9.print("");
+    stringd1.print("");
+    stringd2.print("");
 
 
     // DescList functionality
@@ -118,11 +119,11 @@ int main()
     nixlDescList<nixlMetaDesc> dlist5 (VRAM_SEG);
     dlist5 = dlist3;
 
-    dlist1.printDescList();
-    dlist2.printDescList();
-    dlist3.printDescList();
-    dlist4.printDescList();
-    dlist5.printDescList();
+    dlist1.print();
+    dlist2.print();
+    dlist3.print();
+    dlist4.print();
+    dlist5.print();
 
     assert(dlist1.remDesc(2)==-1);
     std::cout << dlist1.getIndex(meta3) << "\n";
@@ -134,9 +135,9 @@ int main()
     assert(dlist3.getIndex(meta1)==-1);
     assert (dlist3.remDesc(meta4)==-1);
 
-    dlist1.printDescList();
-    dlist2.printDescList();
-    dlist3.printDescList();
+    dlist1.print();
+    dlist2.print();
+    dlist3.print();
 
     // Populate and unifiedAddr test
     std::cout << "\n\n";
@@ -194,24 +195,31 @@ int main()
     dlist20.addDesc(s3);
     dlist20.addDesc(s4);
 
-    assert(dlist10.serialize(ser_des3) == 0);
-    nixlDescList<nixlBasicDesc> importList (ser_des3);;
+    dlist11.print();
+    dlist12.print();
+    dlist13.print();
+    dlist14.print();
+
+    std::cout << "\nSerDes DescList tests:\n";
+    nixlSerDes* ser_des = new nixlSerDes();
+    nixlSerDes* ser_des2 = new nixlSerDes();
+
+    assert(dlist10.serialize(ser_des) == 0);
+    nixlDescList<nixlBasicDesc> importList (ser_des);;
     assert(importList == dlist10);
 
-    assert(dlist20.serialize(ser_des4) == 0);
-    nixlDescList<nixlStringDesc> importSList (ser_des4);
+    assert(dlist20.serialize(ser_des2) == 0);
+    nixlDescList<nixlStringDesc> importSList (ser_des2);
     assert(importSList == dlist20);
 
-    dlist10.printDescList();
+    dlist10.print();
     std::cout << "this should be a copy:\n";
-    importList.printDescList();
-    dlist11.printDescList();
-    dlist12.printDescList();
-    dlist13.printDescList();
-    dlist14.printDescList();
-    dlist20.printDescList();
+    importList.print();
+    std::cout << "\n";
+    dlist20.print();
     std::cout << "this should be a copy:\n";
-    importSList.printDescList();
+    importSList.print();
+    std::cout << "\n";
 
     nixlDescList<nixlStringDesc> dlist21 (DRAM_SEG, false,  false);
     nixlDescList<nixlStringDesc> dlist22 (DRAM_SEG, false,  false);
@@ -225,12 +233,12 @@ int main()
     dlist20.populate (dlist13, dlist24);
     dlist20.populate (dlist14, dlist25);
 
-    std::cout << "\n\n";
-    dlist21.printDescList();
-    dlist22.printDescList();
-    dlist23.printDescList();
-    dlist24.printDescList();
-    dlist25.printDescList();
+    std::cout << "\n";
+    dlist21.print();
+    dlist22.print();
+    dlist23.print();
+    dlist24.print();
+    dlist25.print();
 
     return 0;
 }

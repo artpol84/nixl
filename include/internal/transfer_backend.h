@@ -11,10 +11,8 @@ typedef enum {READ, WRITE} transfer_op_t;
 // A base class to point to backend initialization data
 class nixlBackendInitParams {
     public:
-        backend_type_t backendType;
-        backend_type_t getType () {
-            return backendType;
-        }
+        virtual backend_type_t getType () = 0;
+        virtual ~nixlBackendInitParams() = default;
 };
 
 class nixlBackendTransferHandle {
@@ -70,15 +68,17 @@ class nixlMetaDesc : public nixlBasicDesc {
         // Reuse parent constructor without the metadata
         using nixlBasicDesc::nixlBasicDesc;
 
+        // No serializer or deserializer, using parent not to expose the metadata
+
         // Main use case is to take the BasicDesc from another object, so just
         // the metadata part is separately copied here, used in DescList
         inline void copyMeta (const nixlMetaDesc& meta) {
             this->metadata = meta.metadata;
         }
 
-        inline void printDesc(const std::string suffix) const {
-            nixlBasicDesc::printDesc(", Backend ptr val: " +
-                                     std::to_string((uintptr_t)metadata) + suffix);
+        inline void print(const std::string suffix) const {
+            nixlBasicDesc::print(", Backend ptr val: " +
+                                 std::to_string((uintptr_t)metadata) + suffix);
         }
 };
 
@@ -90,16 +90,19 @@ class nixlStringDesc : public nixlBasicDesc {
         // Reuse parent constructor without the metadata
         using nixlBasicDesc::nixlBasicDesc;
 
+        nixlStringDesc(const std::string& str); // Deserializer
+
+        inline std::string serialize() const {
+            return nixlBasicDesc::serialize() + metadata;
+        }
+
         inline void copyMeta (const nixlStringDesc& meta){
             this->metadata = meta.metadata;
         }
 
-        inline void printDesc(const std::string suffix) const {
-            nixlBasicDesc::printDesc(", Metadata: " + metadata + suffix);
+        inline void print(const std::string suffix) const {
+            nixlBasicDesc::print(", Metadata: " + metadata + suffix);
         }
-
-        int serialize(nixlSerDes* serializor);
-        int deserialize(nixlSerDes* deserializor);
 };
 
 // Base backend engine class, hides away different backend implementaitons
