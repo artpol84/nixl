@@ -13,3 +13,10 @@ desc_example = executable('desc_example',
            include_directories: [inc_dir, '../src/utils/serdes'],
            link_with: [serdes_lib],
            install: true)
+
+md_streamer = executable('md_streamer',
+            'metadata_streamer.cpp',
+            dependencies: [nixl_dep],
+            include_directories: [inc_dir],
+            install: true)
+

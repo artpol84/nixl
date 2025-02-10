@@ -14,7 +14,7 @@ UCX version 1.17.0 was used for nixl backend testing. This is available from the
 tarball download
 
 ```
-$ wget https://github.com/openucx/ucx/releases/download/v1.17.0/ucx-1.18.0.tar.gz
+$ wget https://github.com/openucx/ucx/releases/download/v1.18.0/ucx-1.18.0.tar.gz
 $ tar xzf ucx-1.18.0.tar.gz
 $ cd ucx-1.18.0
 $ ./contrib/configure-release --prefix=<PATH_TO_INSTALL>/install
