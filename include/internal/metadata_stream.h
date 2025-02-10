@@ -7,7 +7,7 @@
 #include <sys/un.h>
 #include <thread>
 #include <mutex>
-#include <condition_variable>
+#include <string>
 #include <queue>
 #include <vector>
 #include <netinet/in.h>
