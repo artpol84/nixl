@@ -1,35 +1,40 @@
 #include "ucx_backend.h"
 
 ucs_status_t check_connection (void *arg, const void *header,
-						       size_t header_length, void *data,
-						       size_t length, 
-						       const ucp_am_recv_param_t *param)
+                               size_t header_length, void *data,
+                               size_t length, 
+                               const ucp_am_recv_param_t *param)
 {
     struct nixl_ucx_am_hdr* hdr = (struct nixl_ucx_am_hdr*) header;
     
     std::string remote_agent( (char*) data, length);
     nixlUcxEngine* engine = (nixlUcxEngine*) arg;
 
+    //debugging
+    //std::cout << " received am to establish connection from " << remote_agent << "\n";
+
     if(hdr->op != CONN_CHECK) {
         //is this the best way to ERR?
-		return UCS_ERR_INVALID_PARAM;
+        return UCS_ERR_INVALID_PARAM;
     }
 
     //send_am should be forcing EAGER protocol
     if((param->recv_attr & UCP_AM_RECV_ATTR_FLAG_RNDV) != 0) {
         //is this the best way to ERR?
-		return UCS_ERR_INVALID_PARAM;
+        return UCS_ERR_INVALID_PARAM;
     }
 
     if(engine->updateConnMap(remote_agent) == -1) {
         //is this the best way to ERR?
-		return UCS_ERR_INVALID_PARAM;
+        return UCS_ERR_INVALID_PARAM;
     }
+    
+    //debugging
+    //std::cout << " finished am to connect to " << remote_agent << "\n";
     
     return UCS_OK;
 }
 
-//not sure if this is the best way to handle init_params
 nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params)
 : nixlBackendEngine ((nixlBackendInitParams*) init_params) {
     std::vector<std::string> devs; /* Empty vector */
@@ -38,6 +43,19 @@ nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params)
     uw = new nixlUcxWorker(devs);
     uw->epAddr(n_addr, workerSize);
     workerAddr = (void*) n_addr;
+
+    uw->regAmCallback(CONN_CHECK, check_connection, this);
+}
+
+nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params, std::string my_agent)
+: nixlBackendEngine ((nixlBackendInitParams*) init_params) {
+    std::vector<std::string> devs; /* Empty vector */
+    uint64_t n_addr;
+
+    uw = new nixlUcxWorker(devs);
+    uw->epAddr(n_addr, workerSize);
+    workerAddr = (void*) n_addr;
+    local_agent = my_agent;
 
     uw->regAmCallback(CONN_CHECK, check_connection, this);
 }
@@ -62,9 +80,8 @@ int nixlUcxEngine::updateConnMap(std::string remote_agent) {
         //TODO: err: remote connection not found
         return -1;
     }
-    conn = search->second;
 
-    conn.connected = true;
+    remoteConnMap[remote_agent].connected = true;
 
     return 0;
 }
@@ -135,12 +152,13 @@ int nixlUcxEngine::loadRemoteConnInfo (std::string remote_agent,
     return 0;
 }
 
-int nixlUcxEngine::makeConnection(std::string local_agent, std::string remote_agent) {
+int nixlUcxEngine::makeConnection(std::string remote_agent) {
     struct nixl_ucx_am_hdr hdr;
     nixlUcxConnection conn;
     uint32_t flags = 0;
     int ret = 0;
     nixlUcxReq req;
+    volatile bool done = false;
 
     auto search = remoteConnMap.find(remote_agent);
 
@@ -149,37 +167,70 @@ int nixlUcxEngine::makeConnection(std::string local_agent, std::string remote_ag
         return -1;
     }
 
-    conn = search->second;
+    conn = remoteConnMap[remote_agent];
+
     hdr.op = CONN_CHECK;
     //agent names should never be long enough to need RNDV
     flags |= UCP_AM_SEND_FLAG_EAGER;
 
-    ret = uw->sendAm(conn.ep, CONN_CHECK, &hdr, sizeof(struct nixl_ucx_am_hdr), (void*) local_agent.c_str(), local_agent.size(), flags, req);
+    ret = uw->sendAm(conn.ep, CONN_CHECK, &hdr, sizeof(struct nixl_ucx_am_hdr), (void*) local_agent.data(), local_agent.size(), flags, req);
     
     if(ret != 0) {
         //TODO: error
         return -1;
     }
 
+    //wait for AM to send
     while(ret == 0){
         ret = uw->test(req);
     }
 
+    //wait for remote agent to complete handshake
+    while(!done){ 
+        uw->progress();
+        done = remoteConnMap[remote_agent].connected;
+    }
+    
     return 0;
 }
 
 int nixlUcxEngine::listenForConnection(std::string remote_agent) {
     
     nixlUcxConnection conn;
+    struct nixl_ucx_am_hdr hdr;
+    uint32_t flags = 0;
+    nixlUcxReq req;
+    int ret = 0;
+    volatile bool done = false;
  
     auto search = remoteConnMap.find(remote_agent);
     if(search == remoteConnMap.end()) {
         //TODO: err: remote connection not found
         return -1;
     }
-    conn = search->second;   
 
-    while(!conn.connected) uw->progress();
+    conn = remoteConnMap[remote_agent];   
+
+    while(!done){
+        uw->progress();
+        done = remoteConnMap[remote_agent].connected;   
+    }
+
+    hdr.op = CONN_CHECK;
+    //agent names should never be long enough to need RNDV
+    flags |= UCP_AM_SEND_FLAG_EAGER;
+
+    ret = uw->sendAm(conn.ep, CONN_CHECK, &hdr, sizeof(struct nixl_ucx_am_hdr), (void*) local_agent.data(), local_agent.size(), flags, req);
+    
+    if(ret != 0) {
+        //TODO: error
+        return -1;
+    }
+
+    //wait for AM to send
+    while(ret == 0){
+        ret = uw->test(req);
+    }
 
     return 0;
 }
@@ -236,7 +287,7 @@ int nixlUcxEngine::loadRemote (nixlStringDesc input,
         //TODO: err: remote connection not found
         return -1;
     }
-    conn = search->second;
+    conn = (nixlUcxConnection) search->second;
 
     addr = _stringToBytes(input.metadata, size);
 

@@ -7,6 +7,12 @@ ucx_backend_example = executable('ucx_backend_example',
            include_directories: [inc_dir, '../src/nixl_nw_backends'],
            install: true)
 
+ucx_backend_multi = executable('ucx_backend_multi',
+           'ucx_backend_multi.cpp',
+           dependencies: [nixl_dep, ucx_backend_dep],
+           include_directories: [inc_dir, '../src/nixl_nw_backends'],
+           install: true)
+
 desc_example = executable('desc_example',
            'desc_example.cpp',
            dependencies: [nixl_dep],

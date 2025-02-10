@@ -18,8 +18,8 @@ int main()
     // User would ask each of the agents to create a ucx  backend, and the
     // agent returns to them these pointers in the form of transfer_backend *
     nixlBackendEngine *ucx1, *ucx2;
-    ucx1 = (nixlBackendEngine*) new nixlUcxEngine (&init1);
-    ucx2 = (nixlBackendEngine*) new nixlUcxEngine (&init2);
+    ucx1 = (nixlBackendEngine*) new nixlUcxEngine (&init1, agent1);
+    ucx2 = (nixlBackendEngine*) new nixlUcxEngine (&init2, agent2);
 
     // We get the required connection info from UCX to be put on the central
     // location and ask for it for a remote node
@@ -33,12 +33,14 @@ int main()
     assert(ret1 == 0);
     assert(ret2 == 0);
 
-    // One side gets to listen, one side to initiate. Same string is passed as the last 2 steps
-    ret1 = ucx1-> listenForConnection(agent2);
-    ret2 = ucx2-> makeConnection(agent2, agent1);
+    //This won't work single threaded
+    //ret1 = ucx1-> listenForConnection(agent2);
+    //ret2 = ucx2-> makeConnection(agent1);
 
     assert(ret1 == 0);
     assert(ret2 == 0);
+
+    std::cout << "Synchronous handshake complete\n";
 
     // User allocates memories, and passes the corresponding address
     // and length to register with the backend

@@ -1,5 +1,6 @@
 #include <vector>
 #include <cstring>
+#include <iostream>
 
 #include "nixl.h"
 
@@ -22,9 +23,9 @@ class nixlUcxConnection : public nixlBackendConnMD {
     private:
         std::string remoteAgent;
         nixlUcxEp ep;
+        volatile bool connected;
 
     public:
-        volatile bool connected;
         // Extra information required for UCX connections
 
     friend class nixlUcxEngine;
@@ -74,6 +75,7 @@ class nixlUcxEngine : nixlBackendEngine {
         nixlUcxWorker* uw;
         void *workerAddr;
         size_t workerSize;
+        std::string local_agent;
 
         // Map of agent name to saved nixlUcxConnection info
         std::map<std::string, nixlUcxConnection> remoteConnMap;
@@ -94,12 +96,13 @@ class nixlUcxEngine : nixlBackendEngine {
 
     public:
         nixlUcxEngine(nixlUcxInitParams* initParams);
+        nixlUcxEngine(nixlUcxInitParams* initParams, std::string my_agent);
 
         ~nixlUcxEngine();
 
         std::string getConnInfo() const;
         int loadRemoteConnInfo (std::string remote_agent, std::string remote_conn_info);
-        int makeConnection(std::string local_agent, std::string remote_agent);
+        int makeConnection(std::string remote_agent);
         int listenForConnection(std::string remote_agent);
 
         int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type, nixlBackendMetadata* &out);
