@@ -116,17 +116,21 @@ int main()
     req_dst.metadata = remote_meta1of2;
     req_dst_descs.addDesc(req_dst);
 
+    std::string test_str("test");
     std::cout << "Transferring from " << addr1 << " to " << addr2 << "\n";
     // Posting a request, to be updated to return an async handler,
     // or an ID that later can be used to check the status as a new method
     // Also maybe we would remove the WRITE and let the backend class decide the op
-    ret1 = ucx1->transfer(req_src_descs, req_dst_descs, WRITE, "", handle);
+    ret1 = ucx1->transfer(req_src_descs, req_dst_descs, WRITE, test_str, handle);
     assert(ret1 == 0);
 
+    ucx1->progress();
+    ucx2->progress();
+    
     int status = 0;
 
     while(status == 0) {
-        status = ucx1->checkTransfer(handle);
+        status = ucx1->sendNotification(agent2, test_str, handle);
         ucx2->progress();
         assert(status != -1);
     }
@@ -137,6 +141,15 @@ int main()
     }
 
     std::cout << "Transfer verified\n";
+
+    std::vector<std::pair<std::string, std::string>> target_notifs;
+
+    ret2 = ucx2->getNotifications(target_notifs);
+
+    assert(ret2 == 1);
+
+    assert(target_notifs[0].first == agent1);
+    assert(target_notifs[0].second == test_str);
 
     // At the end we deregister the memories, by agent knowing all the registered regions
     ucx1->deregisterMem(local_meta1);

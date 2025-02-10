@@ -6,7 +6,7 @@
 
 #include "utils/ucx/ucx_utils.h"
 
-typedef enum {CONN_CHECK, TRANSFER_STR} ucx_cb_op_t;
+typedef enum {CONN_CHECK, NOTIF_STR} ucx_cb_op_t;
 
 struct nixl_ucx_am_hdr {
     ucx_cb_op_t op;
@@ -76,6 +76,9 @@ class nixlUcxEngine : nixlBackendEngine {
         void *workerAddr;
         size_t workerSize;
         std::string local_agent;
+        std::mutex notif_mutex;
+
+        std::queue<std::pair<std::string, std::string>> notifs;
 
         // Map of agent name to saved nixlUcxConnection info
         std::map<std::string, nixlUcxConnection> remoteConnMap;
@@ -114,12 +117,15 @@ class nixlUcxEngine : nixlBackendEngine {
 
         //MetaDesc instead of basic for local
         int transfer (nixlDescList<nixlMetaDesc> local, nixlDescList<nixlMetaDesc> remote, transfer_op_t op, std::string notif_msg, nixlBackendTransferHandle* &handle);
-
         transfer_state_t checkTransfer (nixlBackendTransferHandle* handle);
 
         int progress();
 
+        int sendNotification(std::string remote_agent, std::string msg, nixlBackendTransferHandle* handle);
+        int getNotifications(std::vector<std::pair<std::string, std::string>> &notif_list);
+
         //public function for UCX worker to mark connections as connected
         int updateConnMap(std::string remote_agent);
+        int queueNotification(std::string remote_agent, std::string notif);
 };
 

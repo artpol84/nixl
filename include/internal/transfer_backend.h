@@ -1,6 +1,8 @@
 #ifndef __TRANSFER_BACKEND_H_
 #define __TRANSFER_BACKEND_H_
 
+#include <queue>
+#include <mutex>
 #include <string>
 #include "nixl_descriptors.h"
 
@@ -172,7 +174,9 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
                               nixlBackendTransferHandle* &handle) = 0;
 
         // Send the notification message to the target
-        int sendNotification(nixlBackendTransferHandle* handle);
+        virtual int sendNotification(std::string remote_agent, std::string msg, nixlBackendTransferHandle* handle) = 0;
+
+        virtual int getNotifications(std::vector<std::pair<std::string, std::string>> &notif_list) = 0;
 
         // Use a handle to progress backend engine and see if a transfer is completed or not
         virtual transfer_state_t checkTransfer(nixlBackendTransferHandle* handle) = 0;

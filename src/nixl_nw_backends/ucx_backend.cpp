@@ -1,4 +1,5 @@
 #include "ucx_backend.h"
+#include "serdes.h"
 
 ucs_status_t check_connection (void *arg, const void *header,
                                size_t header_length, void *data,
@@ -35,6 +36,44 @@ ucs_status_t check_connection (void *arg, const void *header,
     return UCS_OK;
 }
 
+ucs_status_t get_notif (void *arg, const void *header,
+                        size_t header_length, void *data,
+                        size_t length, 
+                        const ucp_am_recv_param_t *param)
+{
+    struct nixl_ucx_am_hdr* hdr = (struct nixl_ucx_am_hdr*) header;
+    nixlSerDes ser_des;
+
+    std::string ser_str( (char*) data, length);
+    nixlUcxEngine* engine = (nixlUcxEngine*) arg;
+    std::string remote_name, msg;
+
+    if(hdr->op != NOTIF_STR) {
+        //is this the best way to ERR?
+        return UCS_ERR_INVALID_PARAM;
+    }
+
+    //send_am should be forcing EAGER protocol
+    if((param->recv_attr & UCP_AM_RECV_ATTR_FLAG_RNDV) != 0) {
+        //is this the best way to ERR?
+        return UCS_ERR_INVALID_PARAM;
+    }
+
+    ser_des.importStr(ser_str);
+    remote_name = ser_des.getStr("name");
+    msg = ser_des.getStr("msg");
+
+    if(engine->queueNotification(remote_name, msg) == -1) {
+        //is this the best way to ERR?
+        return UCS_ERR_INVALID_PARAM;
+    }
+    
+    //debugging
+    //std::cout << " finished am to connect to " << remote_agent << "\n";
+    
+    return UCS_OK;
+}
+
 nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params)
 : nixlBackendEngine ((nixlBackendInitParams*) init_params) {
     std::vector<std::string> devs; /* Empty vector */
@@ -43,6 +82,47 @@ nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params)
     uw = new nixlUcxWorker(devs);
     uw->epAddr(n_addr, workerSize);
     workerAddr = (void*) n_addr;
+
+    uw->regAmCallback(CONN_CHECK, check_connection, this);
+    uw->regAmCallback(NOTIF_STR, get_notif, this);
+}
+
+nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params, std::string my_agent)
+: nixlBackendEngine ((nixlBackendInitParams*) init_params) {
+    std::vector<std::string> devs; /* Empty vector */
+    uint64_t n_addr;
+
+    uw = new nixlUcxWorker(devs);
+    uw->epAddr(n_addr, workerSize);
+    workerAddr = (void*) n_addr;
+    local_agent = my_agent;
+
+    uw->regAmCallback(CONN_CHECK, check_connection, this);
+    uw->regAmCallback(NOTIF_STR, get_notif, this);
+}
+
+nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params, std::string my_agent)
+: nixlBackendEngine ((nixlBackendInitParams*) init_params) {
+    std::vector<std::string> devs; /* Empty vector */
+    uint64_t n_addr;
+
+    uw = new nixlUcxWorker(devs);
+    uw->epAddr(n_addr, workerSize);
+    workerAddr = (void*) n_addr;
+    local_agent = my_agent;
+
+    uw->regAmCallback(CONN_CHECK, check_connection, this);
+}
+
+nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params, std::string my_agent)
+: nixlBackendEngine ((nixlBackendInitParams*) init_params) {
+    std::vector<std::string> devs; /* Empty vector */
+    uint64_t n_addr;
+
+    uw = new nixlUcxWorker(devs);
+    uw->epAddr(n_addr, workerSize);
+    workerAddr = (void*) n_addr;
+    local_agent = my_agent;
 
     uw->regAmCallback(CONN_CHECK, check_connection, this);
 }
@@ -82,6 +162,17 @@ int nixlUcxEngine::updateConnMap(std::string remote_agent) {
     }
 
     remoteConnMap[remote_agent].connected = true;
+
+    return 0;
+}
+
+int nixlUcxEngine::queueNotification(std::string remote_agent, std::string notif) {
+    
+    auto new_elm = std::make_pair(remote_agent, notif);
+
+    notif_mutex.lock();
+    notifs.push(new_elm);
+    notif_mutex.unlock();
 
     return 0;
 }
@@ -232,9 +323,18 @@ int nixlUcxEngine::listenForConnection(std::string remote_agent) {
         ret = uw->test(req);
     }
 
+    //wait for remote agent to complete handshake
+    while(!done){ 
+        uw->progress();
+        done = remoteConnMap[remote_agent].connected;
+    }
+    
     return 0;
 }
 
+/****************************************
+ * Memory management
+*****************************************/
 int nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
                                 memory_type_t mem_type,
                                 nixlBackendMetadata* &out)
@@ -313,7 +413,9 @@ int nixlUcxEngine::removeRemote (nixlBackendMetadata* input) {
     return 0;
 }
 
-// using META desc for local list
+/****************************************
+ * Data movement
+*****************************************/
 int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
                              nixlDescList<nixlMetaDesc> remote,
                              transfer_op_t op,
@@ -370,4 +472,72 @@ transfer_state_t nixlUcxEngine::checkTransfer (nixlBackendTransferHandle* handle
 
 int nixlUcxEngine::progress() {
     return uw->progress();
+}
+
+/****************************************
+ * Notifications
+*****************************************/
+
+//agent will provide cached msg
+int nixlUcxEngine::sendNotification(std::string remote_agent, std::string msg, nixlBackendTransferHandle* handle)
+{
+    nixlSerDes ser_des;
+    int status = 0;
+    std::string ser_msg;
+    nixlUcxConnection conn;
+    nixlUcxReq req;
+    struct nixl_ucx_am_hdr hdr;
+    uint32_t flags = 0;
+
+    auto search = remoteConnMap.find(remote_agent);
+
+    if(search == remoteConnMap.end()) {
+        //TODO: err: remote connection not found
+        return -1;
+    }
+
+    conn = remoteConnMap[remote_agent];
+
+    while(status == 0) {
+        status = checkTransfer(handle);
+        if(status == -1) {
+            //TODO: error
+            return status;
+        }
+    }
+
+    hdr.op = NOTIF_STR;
+    flags |= UCP_AM_SEND_FLAG_EAGER;
+    
+    ser_des.addStr("name", local_agent);
+    ser_des.addStr("msg", msg);
+    ser_msg = ser_des.exportStr();
+    
+    status = uw->sendAm(conn.ep, NOTIF_STR, &hdr, sizeof(struct nixl_ucx_am_hdr), (void*) ser_msg.data(), ser_msg.size(), flags, req);
+
+    if(status) {
+        //TODO: err
+        return status;
+    }
+
+    while(status == 0) status = uw->test(req);
+
+    return status;
+}
+int nixlUcxEngine::getNotifications(std::vector<std::pair<std::string, std::string>> &notif_list)
+{
+    std::vector<std::pair<std::string, std::string>> ret_list;
+    int n_notifs = 0;
+
+    notif_mutex.lock();
+
+    while(notifs.size() > 0) {
+        ret_list.push_back(notifs.front());
+        notifs.pop();
+        n_notifs++;
+    }
+
+    notif_mutex.unlock();
+    
+    return n_notifs;
 }
