@@ -230,11 +230,13 @@ int nixlRemoteSection::loadRemoteData (nixlSerDes* deserializer) {
     if (ret) return ret;
 
     for (size_t i=0; i<seg_count; ++i) {
+        // In case of errors, no need to remove the previous entries
+        // Agent will delete the full object.
         ret = deserializer->getBuf("bknd", &backend_type, sizeof(backend_type));
         if (ret) return ret;
         nixlDescList<nixlStringDesc> s_desc(deserializer);
-        if (s_desc.descCount()==0)
-            continue;
+        if (s_desc.descCount()==0) // can be used for removal in future
+            return -1;
         addDescList(s_desc, backendToEngineMap[backend_type]);
     }
     return 0;

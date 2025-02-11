@@ -9,7 +9,6 @@
 typedef enum {READ, WRITE} transfer_op_t;
 typedef enum {NIXL_INIT, NIXL_PROC, NIXL_DONE, NIXL_ERR} transfer_state_t;
 
-
 // A base class to point to backend initialization data
 class nixlBackendInitParams {
     public:
@@ -72,6 +71,11 @@ class nixlMetaDesc : public nixlBasicDesc {
 
         // No serializer or deserializer, using parent not to expose the metadata
 
+        inline friend bool operator==(const nixlMetaDesc& lhs, const nixlMetaDesc& rhs) {
+            return (((nixlBasicDesc)lhs == (nixlBasicDesc)rhs) &&
+                          (lhs.metadata == rhs.metadata));
+        }
+
         // Main use case is to take the BasicDesc from another object, so just
         // the metadata part is separately copied here, used in DescList
         inline void copyMeta (const nixlMetaDesc& meta) {
@@ -93,6 +97,11 @@ class nixlStringDesc : public nixlBasicDesc {
         using nixlBasicDesc::nixlBasicDesc;
 
         nixlStringDesc(const std::string& str); // Deserializer
+
+        inline friend bool operator==(const nixlStringDesc& lhs, const nixlStringDesc& rhs){
+            return (((nixlBasicDesc)lhs == (nixlBasicDesc)rhs) &&
+                          (lhs.metadata == rhs.metadata));
+        }
 
         inline std::string serialize() const {
             return nixlBasicDesc::serialize() + metadata;

@@ -17,7 +17,10 @@ nixlBasicDesc::nixlBasicDesc(uintptr_t addr, size_t len, uint32_t dev_id) {
 }
 
 nixlBasicDesc::nixlBasicDesc(const std::string& str) {
-    str.copy(reinterpret_cast<char*>(this), sizeof(nixlBasicDesc));
+    if (str.size()==sizeof(nixlBasicDesc))
+        str.copy(reinterpret_cast<char*>(this), sizeof(nixlBasicDesc));
+    else
+        len = 0; // Error indicator
 }
 
 nixlBasicDesc::nixlBasicDesc(const nixlBasicDesc& desc) {
@@ -76,10 +79,15 @@ void nixlBasicDesc::print(const std::string suffix) const {
 
 nixlStringDesc::nixlStringDesc(const std::string& str) {
     size_t meta_size = str.size() - sizeof(nixlBasicDesc);
-    metadata.resize(meta_size);
-    str.copy(reinterpret_cast<char*>(this), sizeof(nixlBasicDesc));
-    str.copy(reinterpret_cast<char*>(&metadata[0]),
-             meta_size, sizeof(nixlBasicDesc));
+    if (meta_size>0) {
+        metadata.resize(meta_size);
+        str.copy(reinterpret_cast<char*>(this), sizeof(nixlBasicDesc));
+        str.copy(reinterpret_cast<char*>(&metadata[0]),
+                 meta_size, sizeof(nixlBasicDesc));
+    } else { // Error
+        len = 0;
+        metadata.resize(0);
+    }
 }
 
 /*** Class nixlDescList implementation ***/
@@ -99,6 +107,8 @@ template <class T>
 nixlDescList<T>::nixlDescList(nixlSerDes* deserializer) {
     size_t n_desc;
     std::string str;
+
+    descs.clear();
 
     str = deserializer->getStr("nixlDList"); // Object type
     if (str.size()==0)
@@ -239,8 +249,8 @@ int nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc>& query,
 
     T new_elm;
     nixlBasicDesc *p = &new_elm;
-    int count = 0;
-    bool found;
+    int count = 0, last_found = 0;
+    bool found, q_sorted = query.isSorted();
 
     if (!sorted) {
         for (auto & q : query)
@@ -252,13 +262,18 @@ int nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc>& query,
                     count++;
                     break;
                 }
-    } else {
-        // if (query.isSorted()) // "There can be an optimization. TBD
 
+        if (query.descCount()==count) {
+            return 0;
+        } else {
+            resp.clear();
+            return -1;
+        }
+    } else {
         for (auto & q : query) {
             found = false;
-            auto itr = std::lower_bound(descs.begin(), descs.end(),
-                                        q, desc_comparator_f);
+            auto itr = std::lower_bound(descs.begin() + last_found,
+                                        descs.end(), q, desc_comparator_f);
 
             // Same start address case
             if (itr != descs.end()){
@@ -279,19 +294,15 @@ int nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc>& query,
                 *p = q;
                 new_elm.copyMeta(*itr);
                 resp.addDesc(new_elm);
-                count++; // redundant in sorted mode, double checking
+                if (q_sorted) // only check rest of the list
+                    last_found = itr - descs.begin();
             } else {
                 resp.clear();
                 return -1;
             }
         }
-    }
-
-    if (query.descCount()==count)
         return 0;
-
-    resp.clear();
-    return -1;
+    }
 }
 
 template <class T>
@@ -306,6 +317,7 @@ int nixlDescList<T>::getIndex(nixlBasicDesc query) const {
                                     query, desc_comparator_f);
         if (itr == descs.end())
             return -1; // not found
+        // As desired, becomes nixlBasicDesc on both sides
         if (*itr == query)
             return itr - descs.begin();
     }

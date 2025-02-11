@@ -52,7 +52,6 @@ int main()
 
     nixlStringDesc importStringD(stringd1.serialize());
     assert(stringd1 == importStringD);
-    assert(stringd1.metadata.compare(importStringD.metadata) == 0);
 
     std::cout << "\nSerDes Desc tests:\n";
     buff2.print("");
