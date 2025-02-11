@@ -129,7 +129,7 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
         // Register and deregister local memory
         virtual int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type,
                                  nixlBackendMetadata* &out) = 0;
-        virtual void deregisterMem (nixlBackendMetadata* desc) = 0;
+        virtual void deregisterMem (nixlBackendMetadata* meta) = 0;
 
         // If we use an external connection manager, the next 3 methods might change
         // Provide the required connection info for remote nodes

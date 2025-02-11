@@ -8,81 +8,77 @@
 #include "nixl.h"
 #include "internal/transfer_backend.h"
 
-typedef std::pair<nixlBackendEngine*, nixlDescList<nixlMetaDesc>> nixlSegment;
-typedef std::pair<backend_type_t, nixlDescList<nixlStringDesc>> nixlStringSegment;
-typedef std::pair<backend_type_t, std::string> nixlStringConnMD;
+typedef std::pair<memory_type_t, backend_type_t> section_key_t;
 
-// Merging the nixlDescList to say what backends support each and the corresponding
-// metadata gets really messy. Hard to find if a nixlDescList in a submitted request
-// is in which backend, while at the end of the day only a single backend will
-// process it. So separating the nixlDescLists per backend.
-
-// We don't want to search the descriptors once, and extract the requried metadata
-// separately, so merged the calls by asking the backends to populate the desired
-// descriptor and see if they succeed.
 class nixlMemSection {
     protected:
-        // Per each type of memory, pointer to a backend that supports it, and
-        // which index in that backend. Not keeping any actual memory in MemSection.
-        // When a call to send data to metadata server arrives, we get the required
-        // info from each backend and send them together.
+        // For flexibility can be merged, and have index per each in the
+        // memtoBackendMap, which gets updated per insertion/deletion
+        std::vector<backend_type_t> dramBackends;
+        std::vector<backend_type_t> vramBackends;
+        std::vector<backend_type_t> blockBackends;
+        std::vector<backend_type_t> fileBackends;
 
-        // If we want, based on the memory types in descs we can have priority
-        // over which backend we choose, and then ask the backend if it supports
-        // a dsec_list.
-
-        std::vector<nixlSegment> dramMems;
-        std::vector<nixlSegment> vramMems;
-        std::vector<nixlSegment> blockMems;
-        std::vector<nixlSegment> fileMems;
-
-        std::map<memory_type_t, std::vector<nixlSegment>*> secMap;
-        std::map<backend_type_t, nixlBackendEngine*> backendMap;
-
-        // Next two functions should become const, skipping for now due to compile errors
-        nixlDescList<nixlMetaDesc>* locateDescList (const memory_type_t mem_type,
-                                                    const nixlBackendEngine *backend);
+        std::map<memory_type_t,  std::vector<backend_type_t>*> memToBackendMap;
+        std::map<section_key_t,  nixlDescList<nixlMetaDesc>*>  sectionMap;
+        std::map<backend_type_t, nixlBackendEngine*>           backendToEngineMap;
 
     public:
         nixlMemSection ();
 
-        // Necessary for RemoteSections
-        int addBackendHandler (nixlBackendEngine *backend);
-
-        int populate (const nixlDescList<nixlBasicDesc> query,
+        // used internally to populate the resp with given query and backend
+        int populate (const nixlDescList<nixlBasicDesc>& query,
                       nixlDescList<nixlMetaDesc>& resp,
-                      const nixlBackendEngine *backend);
+                      const backend_type_t& backend_type);
 
         // Find a nixlBasicDesc in the section, if available fills the resp based
-        // on that, and returns the backend that can use the resp
+        // on that, and returns the backend pointer that can use the resp
+        // Might need information from target node to help with the decision
         // Should become const
         nixlBackendEngine* findQuery (const nixlDescList<nixlBasicDesc>& query,
                                       nixlDescList<nixlMetaDesc>& resp);
-        ~nixlMemSection ();
+
+
+        virtual ~nixlMemSection () = 0; // Making the class abstract
 };
 
 class nixlLocalSection : public nixlMemSection {
     private:
-        nixlDescList<nixlStringDesc> getStringDesc (const nixlSegment &input) const;
-
+        nixlDescList<nixlStringDesc> getStringDesc (
+                                     const nixlBackendEngine *backend,
+                                     const nixlDescList<nixlMetaDesc>& d_list) const;
     public:
+        int addBackendHandler (nixlBackendEngine *backend);
+
         int addDescList (const nixlDescList<nixlBasicDesc>& mem_elms,
                          nixlBackendEngine *backend);
 
-        // Per each nixlBasicDesc, the full region that got registered should be deregistered
-        int remDescList (const nixlDescList<nixlMetaDesc>& mem_elements,
+        // Each nixlBasicDesc should be same as original registration region
+        int remDescList (const nixlDescList<nixlMetaDesc>& mem_elms,
                          nixlBackendEngine *backend);
 
-        // Function that extracts the information for metadata server
-        std::vector<nixlStringSegment> getPublicData() const;
+        int serialize(nixlSerDes* serializer); // should be const;
+
+        inline std::map<backend_type_t, nixlBackendEngine*> getEngineMap() {
+            return backendToEngineMap;
+        }
 
         ~nixlLocalSection();
 };
 
 class nixlRemoteSection : public nixlMemSection {
+    private:
+        std::string agent_name;
+
+        // Used for loadRemoteData
+        int addDescList (const nixlDescList<nixlStringDesc>& mem_elms,
+                         nixlBackendEngine *backend);
     public:
-        int loadPublicData (const std::vector<nixlStringSegment> input,
-                            const std::string remote_agent);
+        nixlRemoteSection (std::string& agent_name,
+             std::map<backend_type_t, nixlBackendEngine*> engine_map);
+
+        // Should become constructor? And have a separate update call?
+        int loadRemoteData (nixlSerDes* deserializer);
 
         ~nixlRemoteSection();
 };

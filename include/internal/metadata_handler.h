@@ -40,15 +40,13 @@ class nixlAgentDataPrivate {
         nixlMetadataHandler                        mdHandler;
         // Remote section(s) for Transfer Agent stored locally.
         std::map<std::string, nixlRemoteSection *> remoteSections;
-        // local section strings after serialization
-        std::vector<nixlStringSegment>             sectionMd;
         // local conn strings after serialization
-        std::vector<nixlStringConnMD>              connMd;
+        std::map<backend_type_t, std::string>      connMd;
 
         // // Transfer connection class handles
         // // Discovery and connection information of different nodes
         nixlAgentDataPrivate() {}
-        ~nixlAgentDataPrivate() {}
+        ~nixlAgentDataPrivate();
 };
 
 #endif

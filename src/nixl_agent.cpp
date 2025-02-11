@@ -2,13 +2,16 @@
 #include "ucx_backend.h"
 #include "serdes.h"
 
-// nixlAgentDataPrivate::nixlAgentDataPrivate() {
-//
-// }
-//
-// nixlAgentDataPrivate::~nixlAgentDataPrivate() {
-//
-// }
+nixlAgentDataPrivate::~nixlAgentDataPrivate() {
+    for (auto & elm: remoteSections)
+        delete elm.second;
+    remoteSections.clear();
+
+    for (auto & elm: nixlBackendEngines)
+        delete elm;
+    nixlBackendEngines.clear();
+
+}
 
 nixlMetadataHandler::nixlMetadataHandler(std::string& ip_address, uint16_t port){
     this->ipAddress = ip_address;
@@ -27,7 +30,6 @@ nixlAgent::nixlAgent(const std::string &name,
 }
 
 nixlAgent::~nixlAgent() {
-
 }
 
 nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams *params) {
@@ -36,7 +38,7 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams *params) {
                                  (nixlUcxInitParams*) params);
         data.nixlBackendEngines.push_back(ucx);
         data.memorySection.addBackendHandler(ucx);
-        data.connMd.push_back(std::make_pair(UCX, ucx->getConnInfo()));
+        data.connMd[UCX] = ucx->getConnInfo();
         return ucx;
     }
     return nullptr;
@@ -53,7 +55,7 @@ int nixlAgent::deregisterMem(const nixlDescList<nixlBasicDesc>& descs,
     nixlDescList<nixlMetaDesc> resp(descs.getType(),
                                     descs.isUnifiedAddr(),
                                     descs.isSorted());
-    data.memorySection.populate(descs, resp, backend);
+    data.memorySection.populate(descs, resp, backend->getType());
     return (data.memorySection.remDescList(resp, backend));
 }
 
@@ -97,7 +99,7 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
                                    remote_descs.isSorted());
 
     ret = data.remoteSections[remote_agent]->populate(remote_descs,
-                                    *handle->target_descs, handle->engine);
+               *handle->target_descs, handle->engine->getType());
     if (ret<0)
         return ret;
 
@@ -137,19 +139,18 @@ transfer_state_t nixlAgent::getStatus (nixlTransferRequest *req) {
 
 std::string nixlAgent::getMetadata () {
     // data.connMd was populated when the backend was created
-    // Can consider caching
-    data.sectionMd = data.memorySection.getPublicData();
-
-    if ((data.sectionMd.size()==0) || (data.connMd.size()==0))
+    // For now just single conn of UCX
+    auto it = data.connMd.find(UCX);
+    if (it==data.connMd.end())
         return "";
 
     // TBD supporting more than one entry
     nixlSerDes sd;
     if (sd.addStr("Agent", data.name)<0)
         return "";
-    if (sd.addStr("Conn", data.connMd[0].second)<0)
+    if (sd.addStr("Conn", it->second)<0)
         return "";
-    if (data.sectionMd[0].second.serialize(&sd)<0)
+    if (data.memorySection.serialize(&sd)<0)
         return "";
 
     // Maybe should copy to separate string
@@ -171,24 +172,18 @@ int nixlAgent::loadMetadata (std::string remote_metadata) {
         return -1;
 
     // TBD to determine the corresponding backend
-    data.nixlBackendEngines[0]->loadRemoteConnInfo(
-                                    remote_agent, conn_info);
-
-    // TBD to determine the corresponding memory
-    // Also better to have serialized constructor
-    nixlDescList<nixlStringDesc> remote_desc (&sd);
-
-    if (remote_desc.descCount()==0)
+    if (data.nixlBackendEngines[0]->loadRemoteConnInfo(
+                                    remote_agent, conn_info)<0)
         return -1;
 
-    std::vector<nixlStringSegment> remote_segment;
-    remote_segment.push_back(std::make_pair(UCX, remote_desc));
+    data.remoteSections[remote_agent] = new nixlRemoteSection(
+        remote_agent, data.memorySection.getEngineMap());
 
-    // Better to check and decide about update
-    data.remoteSections[remote_agent] = new nixlRemoteSection;
-    if (data.remoteSections[remote_agent]->loadPublicData(
-                            remote_segment, remote_agent)<0)
+    if (data.remoteSections[remote_agent]->loadRemoteData(&sd)<0){
+        delete data.remoteSections[remote_agent];
+        data.remoteSections.erase(remote_agent);
         return -1;
+    }
 
     return 0;
 }
