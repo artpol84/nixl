@@ -106,7 +106,7 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
     handle->notif_msg = notif_msg;
     // Based on notif_msg we can set WRITE_W_NOTIF
     handle->backend_op = direction ? WRITE : READ;
-    handle->state = INIT;
+    handle->state = NIXL_INIT;
 
     req_handle = handle;
 
@@ -134,6 +134,8 @@ int nixlAgent::sendNotification(nixlTransferRequest *req) {
 }
 
 transfer_state_t nixlAgent::getStatus (nixlTransferRequest *req) {
+    req->state =  req->engine->checkTransfer(req->backend_handle);
+
     return req->state;
 }
 

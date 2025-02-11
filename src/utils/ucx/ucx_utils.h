@@ -85,7 +85,7 @@ public:
             void *laddr, nixlUcxMem &mem,
             uint64_t raddr, nixlUcxRkey &rk,
             size_t size, nixlUcxReq &req);
-    int test(nixlUcxReq &req);
+    transfer_state_t test(nixlUcxReq &req);
 
 };
 

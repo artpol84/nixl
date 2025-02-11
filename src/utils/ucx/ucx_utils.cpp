@@ -355,7 +355,7 @@ exit:
     return 0;
 }
 
-int nixlUcxWorker::test(nixlUcxReq &req)
+transfer_state_t nixlUcxWorker::test(nixlUcxReq &req)
 {
     ucs_status_t status;
 
@@ -367,14 +367,14 @@ int nixlUcxWorker::test(nixlUcxReq &req)
     ucp_worker_progress(worker);
     status = ucp_request_check_status(req.reqh);
     if (status == UCS_INPROGRESS) {
-        return 0;
+        return NIXL_PROC;
     }
 
     if (status == UCS_OK ) {
         ucp_request_free(req.reqh);
-        return 1;
+        return NIXL_DONE;
     } else {
         //TODO: error
-        return -1;
+        return NIXL_ERR;
     }
 }

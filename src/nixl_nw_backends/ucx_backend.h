@@ -105,7 +105,7 @@ class nixlUcxEngine : nixlBackendEngine {
         //MetaDesc instead of basic for local
         int transfer (nixlDescList<nixlMetaDesc> local, nixlDescList<nixlMetaDesc> remote, transfer_op_t op, std::string notif_msg, nixlBackendTransferHandle* &handle);
 
-        int checkTransfer (nixlBackendTransferHandle* handle);
+        transfer_state_t checkTransfer (nixlBackendTransferHandle* handle);
 
         int progress();
 };

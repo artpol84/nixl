@@ -226,8 +226,9 @@ int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
     return ret;
 }
 
-int nixlUcxEngine::checkTransfer (nixlBackendTransferHandle* handle) {
+transfer_state_t nixlUcxEngine::checkTransfer (nixlBackendTransferHandle* handle) {
     nixlUcxReq req;
+
     req.reqh = (void*) handle;
     return uw->test(req);
 }

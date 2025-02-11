@@ -7,6 +7,8 @@
 // Might be removed to be decided by backend, or changed to high
 // level direction or so.
 typedef enum {READ, WRITE} transfer_op_t;
+typedef enum {NIXL_INIT, NIXL_PROC, NIXL_DONE, NIXL_ERR} transfer_state_t;
+
 
 // A base class to point to backend initialization data
 class nixlBackendInitParams {
@@ -163,7 +165,7 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
         int sendNotification(nixlBackendTransferHandle* handle);
 
         //Use a handle to progress backend engine and see if a transfer is completed or not
-        virtual int checkTransfer(nixlBackendTransferHandle* handle) = 0;
+        virtual transfer_state_t checkTransfer(nixlBackendTransferHandle* handle) = 0;
 
         //Force backend engine worker to progress
         virtual int progress(){
