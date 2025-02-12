@@ -38,3 +38,10 @@ p2p_socket = executable('p2p_test',
             dependencies: [nixl_dep],
             include_directories: [inc_dir],
             install: true)
+
+nixl_app  = executable('nixl_test',
+           'nixl_test.cpp',
+           dependencies: [nixl_dep],
+           include_directories: [inc_dir, '../src/utils/serdes'],
+           link_with: [serdes_lib],
+           install: true)
