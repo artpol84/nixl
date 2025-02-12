@@ -19,7 +19,7 @@ class nixlTransferRequest {
     inline ~nixlTransferRequest(){
         delete initiator_descs;
         delete target_descs;
-        delete backend_handle;
+	// delete backend_handle;
     }
 };
 
