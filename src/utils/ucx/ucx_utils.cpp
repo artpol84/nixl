@@ -359,11 +359,6 @@ transfer_state_t nixlUcxWorker::test(nixlUcxReq &req)
 {
     ucs_status_t status;
 
-    //references can't be NULL
-    //if (req == NULL) {
-    //    return 1;
-    //}
-
     if(req.reqh == NULL) {
         return NIXL_DONE;
     }

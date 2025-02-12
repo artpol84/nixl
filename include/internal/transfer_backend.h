@@ -13,7 +13,7 @@ typedef std::vector<std::pair<std::string, std::string>> notifList;
 
 // A base class to point to backend initialization data
 
-// User doesn't know about fields sycg as local_agent but can access it
+// User doesn't know about fields such as local_agent but can access it
 // after the backend is initialized by agent. If we needed to make it private
 // from the user, we should make nixlBackendEngine/nixlAgent friend classes.
 class nixlBackendInitParams {
@@ -179,7 +179,7 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
                               nixlBackendTransferHandle* &handle) = 0;
 
         // Send the notification message to the target
-        virtual int sendNotification(std::string remote_agent, std::string msg, nixlBackendTransferHandle* handle) = 0;
+        virtual int sendNotification(std::string remote_agent, std::string msg) = 0;
 
         virtual int getNotifications(notifList &notif_list) = 0;
 

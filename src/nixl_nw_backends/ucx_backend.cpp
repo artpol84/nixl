@@ -1,7 +1,7 @@
 #include "ucx_backend.h"
 #include "serdes.h"
 
-ucs_status_t check_connection (void *arg, const void *header,
+static ucs_status_t check_connection (void *arg, const void *header,
                                size_t header_length, void *data,
                                size_t length, 
                                const ucp_am_recv_param_t *param)
@@ -36,7 +36,7 @@ ucs_status_t check_connection (void *arg, const void *header,
     return UCS_OK;
 }
 
-ucs_status_t get_notif (void *arg, const void *header,
+static ucs_status_t get_notif (void *arg, const void *header,
                         size_t header_length, void *data,
                         size_t length, 
                         const ucp_am_recv_param_t *param)
@@ -63,14 +63,16 @@ ucs_status_t get_notif (void *arg, const void *header,
     remote_name = ser_des.getStr("name");
     msg = ser_des.getStr("msg");
 
-    if(engine->queueNotification(remote_name, msg) == -1) {
+    if(engine->appendNotification(remote_name, msg) == -1) {
         //is this the best way to ERR?
         return UCS_ERR_INVALID_PARAM;
     }
     
     //debugging
     //std::cout << " finished am to connect to " << remote_agent << "\n";
-    
+   
+    //TODO: ack notification
+
     return UCS_OK;
 }
 
@@ -114,44 +116,15 @@ int nixlUcxEngine::updateConnMap(std::string remote_agent) {
     return 0;
 }
 
-int nixlUcxEngine::queueNotification(std::string remote_agent, std::string notif) {
+int nixlUcxEngine::appendNotification(std::string remote_agent, std::string notif) {
     
+    // TODO: [PERF] avoid heap allocation on the data path
     auto new_elm = std::make_pair(remote_agent, notif);
 
-    notif_mutex.lock();
     notifs.push_back(new_elm);
-    notif_mutex.unlock();
 
     return 0;
 }
-
-/*std::string nixlUcxEngine::_bytesToString(void *buf, size_t size) const {
-    std::string ret_str;
-
-    char temp[16];
-    uint8_t* bytes = (uint8_t*) buf;
-
-    for(size_t i = 0; i<size; i++) {
-        bytes = (uint8_t*) buf;
-        sprintf(temp, "%02x", bytes[i]);
-        ret_str.append(temp, 2);
-    }
-    return ret_str;
-}
-
-void * nixlUcxEngine::_stringToBytes(std::string &s, size_t &size){
-    size = s.size()/2;
-    uint8_t* ret = (uint8_t*) calloc(1, size);
-    char temp[3];
-    const uint8_t* in_str = (uint8_t*) s.data();
-
-    for(size_t i = 0; i<(s.size()); i+=2) {
-        memcpy(temp, in_str + i, 2);
-        ret[(i/2)] = (uint8_t) strtoul(temp, NULL, 16);
-    }
-
-    return ret;
-}*/
 
 /****************************************
  * Connection management
@@ -167,14 +140,15 @@ int nixlUcxEngine::loadRemoteConnInfo (std::string remote_agent,
     size_t size = remote_conn_info.size();
     nixlUcxConnection conn;
     int ret;
-    void* addr = calloc(1, size);
+    //TODO: eventually std::byte?
+    char* addr = new char[size];
 
     if(remoteConnMap.find(remote_agent) != remoteConnMap.end()) {
         //already connected?
         return -1;
     }
 
-    nixlSerDes::_stringToBytes(addr, remote_conn_info, size);
+    nixlSerDes::_stringToBytes((void*) addr, remote_conn_info, size);
     ret = uw->connect(addr, size, conn.ep);
     if (ret) {
         // TODO: print error
@@ -185,8 +159,6 @@ int nixlUcxEngine::loadRemoteConnInfo (std::string remote_agent,
     conn.connected = false;
 
     remoteConnMap[remote_agent] = conn;
-
-    free(addr);
 
     return 0;
 }
@@ -329,7 +301,7 @@ int nixlUcxEngine::loadRemote (nixlStringDesc input,
                                nixlBackendMetadata* &output,
                                std::string remote_agent) {
     size_t size = input.metadata.size();
-    void *addr = calloc(1, size);
+    char *addr = new char[size];
     int ret;
     nixlUcxConnection conn;
 
@@ -353,7 +325,6 @@ int nixlUcxEngine::loadRemote (nixlStringDesc input,
     }
     output = (nixlBackendMetadata*) md;
 
-    free(addr);
     return 0;
 }
 
@@ -434,8 +405,7 @@ int nixlUcxEngine::progress() {
 
 //agent will provide cached msg
 int nixlUcxEngine::sendNotification(std::string remote_agent, 
-                                    std::string msg, 
-                                    nixlBackendTransferHandle* handle)
+                                    std::string msg) 
 {
     nixlSerDes ser_des;
     int status = 0;
@@ -453,14 +423,6 @@ int nixlUcxEngine::sendNotification(std::string remote_agent,
     }
 
     conn = remoteConnMap[remote_agent];
-
-    while(status == 0) {
-        status = checkTransfer(handle);
-        if(status == -1) {
-            //TODO: error
-            return status;
-        }
-    }
 
     hdr.op = NOTIF_STR;
     flags |= UCP_AM_SEND_FLAG_EAGER;
@@ -487,20 +449,9 @@ int nixlUcxEngine::getNotifications(notifList &notif_list)
 {
     int n_notifs;
 
-    notif_mutex.lock();
-
     notif_list = notifs;
     n_notifs = notifs.size();
-
-
     notifs.clear();
-        //while(notifs.size() > 0) {
-    //    ret_list.push_back(notifs.front());
-    //    notifs.pop();
-    //    n_notifs++;
-    //}
-
-    notif_mutex.unlock();
-    
+   
     return n_notifs;
 }

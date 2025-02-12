@@ -76,7 +76,6 @@ class nixlUcxEngine : nixlBackendEngine {
         void *workerAddr;
         size_t workerSize;
         std::string local_agent;
-        std::mutex notif_mutex;
 
         notifList notifs;
 
@@ -90,12 +89,6 @@ class nixlUcxEngine : nixlBackendEngine {
         // Map of remote string to a vector of it's public metadata
         //std::map<std::string, std::vector<nixlUcxPublicMetadata>> vram_map;
         //std::map<std::string, std::vector<nixlUcxPublicMetadata>> dram_map;
-
-        /* TODO: Implement conversion of the arbitrary buffer into a string
-           the naive way is to replace each byte with its 2-character hex representation
-           We can figure out a better way later */
-        //std::string _bytesToString(void *buf, size_t size) const;
-        //void *_stringToBytes(std::string &s, size_t &size);
 
     public:
         nixlUcxEngine(nixlUcxInitParams* initParams);
@@ -124,13 +117,12 @@ class nixlUcxEngine : nixlBackendEngine {
 
         int progress();
 
-        int sendNotification(std::string remote_agent, std::string msg, 
-                             nixlBackendTransferHandle* handle);
+        int sendNotification(std::string remote_agent, std::string msg); 
 
         int getNotifications(notifList &notif_list);
 
         //public function for UCX worker to mark connections as connected
         int updateConnMap(std::string remote_agent);
-        int queueNotification(std::string remote_agent, std::string notif);
+        int appendNotification(std::string remote_agent, std::string notif);
 };
 

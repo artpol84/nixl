@@ -134,10 +134,13 @@ int main()
     int status = 0;
 
     while(status == 0) {
-        status = ucx1->sendNotification(agent2, test_str, handle);
+        status = ucx1->checkTransfer(handle);
         ucx2->progress();
         assert(status != -1);
     }
+
+    status = ucx1->sendNotification(agent2, test_str);
+    assert(status != -1);
 
     // Do some checks on the data.
     for(size_t i = dst_offset; i<req_size; i++){
