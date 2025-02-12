@@ -13,9 +13,6 @@ private:
     ssize_t des_offset;
     ser_mode_t mode;
 
-    std::string _bytesToString(void *buf, ssize_t size);
-    void _stringToBytes(void* fill_buf, const char* s, ssize_t size);
-
 public:
     nixlSerDes();
     
@@ -31,5 +28,8 @@ public:
     /* Ser/Des buffer management */
     std::string exportStr();
     int importStr(std::string sdbuf);
+
+    static std::string _bytesToString(void *buf, ssize_t size);
+    static void _stringToBytes(void* fill_buf, std::string s, ssize_t size);
 };
 #endif

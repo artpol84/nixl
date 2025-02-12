@@ -40,6 +40,7 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams *params) {
     if (data.nixlBackendEngines.count(backend_type)!=0)
         return nullptr;
 
+    params->local_agent = data.name;
     switch (backend_type) { // For supported backends
         case UCX:
             backend = (nixlBackendEngine*) new nixlUcxEngine(

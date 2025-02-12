@@ -18,8 +18,8 @@ int main()
     // User would ask each of the agents to create a ucx  backend, and the
     // agent returns to them these pointers in the form of transfer_backend *
     nixlBackendEngine *ucx1, *ucx2;
-    ucx1 = (nixlBackendEngine*) new nixlUcxEngine (&init1, agent1);
-    ucx2 = (nixlBackendEngine*) new nixlUcxEngine (&init2, agent2);
+    ucx1 = (nixlBackendEngine*) new nixlUcxEngine (&init1);
+    ucx2 = (nixlBackendEngine*) new nixlUcxEngine (&init2);
 
     // We get the required connection info from UCX to be put on the central
     // location and ask for it for a remote node
@@ -142,14 +142,16 @@ int main()
 
     std::cout << "Transfer verified\n";
 
-    std::vector<std::pair<std::string, std::string>> target_notifs;
+    notifList target_notifs;
 
-    ret2 = ucx2->getNotifications(target_notifs);
+    ret2 = 0;
+
+    while(ret2 == 0) ret2 = ucx2->getNotifications(target_notifs);
 
     assert(ret2 == 1);
 
-    assert(target_notifs[0].first == agent1);
-    assert(target_notifs[0].second == test_str);
+    assert(target_notifs.front().first == agent1);
+    assert(target_notifs.front().second == test_str);
 
     // At the end we deregister the memories, by agent knowing all the registered regions
     ucx1->deregisterMem(local_meta1);

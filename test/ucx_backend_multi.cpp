@@ -21,9 +21,11 @@ void test_thread(int id)
         other = "Agent1";
     }
 
+    init_params.local_agent = my_name;
+
     std::cout << my_name << " Started\n";
 
-    ucxw = (nixlBackendEngine*) new nixlUcxEngine (&init_params, my_name);
+    ucxw = (nixlBackendEngine*) new nixlUcxEngine (&init_params);
 
     conn_info[id] = ucxw->getConnInfo();
     

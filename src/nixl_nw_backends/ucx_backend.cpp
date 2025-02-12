@@ -85,59 +85,7 @@ nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params)
 
     uw->regAmCallback(CONN_CHECK, check_connection, this);
     uw->regAmCallback(NOTIF_STR, get_notif, this);
-}
-
-nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params, std::string my_agent)
-: nixlBackendEngine ((nixlBackendInitParams*) init_params) {
-    std::vector<std::string> devs; /* Empty vector */
-    uint64_t n_addr;
-
-    uw = new nixlUcxWorker(devs);
-    uw->epAddr(n_addr, workerSize);
-    workerAddr = (void*) n_addr;
-    local_agent = my_agent;
-
-    uw->regAmCallback(CONN_CHECK, check_connection, this);
-    uw->regAmCallback(NOTIF_STR, get_notif, this);
-}
-
-nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params, std::string my_agent)
-: nixlBackendEngine ((nixlBackendInitParams*) init_params) {
-    std::vector<std::string> devs; /* Empty vector */
-    uint64_t n_addr;
-
-    uw = new nixlUcxWorker(devs);
-    uw->epAddr(n_addr, workerSize);
-    workerAddr = (void*) n_addr;
-    local_agent = my_agent;
-
-    uw->regAmCallback(CONN_CHECK, check_connection, this);
-}
-
-nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params, std::string my_agent)
-: nixlBackendEngine ((nixlBackendInitParams*) init_params) {
-    std::vector<std::string> devs; /* Empty vector */
-    uint64_t n_addr;
-
-    uw = new nixlUcxWorker(devs);
-    uw->epAddr(n_addr, workerSize);
-    workerAddr = (void*) n_addr;
-    local_agent = my_agent;
-
-    uw->regAmCallback(CONN_CHECK, check_connection, this);
-}
-
-nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params, std::string my_agent)
-: nixlBackendEngine ((nixlBackendInitParams*) init_params) {
-    std::vector<std::string> devs; /* Empty vector */
-    uint64_t n_addr;
-
-    uw = new nixlUcxWorker(devs);
-    uw->epAddr(n_addr, workerSize);
-    workerAddr = (void*) n_addr;
-    local_agent = my_agent;
-
-    uw->regAmCallback(CONN_CHECK, check_connection, this);
+    local_agent = init_params->local_agent;
 }
 
 // Through parent destructor the unregister will be called.
@@ -171,13 +119,13 @@ int nixlUcxEngine::queueNotification(std::string remote_agent, std::string notif
     auto new_elm = std::make_pair(remote_agent, notif);
 
     notif_mutex.lock();
-    notifs.push(new_elm);
+    notifs.push_back(new_elm);
     notif_mutex.unlock();
 
     return 0;
 }
 
-std::string nixlUcxEngine::_bytesToString(void *buf, size_t size) const {
+/*std::string nixlUcxEngine::_bytesToString(void *buf, size_t size) const {
     std::string ret_str;
 
     char temp[16];
@@ -195,7 +143,7 @@ void * nixlUcxEngine::_stringToBytes(std::string &s, size_t &size){
     size = s.size()/2;
     uint8_t* ret = (uint8_t*) calloc(1, size);
     char temp[3];
-    const uint8_t* in_str = (uint8_t*) s.c_str();
+    const uint8_t* in_str = (uint8_t*) s.data();
 
     for(size_t i = 0; i<(s.size()); i+=2) {
         memcpy(temp, in_str + i, 2);
@@ -203,30 +151,30 @@ void * nixlUcxEngine::_stringToBytes(std::string &s, size_t &size){
     }
 
     return ret;
-}
+}*/
 
 /****************************************
  * Connection management
 *****************************************/
 std::string nixlUcxEngine::getConnInfo() const {
-    return _bytesToString(workerAddr, workerSize);
+    return nixlSerDes::_bytesToString(workerAddr, workerSize);
 }
 
 
 int nixlUcxEngine::loadRemoteConnInfo (std::string remote_agent,
                                        std::string remote_conn_info)
 {
-    size_t size;
+    size_t size = remote_conn_info.size();
     nixlUcxConnection conn;
     int ret;
-    void* addr;
+    void* addr = calloc(1, size);
 
     if(remoteConnMap.find(remote_agent) != remoteConnMap.end()) {
         //already connected?
         return -1;
     }
 
-    addr = _stringToBytes(remote_conn_info, size);
+    nixlSerDes::_stringToBytes(addr, remote_conn_info, size);
     ret = uw->connect(addr, size, conn.ep);
     if (ret) {
         // TODO: print error
@@ -264,7 +212,10 @@ int nixlUcxEngine::makeConnection(std::string remote_agent) {
     //agent names should never be long enough to need RNDV
     flags |= UCP_AM_SEND_FLAG_EAGER;
 
-    ret = uw->sendAm(conn.ep, CONN_CHECK, &hdr, sizeof(struct nixl_ucx_am_hdr), (void*) local_agent.data(), local_agent.size(), flags, req);
+    ret = uw->sendAm(conn.ep, CONN_CHECK, 
+                     &hdr, sizeof(struct nixl_ucx_am_hdr), 
+                     (void*) local_agent.data(), local_agent.size(), 
+                     flags, req);
     
     if(ret != 0) {
         //TODO: error
@@ -311,7 +262,10 @@ int nixlUcxEngine::listenForConnection(std::string remote_agent) {
     //agent names should never be long enough to need RNDV
     flags |= UCP_AM_SEND_FLAG_EAGER;
 
-    ret = uw->sendAm(conn.ep, CONN_CHECK, &hdr, sizeof(struct nixl_ucx_am_hdr), (void*) local_agent.data(), local_agent.size(), flags, req);
+    ret = uw->sendAm(conn.ep, CONN_CHECK, 
+                     &hdr, sizeof(struct nixl_ucx_am_hdr), 
+                     (void*) local_agent.data(), local_agent.size(), 
+                     flags, req);
     
     if(ret != 0) {
         //TODO: error
@@ -354,7 +308,7 @@ int nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
         // TODO: err out
         return -1;
     }
-    priv->rkeyStr = _bytesToString((void*) rkey_addr, rkey_size);
+    priv->rkeyStr = nixlSerDes::_bytesToString((void*) rkey_addr, rkey_size);
 
     out = (nixlBackendMetadata*) priv; //typecast?
 
@@ -374,8 +328,8 @@ void nixlUcxEngine::deregisterMem (nixlBackendMetadata* desc)
 int nixlUcxEngine::loadRemote (nixlStringDesc input,
                                nixlBackendMetadata* &output,
                                std::string remote_agent) {
-    void *addr;
-    size_t size;
+    size_t size = input.metadata.size();
+    void *addr = calloc(1, size);
     int ret;
     nixlUcxConnection conn;
 
@@ -389,7 +343,7 @@ int nixlUcxEngine::loadRemote (nixlStringDesc input,
     }
     conn = (nixlUcxConnection) search->second;
 
-    addr = _stringToBytes(input.metadata, size);
+    nixlSerDes::_stringToBytes(addr, input.metadata, size);
 
     md->conn = conn;
     ret = uw->rkeyImport(conn.ep, addr, size, md->rkey);
@@ -479,7 +433,9 @@ int nixlUcxEngine::progress() {
 *****************************************/
 
 //agent will provide cached msg
-int nixlUcxEngine::sendNotification(std::string remote_agent, std::string msg, nixlBackendTransferHandle* handle)
+int nixlUcxEngine::sendNotification(std::string remote_agent, 
+                                    std::string msg, 
+                                    nixlBackendTransferHandle* handle)
 {
     nixlSerDes ser_des;
     int status = 0;
@@ -513,7 +469,10 @@ int nixlUcxEngine::sendNotification(std::string remote_agent, std::string msg, n
     ser_des.addStr("msg", msg);
     ser_msg = ser_des.exportStr();
     
-    status = uw->sendAm(conn.ep, NOTIF_STR, &hdr, sizeof(struct nixl_ucx_am_hdr), (void*) ser_msg.data(), ser_msg.size(), flags, req);
+    status = uw->sendAm(conn.ep, NOTIF_STR, 
+                        &hdr, sizeof(struct nixl_ucx_am_hdr), 
+                        (void*) ser_msg.data(), ser_msg.size(), 
+                        flags, req);
 
     if(status) {
         //TODO: err
@@ -524,18 +483,19 @@ int nixlUcxEngine::sendNotification(std::string remote_agent, std::string msg, n
 
     return status;
 }
-int nixlUcxEngine::getNotifications(std::vector<std::pair<std::string, std::string>> &notif_list)
+int nixlUcxEngine::getNotifications(notifList &notif_list)
 {
-    std::vector<std::pair<std::string, std::string>> ret_list;
-    int n_notifs = 0;
+    notifList ret_list = notifs;
+    int n_notifs = notifs.size();
 
     notif_mutex.lock();
 
-    while(notifs.size() > 0) {
-        ret_list.push_back(notifs.front());
-        notifs.pop();
-        n_notifs++;
-    }
+    notifs.clear();
+        //while(notifs.size() > 0) {
+    //    ret_list.push_back(notifs.front());
+    //    notifs.pop();
+    //    n_notifs++;
+    //}
 
     notif_mutex.unlock();
     

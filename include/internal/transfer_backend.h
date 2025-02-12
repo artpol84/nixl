@@ -1,7 +1,6 @@
 #ifndef __TRANSFER_BACKEND_H_
 #define __TRANSFER_BACKEND_H_
 
-#include <queue>
 #include <mutex>
 #include <string>
 #include "nixl_descriptors.h"
@@ -10,10 +9,16 @@
 // level direction or so.
 typedef enum {READ, WRITE} transfer_op_t;
 typedef enum {NIXL_INIT, NIXL_PROC, NIXL_DONE, NIXL_ERR} transfer_state_t;
+typedef std::vector<std::pair<std::string, std::string>> notifList;
 
 // A base class to point to backend initialization data
+
+// User doesn't know about fields sycg as local_agent but can access it
+// after the backend is initialized by agent. If we needed to make it private
+// from the user, we should make nixlBackendEngine/nixlAgent friend classes.
 class nixlBackendInitParams {
     public:
+        std::string local_agent;
         virtual backend_type_t getType () = 0;
         virtual ~nixlBackendInitParams() = default;
 };
@@ -176,7 +181,7 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
         // Send the notification message to the target
         virtual int sendNotification(std::string remote_agent, std::string msg, nixlBackendTransferHandle* handle) = 0;
 
-        virtual int getNotifications(std::vector<std::pair<std::string, std::string>> &notif_list) = 0;
+        virtual int getNotifications(notifList &notif_list) = 0;
 
         // Use a handle to progress backend engine and see if a transfer is completed or not
         virtual transfer_state_t checkTransfer(nixlBackendTransferHandle* handle) = 0;

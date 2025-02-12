@@ -78,7 +78,7 @@ class nixlUcxEngine : nixlBackendEngine {
         std::string local_agent;
         std::mutex notif_mutex;
 
-        std::queue<std::pair<std::string, std::string>> notifs;
+        notifList notifs;
 
         // Map of agent name to saved nixlUcxConnection info
         std::map<std::string, nixlUcxConnection> remoteConnMap;
@@ -94,12 +94,11 @@ class nixlUcxEngine : nixlBackendEngine {
         /* TODO: Implement conversion of the arbitrary buffer into a string
            the naive way is to replace each byte with its 2-character hex representation
            We can figure out a better way later */
-        std::string _bytesToString(void *buf, size_t size) const;
-        void *_stringToBytes(std::string &s, size_t &size);
+        //std::string _bytesToString(void *buf, size_t size) const;
+        //void *_stringToBytes(std::string &s, size_t &size);
 
     public:
         nixlUcxEngine(nixlUcxInitParams* initParams);
-        nixlUcxEngine(nixlUcxInitParams* initParams, std::string my_agent);
 
         ~nixlUcxEngine();
 
@@ -116,13 +115,19 @@ class nixlUcxEngine : nixlBackendEngine {
         int removeRemote (nixlBackendMetadata* input);
 
         //MetaDesc instead of basic for local
-        int transfer (nixlDescList<nixlMetaDesc> local, nixlDescList<nixlMetaDesc> remote, transfer_op_t op, std::string notif_msg, nixlBackendTransferHandle* &handle);
+        int transfer (nixlDescList<nixlMetaDesc> local, 
+                      nixlDescList<nixlMetaDesc> remote, 
+                      transfer_op_t op, std::string notif_msg, 
+                      nixlBackendTransferHandle* &handle);
+        
         transfer_state_t checkTransfer (nixlBackendTransferHandle* handle);
 
         int progress();
 
-        int sendNotification(std::string remote_agent, std::string msg, nixlBackendTransferHandle* handle);
-        int getNotifications(std::vector<std::pair<std::string, std::string>> &notif_list);
+        int sendNotification(std::string remote_agent, std::string msg, 
+                             nixlBackendTransferHandle* handle);
+
+        int getNotifications(notifList &notif_list);
 
         //public function for UCX worker to mark connections as connected
         int updateConnMap(std::string remote_agent);

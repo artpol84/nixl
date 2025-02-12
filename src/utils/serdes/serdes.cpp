@@ -8,27 +8,12 @@ nixlSerDes::nixlSerDes() {
 }
 
 std::string nixlSerDes::_bytesToString(void *buf, ssize_t size) {
-    std::string ret_str;
-
-    char temp[16];
-    uint8_t* bytes = (uint8_t*) buf;
-
-    for(ssize_t i = 0; i<size; i++) {
-        bytes = (uint8_t*) buf;
-        sprintf(temp, "%02x", bytes[i]);
-        ret_str.append(temp, 2);
-    }
+    std::string ret_str = std::string(reinterpret_cast<const char*>(buf), size);
     return ret_str;
 }
 
-void nixlSerDes::_stringToBytes(void* fill_buf, const char* s, ssize_t size){
-    uint8_t* ret = (uint8_t*) fill_buf;
-    char temp[3];
-
-    for(ssize_t i = 0; i<(size*2); i+=2) {
-        memcpy(temp, s + i, 2);
-        ret[(i/2)] = (uint8_t) strtoul(temp, NULL, 16);
-    }
+void nixlSerDes::_stringToBytes(void* fill_buf, std::string s, ssize_t size){
+    s.copy(reinterpret_cast<char*>(fill_buf), size); 
 }
 
 /* Ser/Des for Strings */
@@ -56,8 +41,9 @@ std::string nixlSerDes::getStr(std::string tag){
     des_offset += tag.size();
     
     //get len
-    _stringToBytes(&len, workingStr.c_str() + des_offset, sizeof(ssize_t));
-    des_offset += (sizeof(ssize_t)*2);
+    //_stringToBytes(&len, workingStr.data() + des_offset, sizeof(ssize_t));
+    _stringToBytes(&len, workingStr.substr(des_offset, sizeof(ssize_t)), sizeof(ssize_t));
+    des_offset += sizeof(ssize_t);
 
     //get string
     std::string ret = workingStr.substr(des_offset, len);
@@ -88,7 +74,8 @@ ssize_t nixlSerDes::getBufLen(std::string tag){
     ssize_t len;
 
     //get len
-    _stringToBytes(&len, workingStr.c_str() + des_offset + tag.size(), sizeof(ssize_t));
+    //_stringToBytes(&len, workingStr.data() + des_offset + tag.size(), sizeof(ssize_t));
+    _stringToBytes(&len, workingStr.substr(des_offset + tag.size(), sizeof(ssize_t)), sizeof(ssize_t));
 
     return len;
 }
@@ -100,12 +87,13 @@ int nixlSerDes::getBuf(std::string tag, void *buf, ssize_t len){
     }
     
     //skip over tag and size, which we assume has been read previously
-    des_offset += tag.size() + sizeof(ssize_t)*2;
+    des_offset += tag.size() + sizeof(ssize_t);
 
-    _stringToBytes(buf, workingStr.c_str() + des_offset, len);
+    //_stringToBytes(buf, workingStr.data() + des_offset, len);
+    _stringToBytes(buf, workingStr.substr(des_offset, len), len);
 
     //bytes in string form are twice as long, skip those plus | delimiter
-    des_offset += (len*2) + 1;
+    des_offset += len + 1;
 
     return 0;
 }

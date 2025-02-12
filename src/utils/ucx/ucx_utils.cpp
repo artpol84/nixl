@@ -364,6 +364,10 @@ transfer_state_t nixlUcxWorker::test(nixlUcxReq &req)
     //    return 1;
     //}
 
+    if(req.reqh == NULL) {
+        return NIXL_DONE;
+    }
+
     ucp_worker_progress(worker);
     status = ucp_request_check_status(req.reqh);
     if (status == UCS_INPROGRESS) {
