@@ -161,6 +161,15 @@ void nixlAgent::invalidateRequest(nixlTransferRequest *req) {
 int nixlAgent::postRequest(nixlTransferRequest *req) {
     if (req==nullptr)
         return -1;
+    // We can't repost while a request is in progress
+    if (req->state == NIXL_PROC) {
+        req->state = req->engine->checkTransfer(req->backend_handle);
+        if (req->state == NIXL_PROC)
+            return -1;
+    }
+
+    // If state is NIXL_INIT or NIXL_DONE we can repost,
+    // backend handle is non_existent or release respectively.
     return (req->engine->transfer (*req->initiator_descs,
                                    *req->target_descs,
                                    req->backend_op,
@@ -174,7 +183,9 @@ int nixlAgent::sendNotification(nixlTransferRequest *req) {
 }
 
 transfer_state_t nixlAgent::getStatus (nixlTransferRequest *req) {
-    req->state =  req->engine->checkTransfer(req->backend_handle);
+    // If the state is done, the backend_handle is released
+    if (req->state != NIXL_DONE)
+        req->state = req->engine->checkTransfer(req->backend_handle);
 
     return req->state;
 }
