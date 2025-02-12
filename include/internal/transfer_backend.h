@@ -147,6 +147,7 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
         virtual std::string getConnInfo() const = 0;
 
         // Deserialize from string the connection info for a remote node
+        // The generated data should be deleted in nixlBackendEngine destructor
         virtual int loadRemoteConnInfo (std::string remote_agent,
                                         std::string remote_conn_info) = 0;
 
@@ -173,13 +174,11 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
         // Send the notification message to the target
         int sendNotification(nixlBackendTransferHandle* handle);
 
-        //Use a handle to progress backend engine and see if a transfer is completed or not
+        // Use a handle to progress backend engine and see if a transfer is completed or not
         virtual transfer_state_t checkTransfer(nixlBackendTransferHandle* handle) = 0;
 
-        //Force backend engine worker to progress
-        virtual int progress(){
-            return 0;
-        }
+        // Force backend engine worker to progress
+        virtual int progress() { return 0; }
 };
 
 #endif

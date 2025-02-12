@@ -136,6 +136,12 @@ nixlDescList<T>::nixlDescList(nixlSerDes* deserializer) {
             return;
         descs.resize(n_desc);
         str.copy(reinterpret_cast<char*>(descs.data()), str.size());
+
+        for (size_t i=0; i<n_desc; ++i)
+            if (descs[i].len == 0) { // Error indicator
+                descs.clear();
+                return;
+            }
     } else if(std::is_same<nixlStringDesc, T>::value) {
         if (str!="nixlSDList")
             return;
@@ -146,6 +152,10 @@ nixlDescList<T>::nixlDescList(nixlSerDes* deserializer) {
                 return;
             }
             T elm(str);
+            if (elm.len == 0) { // Error indicator
+                descs.clear();
+                return;
+            }
             descs.push_back(elm);
         }
     } else {
@@ -194,6 +204,9 @@ bool descAddrCompare (const nixlBasicDesc& a, const nixlBasicDesc& b,
 // and during insertion we guarantee that.
 template <class T>
 int nixlDescList<T>::addDesc (const T& desc) {
+    if (desc.len == 0) // Error indicator
+        return -1;
+
     if (!sorted) {
         for (auto & elm : descs) {
             // No overlap is allowed among descs of a list

@@ -16,31 +16,15 @@ nixlMemSection:: nixlMemSection () {
 
 int nixlMemSection::populate (const nixlDescList<nixlBasicDesc>& query,
                               nixlDescList<nixlMetaDesc>& resp,
-                              const backend_type_t& backend_type) {
+                              const backend_type_t& backend_type) const {
+    if (query.getType() != resp.getType())
+        return -1;
     section_key_t sec_key = std::make_pair(query.getType(), backend_type);
     auto it = sectionMap.find(sec_key);
     if (it==sectionMap.end())
         return -1;
     else
         return it->second->populate(query, resp);
-}
-
-nixlBackendEngine* nixlMemSection::findQuery (const nixlDescList<nixlBasicDesc>& query,
-                                              nixlDescList<nixlMetaDesc>& resp) {
-
-    auto it = memToBackendMap.find(query.getType());
-    if (it==memToBackendMap.end())
-        return nullptr;
-    std::vector<backend_type_t> *supported_backends = it->second;
-
-    // Based on supported backends, rearrange the order to visit if desired
-
-    for (auto & elm : *supported_backends) {
-        // If populate fails, it clears the resp before return
-        if (populate(query, resp, elm) == 0)
-            return backendToEngineMap[elm];
-    }
-    return nullptr;
 }
 
 // Eventhough it's pure virtual, base class needs a destructor,
@@ -78,7 +62,7 @@ nixlDescList<nixlStringDesc> nixlLocalSection::getStringDesc (
 int nixlLocalSection::addBackendHandler (nixlBackendEngine *backend) {
     if (backend == nullptr)
         return -1;
-    // Can check for reinsertion
+    // Agent has already checked for not being the same type of backend
     backendToEngineMap[backend->getType()] = backend;
     return 0;
 }
@@ -156,7 +140,32 @@ int nixlLocalSection::remDescList (const nixlDescList<nixlMetaDesc>& mem_elms,
     return 0;
 }
 
-int nixlLocalSection::serialize(nixlSerDes* serializer) { // should be const;
+nixlBackendEngine* nixlLocalSection::findQuery(
+                       const nixlDescList<nixlBasicDesc>& query,
+                       nixlDescList<nixlMetaDesc>& resp,
+                       const memory_type_t remote_mem_type,
+                       const backend_list_t remote_backends) const {
+
+    auto it = memToBackendMap.find(query.getType());
+    if (it==memToBackendMap.end())
+        return nullptr;
+    std::vector<backend_type_t> *supported_backends = it->second;
+
+    // Decision making based on supported local backends for this
+    // memory type, supported remote backends and remote memory type
+    // or here we loop through and find first local match. The more
+    // complete option (overkill) is to try all possible scenarios and
+    // see which populates on both side are successful and then decide
+
+    for (auto & elm : *supported_backends) {
+        // If populate fails, it clears the resp before return
+        if (populate(query, resp, elm) == 0)
+            return backendToEngineMap.at(elm);
+    }
+    return nullptr;
+}
+
+int nixlLocalSection::serialize(nixlSerDes* serializer) const {
     int ret;
     size_t seg_count = sectionMap.size();
     backend_type_t backend_type;
@@ -167,7 +176,7 @@ int nixlLocalSection::serialize(nixlSerDes* serializer) { // should be const;
     for (auto &seg : sectionMap) {
         backend_type = seg.first.second;
         nixlDescList<nixlStringDesc> s_desc = getStringDesc(
-                    backendToEngineMap[backend_type], *seg.second);
+                    backendToEngineMap.at(backend_type), *seg.second);
 
         ret = serializer->addBuf("bknd", &backend_type, sizeof(backend_type));
         if (ret) return ret;
@@ -193,8 +202,9 @@ nixlRemoteSection::nixlRemoteSection (std::string& agent_name,
 
 int nixlRemoteSection::addDescList (const nixlDescList<nixlStringDesc>& mem_elms,
                                     nixlBackendEngine *backend) {
-    // Less checks that LocalSection, as it's private and called by loadRemoteData
-    // In RemoteSection we overwrite if the key exists
+    // Less checks than LocalSection, as it's private and called by loadRemoteData
+    // In RemoteSection, if we support updates, value for a key gets overwritten
+    // Without it, its corrupt data, we keep the last option without raising an error
     memory_type_t  mem_type     = mem_elms.getType();
     backend_type_t backend_type = backend->getType();
     section_key_t sec_key = std::make_pair(mem_type, backend_type);
@@ -209,12 +219,10 @@ int nixlRemoteSection::addDescList (const nixlDescList<nixlStringDesc>& mem_elms
     int ret;
     for (int i=0; i<mem_elms.descCount(); ++i) {
         ret = backend->loadRemote(mem_elms[i], out.metadata, agent_name);
-        if (ret<0) {
-            for (int j=0; j<i; ++j) { // Assuming incoming list was sorted
-                backend->removeRemote((*target)[j].metadata);
-            }
+        // In case of errors, no need to remove the previous entries
+        // Agent will delete the full object.
+        if (ret<0)
             return ret;
-        }
         *p = mem_elms[i]; // Copy the basic desc part
         target->addDesc(out);
     }
@@ -235,9 +243,10 @@ int nixlRemoteSection::loadRemoteData (nixlSerDes* deserializer) {
         ret = deserializer->getBuf("bknd", &backend_type, sizeof(backend_type));
         if (ret) return ret;
         nixlDescList<nixlStringDesc> s_desc(deserializer);
-        if (s_desc.descCount()==0) // can be used for removal in future
+        if (s_desc.descCount()==0) // can be used for entry removal in future
             return -1;
-        addDescList(s_desc, backendToEngineMap[backend_type]);
+        if (addDescList(s_desc, backendToEngineMap[backend_type]) < 0)
+            return -1;
     }
     return 0;
 }

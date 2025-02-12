@@ -18,18 +18,20 @@ class nixlAgent {
         /*** Initialization and Regsitering Methods ***/
 
         // Populates agent name and device metadata
-        nixlAgent(const std::string &name, const nixlDeviceMetadata &devs);
-        ~nixlAgent();
+        nixlAgent (const std::string &name, const nixlDeviceMetadata &devs);
+        ~nixlAgent ();
 
-        // Instantiate BackendEngine objects, based on corresponding parameters
-        nixlBackendEngine* createBackend(nixlBackendInitParams *params);
+        // Instantiate BackendEngine objects, based on corresponding params
+        nixlBackendEngine* createBackend (nixlBackendInitParams *params);
         // Register with the backend and populate memory_section
-        int registerMem(const nixlDescList<nixlBasicDesc>& descs, nixlBackendEngine *backend);
+        int registerMem (const nixlDescList<nixlBasicDesc>& descs,
+                         nixlBackendEngine *backend);
         // Deregister and remove from memory section
-        int deregisterMem(const nixlDescList<nixlBasicDesc>& descs, nixlBackendEngine *backend);
+        int deregisterMem (const nixlDescList<nixlBasicDesc>& descs,
+                           nixlBackendEngine *backend);
 
-        // Make connection to a remote agent proactively, instead of at transfer time
-        int makeConnection(std::string remote_agent, int direction);
+        // Make connectionproactively, instead of at transfer time
+        int makeConnection (std::string remote_agent, int direction);
 
 
         /*** Transfer Request Handling ***/
@@ -43,14 +45,14 @@ class nixlAgent {
                                nixlTransferRequest* &req_handle);
 
         // Invalidate transfer request if we no longer need it.
-        void invalidateRequest(nixlTransferRequest *req);
+        void invalidateRequest (nixlTransferRequest *req);
 
         // Submit transfer requests
         // The async handler is the TransferRequest object
-        int postRequest(nixlTransferRequest *req);
+        int postRequest (nixlTransferRequest *req);
 
         // Send the notification message to the target
-        int sendNotification(nixlTransferRequest *req);
+        int sendNotification (nixlTransferRequest *req);
 
         // Check the status of transfer requests
         transfer_state_t getStatus (nixlTransferRequest *req);
@@ -59,25 +61,25 @@ class nixlAgent {
         /*** Metadata handling through side channel ***/
 
         // Get nixl_metadata for this agent
-        std::string getMetadata ();
+        std::string getMetadata () const;
 
         // Load other agent's metadata and unpack it internally
         int loadMetadata (std::string remote_metadata);
 
         // Invalidate the remote section information cached locally
-        void invalidateRemoteMetadata(std::string remote_agent);
+        void invalidateRemoteMetadata (std::string remote_agent);
 
 
-        /*** Metadata handling through central kv service, or single peer for test ***/
+        /*** Metadata handling through central kv service, or for p2p test ***/
 
         // Send the local metadata to kv service to store it
-        int sendMetadata();
+        int sendMetadata () const;
 
-        // Request for a remote Agent's metadata, can be used for proactive prefetch
+        // Request for a remote Agent's metadata, used for proactive prefetch
         int fetchMetadata (std::string &remote_agent);
 
         // Sends messages to kv service to invalidate this Agent's metadata
-        void invalidateLocalMetadata();
+        void invalidateLocalMetadata ();
 };
 
 #endif

@@ -29,22 +29,18 @@ class nixlMetadataHandler {
 
 class nixlAgentDataPrivate {
     public:
-        std::string                                name;
-        // Device specfic metadata such as topology/others
-        nixlDeviceMetadata                         deviceMeta;
-        // Handles to different registered backend engines
-        std::vector<nixlBackendEngine *>           nixlBackendEngines;
-        // Memory section objects for local and list of cached remote objects
-        nixlLocalSection                           memorySection;
-        // Handler for metadata server access
-        nixlMetadataHandler                        mdHandler;
-        // Remote section(s) for Transfer Agent stored locally.
-        std::map<std::string, nixlRemoteSection *> remoteSections;
-        // local conn strings after serialization
-        std::map<backend_type_t, std::string>      connMd;
+        std::string                                  name;
+        nixlDeviceMetadata                           deviceMeta;
 
-        // // Transfer connection class handles
-        // // Discovery and connection information of different nodes
+        std::map<backend_type_t, nixlBackendEngine*> nixlBackendEngines;
+        std::map<backend_type_t, std::string>        connMd; // Local info
+
+        nixlLocalSection                             memorySection;
+        nixlMetadataHandler                          mdHandler;
+
+        std::map<std::string, nixlRemoteSection *>   remoteSections;
+        std::map<std::string, backend_list_t>        remoteBackends;
+
         nixlAgentDataPrivate() {}
         ~nixlAgentDataPrivate();
 };
