@@ -15,11 +15,11 @@ nixlMetadataStream::~nixlMetadataStream() {
 }
 
 bool nixlMetadataStream::setupStream() {
-    
+
     socketFd = socket(AF_INET, SOCK_STREAM, 0);
     if (socketFd == -1) {
         std::cerr << "failed to create stream socket for listener";
-        return false;   
+        return false;
     }
 
     listenerAddr.sin_family = AF_INET;
@@ -32,74 +32,116 @@ bool nixlMetadataStream::setupStream() {
 void nixlMetadataStream::closeStream() {
    if (socketFd != -1) {
         close(socketFd);
-   } 
+   }
 }
 
 
-nixlMDStreamListener::nixlMDStreamListener(int port) : nixlMetadataStream(port) {}
+nixlMDStreamListener::nixlMDStreamListener(int port) :
+        nixlMetadataStream(port) {}
 
 nixlMDStreamListener::~nixlMDStreamListener() {
     if (listenerThread.joinable()) {
         listenerThread.join();
+    }
+    if (csock >= 0) {
+            close(csock);
     }
 }
 
 void nixlMDStreamListener::setupListener() {
     setupStream();
 
-    if (bind(socketFd, (struct sockaddr*)&listenerAddr, sizeof(listenerAddr)) < 0) {
+    if (bind(socketFd, (struct sockaddr*)&listenerAddr,
+             sizeof(listenerAddr)) < 0) {
         std::cerr << "Socket Bind failed while setting up listener for MD\n";
         closeStream();
         return;
     }
 
     if (listen(socketFd, 128) < 0) {
-        std::cerr << "Listening failed for stream Socket: " << socketFd << std::endl;
+        std::cerr << "Listening failed for stream Socket: "
+                  << socketFd  << "\n";
         closeStream();
         return;
     }
-    std::cout << "MD listener is listening on port " << port << "...\n";
+    std::cout << "MD listener is listening on port "
+              << port << "...\n";
 }
 
-void nixlMDStreamListener::acceptClients() {
+void nixlMDStreamListener::acceptClient() {
+        csock = accept(socketFd, NULL, NULL);
+        if (csock < 0) {
+            std::cerr << "Cannot accept client connection\n"
+                      << strerror(errno) << std::endl;
+            return;
+        }
+}
+
+
+void nixlMDStreamListener::acceptClientsAsync() {
     while(true) {
         int clientSocket = accept(socketFd, NULL, NULL);
         if (clientSocket < 0) {
-            std::cerr << "Cannot accept client connection\n" << strerror(errno) << std::endl;
+            std::cerr << "Cannot accept client connection\n"
+                      << strerror(errno) << std::endl;
             continue;
         }
         std::cout << "Client connected.\n";
-        std::thread clientThread(&nixlMDStreamListener::recvFromClient, this, clientSocket);
+        std::thread clientThread(&nixlMDStreamListener::recvFromClients,
+                                 this, clientSocket);
         clientThread.detach();
     }
 }
 
-void nixlMDStreamListener::recvFromClient(int clientSocket) {
-  char buffer[RECV_BUFFER_SIZE]; 
-  int  bytes_read;
+std::string nixlMDStreamListener::recvFromClient() {
+        char            buffer[RECV_BUFFER_SIZE];
+        int             bytes_read;
+        std::string     recvData;
 
-  while ((bytes_read = recv(clientSocket, buffer, sizeof(buffer), 0)) > 0) {
-      buffer[bytes_read] = '\0';
-  
-      std::cout <<"Received from client: " << buffer <<"\n";
-  
-      // Return ack
-      std::string ack = "Message received";
+        bytes_read = recv(csock, buffer, sizeof(buffer), 0);
 
-      send(clientSocket, ack.c_str(), ack.size(), 0);
-  }
-  
-  close(clientSocket);
-  std::cout << "Client Disconnected\n";
+        if (bytes_read > 0) {
+                recvData = std::string(buffer, bytes_read);
+        } else if (bytes_read == 0) {
+                std::cout << "Client Disconnectd" <<std::endl;
+        } else {
+                std::cerr << "Error receiving data" << std::endl;
+        }
+        return recvData;
 }
 
-void nixlMDStreamListener::startListener() {
+void nixlMDStreamListener::recvFromClients(int clientSocket) {
+        char    buffer[RECV_BUFFER_SIZE];
+        int     bytes_read;
+
+        while ((bytes_read = recv(clientSocket, buffer,
+                                  sizeof(buffer), 0)) > 0) {
+              buffer[bytes_read] = '\0';
+              // Return ack
+              std::string ack = "Message received";
+              send(clientSocket, ack.c_str(), ack.size(), 0);
+              std::string recv_message(buffer);
+              std::cout << "Message Received" << recv_message <<"\n";
+        }
+        close(clientSocket);
+        std::cout << "Client Disconnected\n";
+}
+
+void nixlMDStreamListener::startListenerForClient() {
     setupListener();
-    listenerThread = std::thread(&nixlMDStreamListener::acceptClients, this);
+    acceptClient();
 }
 
-nixlMDStreamClient::nixlMDStreamClient(const std::string& listenerAddress, int port)
-    : nixlMetadataStream(port), listenerAddress(listenerAddress) {}
+
+void nixlMDStreamListener::startListenerForClients() {
+    setupListener();
+    listenerThread = std::thread(&nixlMDStreamListener::acceptClientsAsync,
+                                 this);
+}
+
+nixlMDStreamClient::nixlMDStreamClient(const std::string& listenerAddress,
+                                       int port) : nixlMetadataStream(port),
+                                       listenerAddress(listenerAddress) {}
 
 nixlMDStreamClient::~nixlMDStreamClient() {
     closeStream();
@@ -112,17 +154,20 @@ bool nixlMDStreamClient::setupClient() {
     listenerAddr.sin_family = AF_INET;
     listenerAddr.sin_port   = htons(port);
 
-    if (inet_pton(AF_INET, listenerAddress.c_str(), &listenerAddr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, listenerAddress.c_str(),
+                  &listenerAddr.sin_addr) <= 0) {
         perror("Invalid address/ Address not supported");
         return false;
     }
 
-    if (connect(socketFd, (struct sockaddr*)&listenerAddr, sizeof(listenerAddr)) < 0) {
+    if (connect(socketFd, (struct sockaddr*)&listenerAddr,
+                sizeof(listenerAddr)) < 0) {
         std::cerr << "Connection Failed: "<< strerror(errno) << std::endl;
         closeStream();
         return false;
     }
-    std::cout << "Connected to listener at " << listenerAddress << ":" << port << "\n";
+    std::cout << "Connected to listener at "
+              << listenerAddress << ":" << port << "\n";
     return true;
 }
 

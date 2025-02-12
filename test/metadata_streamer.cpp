@@ -5,7 +5,7 @@
 
 void run_server() {
     nixlMDStreamListener listener(8082);
-    listener.startListener();
+    listener.startListenerForClients();
     return;
 }
 

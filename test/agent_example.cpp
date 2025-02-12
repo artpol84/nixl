@@ -101,9 +101,9 @@ int main()
 
     int status = 0;
 
-    while(status != DONE) {
+    while(status != NIXL_DONE) {
         status = A1.getStatus(req_handle);
-        assert(status != ERR);
+        assert(status != NIXL_ERR);
     }
 
     // Do some checks on the data.

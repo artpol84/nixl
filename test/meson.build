@@ -26,3 +26,9 @@ agent_example = executable('agent_example',
            include_directories: [inc_dir, '../src/utils/serdes', '../src/nixl_nw_backends'],
            link_with: [serdes_lib],
            install: true)
+
+p2p_socket = executable('p2p_test',
+            'p2p_socket_test.cpp',
+            dependencies: [nixl_dep],
+            include_directories: [inc_dir],
+            install: true)
