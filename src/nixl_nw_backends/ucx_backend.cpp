@@ -485,10 +485,13 @@ int nixlUcxEngine::sendNotification(std::string remote_agent,
 }
 int nixlUcxEngine::getNotifications(notifList &notif_list)
 {
-    notifList ret_list = notifs;
-    int n_notifs = notifs.size();
+    int n_notifs;
 
     notif_mutex.lock();
+
+    notif_list = notifs;
+    n_notifs = notifs.size();
+
 
     notifs.clear();
         //while(notifs.size() > 0) {

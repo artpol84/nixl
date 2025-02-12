@@ -18,6 +18,10 @@ int main()
     // User would ask each of the agents to create a ucx  backend, and the
     // agent returns to them these pointers in the form of transfer_backend *
     nixlBackendEngine *ucx1, *ucx2;
+
+    init1.local_agent = agent1;
+    init2.local_agent = agent2;
+
     ucx1 = (nixlBackendEngine*) new nixlUcxEngine (&init1);
     ucx2 = (nixlBackendEngine*) new nixlUcxEngine (&init2);
 
@@ -146,7 +150,10 @@ int main()
 
     ret2 = 0;
 
-    while(ret2 == 0) ret2 = ucx2->getNotifications(target_notifs);
+    while(ret2 == 0){
+        ucx2->progress();
+        ret2 = ucx2->getNotifications(target_notifs);
+    }
 
     assert(ret2 == 1);
 
