@@ -43,7 +43,9 @@ private:
     ucp_worker_h worker;
 
 public:
-    nixlUcxWorker(std::vector<std::string> devices);
+
+    typedef void req_cb_t(void *request);
+    nixlUcxWorker(std::vector<std::string> devices, size_t req_size, req_cb_t init_cb, req_cb_t fini_cb);
     //{
         // Create UCX worker spanning provided devices
         // Have a special conf when we want UCX to detect devices
@@ -73,14 +75,14 @@ public:
 
     /* Data access */
     int progress();
-    int read(nixlUcxEp &ep,
-            uint64_t raddr, nixlUcxRkey &rk,
-            void *laddr, nixlUcxMem &mem,
-            size_t size, nixlUcxReq &req);
-    int write(nixlUcxEp &ep,
-            void *laddr, nixlUcxMem &mem,
-            uint64_t raddr, nixlUcxRkey &rk,
-            size_t size, nixlUcxReq &req);
+    transfer_state_t read(nixlUcxEp &ep,
+                            uint64_t raddr, nixlUcxRkey &rk,
+                            void *laddr, nixlUcxMem &mem,
+                            size_t size, nixlUcxReq &req);
+    transfer_state_t write(nixlUcxEp &ep,
+                            void *laddr, nixlUcxMem &mem,
+                            uint64_t raddr, nixlUcxRkey &rk,
+                            size_t size, nixlUcxReq &req);
     transfer_state_t test(nixlUcxReq &req);
 
 };

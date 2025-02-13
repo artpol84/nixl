@@ -76,7 +76,10 @@ int main()
 {
     vector<string> devs;
     devs.push_back("mlx5_0");
-    nixlUcxWorker w[2] = { nixlUcxWorker(devs), nixlUcxWorker(devs) };
+    nixlUcxWorker w[2] = { 
+        nixlUcxWorker(devs, 0, NULL, NULL), 
+        nixlUcxWorker(devs, 0, NULL, NULL) 
+    };
     nixlUcxEp ep[2];
     nixlUcxReq req;
     uint64_t buffer;
