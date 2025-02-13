@@ -274,7 +274,7 @@ int nixlUcxWorker::sendAm(nixlUcxEp &ep, unsigned msg_id, void* hdr, size_t hdr_
         return -1;
     }
 
-    req.reqh = status; 
+    req = (void*)status; 
    
     return 0;
 }
@@ -289,7 +289,7 @@ int nixlUcxWorker::getRndvData(void* data_desc, void* buffer, size_t len, const 
         //TODO: error handling
         return -1;
     }
-    req.reqh = status;
+    req = (void*)status;
 
     return 0;
 }
@@ -325,7 +325,7 @@ int nixlUcxWorker::read(nixlUcxEp &ep,
     }
 
 exit:
-    req.reqh = (void*)request;
+    req = (void*)request;
     return 0;
 }
 
@@ -351,7 +351,7 @@ int nixlUcxWorker::write(nixlUcxEp &ep,
     }
 
 exit:
-    req.reqh = (void*)request;
+    req = (void*)request;
     return 0;
 }
 
@@ -359,18 +359,18 @@ transfer_state_t nixlUcxWorker::test(nixlUcxReq &req)
 {
     ucs_status_t status;
 
-    if(req.reqh == NULL) {
+    if(req == NULL) {
         return NIXL_XFER_DONE;
     }
 
     ucp_worker_progress(worker);
-    status = ucp_request_check_status(req.reqh);
+    status = ucp_request_check_status(req);
     if (status == UCS_INPROGRESS) {
         return NIXL_XFER_PROC;
     }
 
     if (status == UCS_OK ) {
-        ucp_request_free(req.reqh);
+        ucp_request_free(req);
         return NIXL_XFER_DONE;
     } else {
         //TODO: error

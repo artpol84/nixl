@@ -386,8 +386,7 @@ transfer_state_t nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
         }
     }
 
-    handle = (nixlBackendReqH*) req.reqh;
-
+    handle = (nixlBackendReqH*) req;
     // TODO: update if it's already DONE
     if (ret)
         return NIXL_XFER_ERR;
@@ -398,8 +397,7 @@ transfer_state_t nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
 transfer_state_t nixlUcxEngine::checkTransfer (nixlBackendReqH* handle) {
     nixlUcxReq req;
 
-    req.reqh = (void*) handle;
-    // TODO: if _NOTIF, sendNotif(remote_agent, msg)
+    req = (nixlUcxReq*) handle;
     return uw->test(req);
 }
 

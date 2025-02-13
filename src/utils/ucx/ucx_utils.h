@@ -1,7 +1,11 @@
 #ifndef __UCX_UTILS_H
 #define __UCX_UTILS_H
 
+extern "C"
+{
 #include <ucp/api/ucp.h>
+}
+
 #include "nixl.h"
 
 class nixlUcxEp {
@@ -30,18 +34,7 @@ public:
     friend class nixlUcxWorker;
 };
 
-class nixlUcxReq : public nixlBackendReqH {
-private:
-    int complete;
-
-public:
-    void* reqh;
-    nixlUcxReq() {
-        complete = 0;
-    }
-
-    friend class nixlUcxWorker;
-};
+typedef void * nixlUcxReq;
 
 class nixlUcxWorker {
 private:
@@ -93,3 +86,4 @@ public:
 };
 
 #endif
+
