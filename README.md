@@ -2,6 +2,11 @@
 
 NIXL is an abstraction library to abstract memory of heterogeneous devices, i.e., CPU, GPU, storage, and enable most efficient and low-latency communication among them, integrated with distributed inference servers such as Triton. This library will target distributed inference communication patterns to effectively transfer the KV cache in disaggregated LLM serving platform.
 
+# Code style
+
+* Lower camel style: Data types, Classes, Class Members, Member functions
+* Snake style: function arguments, local variables
+
 # Prerequisites
 ### Packages ###
 ```
