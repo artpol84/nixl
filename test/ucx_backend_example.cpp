@@ -49,7 +49,7 @@ int main()
     // User allocates memories, and passes the corresponding address
     // and length to register with the backend
     nixlBasicDesc buff1, buff2;
-    nixlBackendMetadata* local_meta1, *local_meta2;
+    nixlBackendMD* local_meta1, *local_meta2;
     size_t len = 256;
     void* addr1 = calloc(1, len);
     void* addr2 = calloc(1, len);
@@ -91,7 +91,7 @@ int main()
     assert(ucx_dram_info2.metadata.size() > 0);
 
     // We get the data from the cetnral location and populate the backend, and receive remote_meta
-    nixlBackendMetadata* remote_meta1of2, *remote_meta2of1;
+    nixlBackendMD* remote_meta1of2, *remote_meta2of1;
     ret1 = ucx1->loadRemote (ucx_dram_info2, remote_meta1of2, agent2);
     ret2 = ucx2->loadRemote (ucx_dram_info1, remote_meta2of1, agent1);
 
@@ -102,7 +102,7 @@ int main()
     // The agent fills the metadata fields based on local_meta1 and remote_meta1
     size_t req_size = 8;
     size_t dst_offset = 8;
-    nixlBackendTransferHandle* handle;
+    nixlBackendReqH* handle;
 
     nixlDescList<nixlMetaDesc> req_src_descs (DRAM_SEG);
     nixlMetaDesc req_src;

@@ -10,7 +10,7 @@ class nixlSystemTopology {
 };
 
 // Per node device metadata information
-class nixlDeviceMetadata {
+class nixlDeviceMD {
     // Information about the node that needs to be sent to ETCD
     // Such as list of devices and their type, assigned IP to ETCD
     // Some topology info might be added as well (Ryan's comment)

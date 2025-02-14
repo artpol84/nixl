@@ -360,20 +360,20 @@ transfer_state_t nixlUcxWorker::test(nixlUcxReq &req)
     ucs_status_t status;
 
     if(req.reqh == NULL) {
-        return NIXL_DONE;
+        return NIXL_XFER_DONE;
     }
 
     ucp_worker_progress(worker);
     status = ucp_request_check_status(req.reqh);
     if (status == UCS_INPROGRESS) {
-        return NIXL_PROC;
+        return NIXL_XFER_PROC;
     }
 
     if (status == UCS_OK ) {
         ucp_request_free(req.reqh);
-        return NIXL_DONE;
+        return NIXL_XFER_DONE;
     } else {
         //TODO: error
-        return NIXL_ERR;
+        return NIXL_XFER_ERR;
     }
 }

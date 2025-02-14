@@ -13,16 +13,16 @@ nixlAgentDataPrivate::~nixlAgentDataPrivate() {
 
 }
 
-nixlMetadataHandler::nixlMetadataHandler(std::string& ip_address, uint16_t port){
+nixlMetadataH::nixlMetadataH(std::string& ip_address, uint16_t port){
     this->ipAddress = ip_address;
     this->port      = port;
 }
 
-nixlMetadataHandler::~nixlMetadataHandler(){
+nixlMetadataH::~nixlMetadataH(){
 }
 
 nixlAgent::nixlAgent(const std::string &name,
-                     const nixlDeviceMetadata &devs){
+                     const nixlDeviceMD &devs){
    data.name                    = name;
    data.deviceMeta.srcIpAddress = devs.srcIpAddress;
    data.deviceMeta.srcPort      = devs.srcPort;
@@ -106,7 +106,7 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
                                  std::string remote_agent,
                                  std::string notif_msg,
                                  int direction,
-                                 nixlTransferRequest* &req_handle) {
+                                 nixlXferReqH* &req_handle) {
 
     // Check the correspondence between descriptor lists
     if (local_descs.descCount() != remote_descs.descCount())
@@ -119,7 +119,7 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
     if (data.remoteSections.count(remote_agent)==0)
         return -1;
 
-    nixlTransferRequest *handle = new nixlTransferRequest;
+    nixlXferReqH *handle = new nixlXferReqH;
     // Might not need unified and sorted info
     handle->initiator_descs = new nixlDescList<nixlMetaDesc> (
                                       local_descs.getType(),
@@ -147,7 +147,7 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
     handle->notif_msg = notif_msg;
     // Based on notif_msg we can set WRITE_W_NOTIF
     handle->backend_op = direction ? WRITE : READ;
-    handle->state = NIXL_INIT;
+    handle->state = NIXL_XFER_INIT;
 
     req_handle = handle;
 
@@ -155,22 +155,23 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
     return 0;
 }
 
-void nixlAgent::invalidateRequest(nixlTransferRequest *req) {
+void nixlAgent::invalidateRequest(nixlXferReqH *req) {
+    if (req->state != NIXL_XFER_DONE)
+        req->engine->releaseReqH(req->backend_handle);
     delete req;
 }
 
-int nixlAgent::postRequest(nixlTransferRequest *req) {
+int nixlAgent::postRequest(nixlXferReqH *req) {
     if (req==nullptr)
         return -1;
     // We can't repost while a request is in progress
-    if (req->state == NIXL_PROC) {
+    if (req->state == NIXL_XFER_PROC) {
         req->state = req->engine->checkTransfer(req->backend_handle);
-        if (req->state == NIXL_PROC)
+        if (req->state == NIXL_XFER_PROC)
             return -1;
     }
 
-    // If state is NIXL_INIT or NIXL_DONE we can repost,
-    // backend handle is non_existent or release respectively.
+    // If state is NIXL_XFER_INIT or NIXL_XFER_DONE we can repost,
     return (req->engine->transfer (*req->initiator_descs,
                                    *req->target_descs,
                                    req->backend_op,
@@ -178,14 +179,14 @@ int nixlAgent::postRequest(nixlTransferRequest *req) {
                                    req->backend_handle));
 }
 
-int nixlAgent::sendNotification(nixlTransferRequest *req) {
+int nixlAgent::sendNotification(nixlXferReqH *req) {
     // TBD
     return 0;
 }
 
-transfer_state_t nixlAgent::getStatus (nixlTransferRequest *req) {
-    // If the state is done, the backend_handle is released
-    if (req->state != NIXL_DONE)
+transfer_state_t nixlAgent::getStatus (nixlXferReqH *req) {
+    // If the state is done, no need to recheck.
+    if (req->state != NIXL_XFER_DONE)
         req->state = req->engine->checkTransfer(req->backend_handle);
 
     return req->state;

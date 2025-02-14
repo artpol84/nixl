@@ -263,7 +263,7 @@ int nixlUcxEngine::listenForConnection(std::string remote_agent) {
 *****************************************/
 int nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
                                 memory_type_t mem_type,
-                                nixlBackendMetadata* &out)
+                                nixlBackendMD* &out)
 {
     int ret;
     nixlUcxPrivateMetadata *priv = new nixlUcxPrivateMetadata;
@@ -282,12 +282,12 @@ int nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
     }
     priv->rkeyStr = nixlSerDes::_bytesToString((void*) rkey_addr, rkey_size);
 
-    out = (nixlBackendMetadata*) priv; //typecast?
+    out = (nixlBackendMD*) priv; //typecast?
 
     return 0; // Or errors
 }
 
-void nixlUcxEngine::deregisterMem (nixlBackendMetadata* desc)
+void nixlUcxEngine::deregisterMem (nixlBackendMD* desc)
 {
     nixlUcxPrivateMetadata *priv = (nixlUcxPrivateMetadata*) desc; //typecast?
 
@@ -298,7 +298,7 @@ void nixlUcxEngine::deregisterMem (nixlBackendMetadata* desc)
 
 // To be cleaned up
 int nixlUcxEngine::loadRemote (nixlStringDesc input,
-                               nixlBackendMetadata* &output,
+                               nixlBackendMD* &output,
                                std::string remote_agent) {
     size_t size = input.metadata.size();
     char *addr = new char[size];
@@ -323,12 +323,12 @@ int nixlUcxEngine::loadRemote (nixlStringDesc input,
         // TODO: error out. Should we indicate which desc failed or unroll everything prior
         return -1;
     }
-    output = (nixlBackendMetadata*) md;
+    output = (nixlBackendMD*) md;
 
     return 0;
 }
 
-int nixlUcxEngine::removeRemote (nixlBackendMetadata* input) {
+int nixlUcxEngine::removeRemote (nixlBackendMD* input) {
 
     nixlUcxPublicMetadata *md = (nixlUcxPublicMetadata*) input; //typecast?
 
@@ -345,7 +345,7 @@ int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
                              nixlDescList<nixlMetaDesc> remote,
                              transfer_op_t op,
                              std::string notif_msg,
-                             nixlBackendTransferHandle* &handle)
+                             nixlBackendReqH* &handle)
 {
     size_t lcnt = local.descCount();
     size_t rcnt = remote.descCount();
@@ -383,12 +383,12 @@ int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
         }
     }
 
-    handle = (nixlBackendTransferHandle*) req.reqh;
+    handle = (nixlBackendReqH*) req.reqh;
 
     return ret;
 }
 
-transfer_state_t nixlUcxEngine::checkTransfer (nixlBackendTransferHandle* handle) {
+transfer_state_t nixlUcxEngine::checkTransfer (nixlBackendReqH* handle) {
     nixlUcxReq req;
 
     req.reqh = (void*) handle;

@@ -27,7 +27,7 @@ public:
     friend class nixlUcxWorker;
 };
 
-class nixlUcxReq : public nixlBackendTransferHandle {
+class nixlUcxReq : public nixlBackendReqH {
 private:
     int complete;
 

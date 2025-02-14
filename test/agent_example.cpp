@@ -13,7 +13,7 @@ int main()
     std::string agent1("Agent1");
     std::string agent2("Agent2");
 
-    nixlDeviceMetadata devices;
+    nixlDeviceMD devices;
     nixlUcxInitParams init1, init2;
     // populate required/desired inits
 
@@ -91,7 +91,7 @@ int main()
     // Posting a request, to be updated to return an async handler,
     // or an ID that later can be used to check the status as a new method
     // Also maybe we would remove the WRITE and let the backend class decide the op
-    nixlTransferRequest* req_handle;
+    nixlXferReqH* req_handle;
     ret1 = A1.createTransferReq(req_src_descs, req_dst_descs, "Agent2", "", 1, req_handle);
     assert(ret1 == 0);
 
@@ -101,9 +101,9 @@ int main()
 
     int status = 0;
 
-    while(status != NIXL_DONE) {
+    while(status != NIXL_XFER_DONE) {
         status = A1.getStatus(req_handle);
-        assert(status != NIXL_ERR);
+        assert(status != NIXL_XFER_ERR);
     }
 
     // Do some checks on the data.

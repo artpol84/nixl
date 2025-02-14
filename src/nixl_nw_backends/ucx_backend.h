@@ -12,7 +12,7 @@ struct nixl_ucx_am_hdr {
     ucx_cb_op_t op;
 };
 
-class nixlUcxTransferHandle : public nixlBackendTransferHandle {
+class nixlUcxTransferHandle : public nixlBackendReqH {
     private:
         nixlUcxReq req;
 
@@ -32,13 +32,13 @@ class nixlUcxConnection : public nixlBackendConnMD {
 };
 
 // A private metadata has to implement get, and has all the metadata
-class nixlUcxPrivateMetadata : public nixlBackendMetadata {
+class nixlUcxPrivateMetadata : public nixlBackendMD {
     private:
         nixlUcxMem mem;
         std::string rkeyStr;
 
     public:
-        nixlUcxPrivateMetadata() : nixlBackendMetadata(true) {
+        nixlUcxPrivateMetadata() : nixlBackendMD(true) {
         }
 
         ~nixlUcxPrivateMetadata(){
@@ -52,13 +52,13 @@ class nixlUcxPrivateMetadata : public nixlBackendMetadata {
 };
 
 // A public metadata has to implement put, and only has the remote metadata
-class nixlUcxPublicMetadata : public nixlBackendMetadata {
+class nixlUcxPublicMetadata : public nixlBackendMD {
 
     public:
         nixlUcxRkey rkey;
         nixlUcxConnection conn;
 
-        nixlUcxPublicMetadata() : nixlBackendMetadata(false) {}
+        nixlUcxPublicMetadata() : nixlBackendMD(false) {}
 
         ~nixlUcxPublicMetadata(){
         }
@@ -100,24 +100,26 @@ class nixlUcxEngine : nixlBackendEngine {
         int makeConnection(std::string remote_agent);
         int listenForConnection(std::string remote_agent);
 
-        int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type, nixlBackendMetadata* &out);
-        void deregisterMem (nixlBackendMetadata* desc);
+        int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type, nixlBackendMD* &out);
+        void deregisterMem (nixlBackendMD* desc);
 
-        int loadRemote (nixlStringDesc input, nixlBackendMetadata* &output, std::string remote_agent);
+        int loadRemote (nixlStringDesc input, nixlBackendMD* &output, std::string remote_agent);
 
-        int removeRemote (nixlBackendMetadata* input);
+        int removeRemote (nixlBackendMD* input);
 
-        //MetaDesc instead of basic for local
-        int transfer (nixlDescList<nixlMetaDesc> local, 
-                      nixlDescList<nixlMetaDesc> remote, 
-                      transfer_op_t op, std::string notif_msg, 
-                      nixlBackendTransferHandle* &handle);
-        
-        transfer_state_t checkTransfer (nixlBackendTransferHandle* handle);
+        // MetaDesc instead of basic for local
+        int transfer (nixlDescList<nixlMetaDesc> local,
+                      nixlDescList<nixlMetaDesc> remote,
+                      transfer_op_t op, std::string notif_msg,
+                      nixlBackendReqH* &handle);
+
+        transfer_state_t checkTransfer (nixlBackendReqH* handle);
+
+        void releaseReqH(nixlBackendReqH* handle) {}
 
         int progress();
 
-        int sendNotification(std::string remote_agent, std::string msg); 
+        int sendNotification(std::string remote_agent, std::string msg);
 
         int getNotifications(notifList &notif_list);
 

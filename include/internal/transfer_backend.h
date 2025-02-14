@@ -8,7 +8,8 @@
 // Might be removed to be decided by backend, or changed to high
 // level direction or so.
 typedef enum {READ, WRITE} transfer_op_t;
-typedef enum {NIXL_INIT, NIXL_PROC, NIXL_DONE, NIXL_ERR} transfer_state_t;
+typedef enum {NIXL_XFER_INIT, NIXL_XFER_PROC,
+              NIXL_XFER_DONE, NIXL_XFER_ERR} transfer_state_t;
 typedef std::vector<std::pair<std::string, std::string>> notifList;
 
 // A base class to point to backend initialization data
@@ -23,22 +24,22 @@ class nixlBackendInitParams {
         virtual ~nixlBackendInitParams() = default;
 };
 
-class nixlBackendTransferHandle {
+class nixlBackendReqH {
 };
 
 // Main goal of BackendMetadata class is to have a common pointer type
 // for different backend metadata
 // Not sure get/set for serializer/deserializer is necessary
 // We can add backend_type and memory_type, but can't see use case
-class nixlBackendMetadata {
+class nixlBackendMD {
     bool privateMetadata = true;
 
     public:
-        nixlBackendMetadata(bool isPrivate){
+        nixlBackendMD(bool isPrivate){
             privateMetadata = isPrivate;
         }
 
-        virtual ~nixlBackendMetadata(){
+        virtual ~nixlBackendMD(){
         }
 
         bool isPrivate () const { return  privateMetadata; }
@@ -71,7 +72,7 @@ class nixlBackendConnMD {
 class nixlMetaDesc : public nixlBasicDesc {
   public:
         // To be able to point to any object
-        nixlBackendMetadata *metadata;
+        nixlBackendMD *metadata;
 
         // Reuse parent constructor without the metadata
         using nixlBasicDesc::nixlBasicDesc;
@@ -138,7 +139,7 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
         backend_type_t getType () const { return backendType; }
 
         // Can add checks for being public metadata
-        std::string getPublicData (const nixlBackendMetadata* meta) const {
+        std::string getPublicData (const nixlBackendMD* meta) const {
             return meta->get();
         }
 
@@ -146,8 +147,8 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
 
         // Register and deregister local memory
         virtual int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type,
-                                 nixlBackendMetadata* &out) = 0;
-        virtual void deregisterMem (nixlBackendMetadata* meta) = 0;
+                                 nixlBackendMD* &out) = 0;
+        virtual void deregisterMem (nixlBackendMD* meta) = 0;
 
         // If we use an external connection manager, the next 3 methods might change
         // Provide the required connection info for remote nodes
@@ -166,17 +167,17 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
 
         // Add and remove remtoe metadata
         virtual int loadRemote (nixlStringDesc input,
-                                nixlBackendMetadata* &output,
+                                nixlBackendMD* &output,
                                 std::string remote_agent) = 0;
 
-        virtual int removeRemote (nixlBackendMetadata* input) = 0;
+        virtual int removeRemote (nixlBackendMD* input) = 0;
 
         // Posting a request, to be updated to return an async handler
         virtual int transfer (nixlDescList<nixlMetaDesc> local,
                               nixlDescList<nixlMetaDesc> remote,
                               transfer_op_t operation,
                               std::string notif_msg,
-                              nixlBackendTransferHandle* &handle) = 0;
+                              nixlBackendReqH* &handle) = 0;
 
         // Send the notification message to the target
         virtual int sendNotification(std::string remote_agent, std::string msg) = 0;
@@ -184,7 +185,9 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
         virtual int getNotifications(notifList &notif_list) = 0;
 
         // Use a handle to progress backend engine and see if a transfer is completed or not
-        virtual transfer_state_t checkTransfer(nixlBackendTransferHandle* handle) = 0;
+        virtual transfer_state_t checkTransfer(nixlBackendReqH* handle) = 0;
+
+        virtual void releaseReqH(nixlBackendReqH* handle) = 0;
 
         // Force backend engine worker to progress
         virtual int progress() { return 0; }

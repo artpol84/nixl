@@ -4,7 +4,7 @@
 #include "mem_section.h"
 
 // This class talks to the metadata server.
-class nixlMetadataHandler {
+class nixlMetadataH {
     private:
         // Maybe the connection information should go to Agent,
         // to add p2p support
@@ -13,9 +13,9 @@ class nixlMetadataHandler {
 
     public:
         // Creates the connection to the metadata server
-        nixlMetadataHandler() {}
-        nixlMetadataHandler(std::string& ip_address, uint16_t port);
-        ~nixlMetadataHandler();
+        nixlMetadataH() {}
+        nixlMetadataH(std::string& ip_address, uint16_t port);
+        ~nixlMetadataH();
 
         /** Sync the local section with the metadata server */
         int sendLocalMetadata(std::string& local_md);
@@ -30,13 +30,13 @@ class nixlMetadataHandler {
 class nixlAgentDataPrivate {
     public:
         std::string                                  name;
-        nixlDeviceMetadata                           deviceMeta;
+        nixlDeviceMD                                 deviceMeta;
 
         std::map<backend_type_t, nixlBackendEngine*> nixlBackendEngines;
         std::map<backend_type_t, std::string>        connMd; // Local info
 
         nixlLocalSection                             memorySection;
-        nixlMetadataHandler                          mdHandler;
+        nixlMetadataH                                mdHandler;
 
         std::map<std::string, nixlRemoteSection *>   remoteSections;
         std::map<std::string, backend_list_t>        remoteBackends;

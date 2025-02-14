@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 
     /** NIXL declarations */
     /** Agent and backend creation parameters */
-    nixlDeviceMetadata          devices;
+    nixlDeviceMD                devices;
     nixlUcxInitParams           params;
     nixlBasicDesc               buf[NUM_TRANSFERS];
     nixlBackendEngine           *ucx;
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
     /** Descriptors and Transfer Request */
     nixlDescList<nixlBasicDesc> dram_for_ucx(DRAM_SEG);
-    nixlTransferRequest         *treq;
+    nixlXferReqH                *treq;
 
     /** Argument Parsing */
     if (argc < 4) {
@@ -204,9 +204,9 @@ int main(int argc, char *argv[]) {
         std::cout << " Initiator posted Data Path transfer\n";
         std::cout << " Waiting for completion\n";
 
-        while (status != NIXL_DONE) {
+        while (status != NIXL_XFER_DONE) {
             status = agent.getStatus(treq);
-            assert(status != NIXL_ERR);
+            assert(status != NIXL_XFER_ERR);
         }
         std::cout << " Completed Sending Data using UCX backend\n";
         agent.invalidateRequest(treq);

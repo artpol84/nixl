@@ -18,7 +18,7 @@ class nixlAgent {
         /*** Initialization and Regsitering Methods ***/
 
         // Populates agent name and device metadata
-        nixlAgent (const std::string &name, const nixlDeviceMetadata &devs);
+        nixlAgent (const std::string &name, const nixlDeviceMD &devs);
         ~nixlAgent ();
 
         // Instantiate BackendEngine objects, based on corresponding params
@@ -42,20 +42,20 @@ class nixlAgent {
                                std::string remote_agent,
                                std::string notif_msg,
                                int direction,
-                               nixlTransferRequest* &req_handle);
+                               nixlXferReqH* &req_handle);
 
         // Invalidate transfer request if we no longer need it.
-        void invalidateRequest (nixlTransferRequest *req);
+        void invalidateRequest (nixlXferReqH *req);
 
         // Submit transfer requests
         // The async handler is the TransferRequest object
-        int postRequest (nixlTransferRequest *req);
+        int postRequest (nixlXferReqH *req);
 
         // Send the notification message to the target
-        int sendNotification (nixlTransferRequest *req);
+        int sendNotification (nixlXferReqH *req);
 
         // Check the status of transfer requests
-        transfer_state_t getStatus (nixlTransferRequest *req);
+        transfer_state_t getStatus (nixlXferReqH *req);
 
 
         /*** Metadata handling through side channel ***/

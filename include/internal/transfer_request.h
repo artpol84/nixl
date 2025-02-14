@@ -3,23 +3,23 @@
 
 
 // Has state, a boolean to start the transfer, as well as populated and verified DescLists
-class nixlTransferRequest {
+class nixlXferReqH {
     public:
     // private: For now public, later to be improved
         nixlBackendEngine          *engine;
         nixlDescList<nixlMetaDesc> *initiator_descs;
         nixlDescList<nixlMetaDesc> *target_descs;
-        nixlBackendTransferHandle  *backend_handle;
+        nixlBackendReqH            *backend_handle;
         std::string                notif_msg;
         transfer_op_t              backend_op;
 
         transfer_state_t state;
 
-    inline nixlTransferRequest(){}
-    inline ~nixlTransferRequest(){
+    inline nixlXferReqH() {}
+    inline ~nixlXferReqH() {
         delete initiator_descs;
         delete target_descs;
-	// delete backend_handle;
+        engine->releaseReqH(backend_handle);
     }
 };
 
