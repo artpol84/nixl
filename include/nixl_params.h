@@ -5,7 +5,7 @@
 #include <cstdint>
 #include "internal/transfer_backend.h"
 
-class nixlSystemTopology {
+class nixlSysTopology {
     // System Topology class TBD
 };
 
@@ -16,9 +16,9 @@ class nixlDeviceMD {
     // Some topology info might be added as well (Ryan's comment)
     // TBD: Like Topology class - to get system specific information/tuning
     public:
-        nixlSystemTopology topology;
-        std::string    srcIpAddress;
-        uint16_t       srcPort;
+        nixlSysTopology topology;
+        std::string     srcIpAddress;
+        uint16_t        srcPort;
 };
 
 // Example backend initialization data for UCX

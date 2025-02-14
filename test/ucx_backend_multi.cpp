@@ -21,7 +21,7 @@ void test_thread(int id)
         other = "Agent1";
     }
 
-    init_params.local_agent = my_name;
+    init_params.localAgent = my_name;
 
     std::cout << my_name << " Started\n";
 

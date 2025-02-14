@@ -36,7 +36,7 @@ class nixlAgent {
 
         /*** Transfer Request Handling ***/
 
-        // populates the transfer request.
+        // populates the transfer request. Empty notif_msg means no notif
         int createTransferReq (nixlDescList<nixlBasicDesc>& local_descs,
                                nixlDescList<nixlBasicDesc>& remote_descs,
                                std::string remote_agent,
@@ -50,9 +50,6 @@ class nixlAgent {
         // Submit transfer requests
         // The async handler is the TransferRequest object
         int postRequest (nixlXferReqH *req);
-
-        // Send the notification message to the target
-        int sendNotification (nixlXferReqH *req);
 
         // Check the status of transfer requests
         transfer_state_t getStatus (nixlXferReqH *req);

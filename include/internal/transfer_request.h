@@ -1,26 +1,28 @@
 #ifndef __TRANSFER_REQUEST_H_
 #define __TRANSFER_REQUEST_H_
 
-
-// Has state, a boolean to start the transfer, as well as populated and verified DescLists
+// Contains pointers to corresponding backend engine and its handler, and populated
+// and verified DescLists, and other state and metadata needed for a NIXL transfer
 class nixlXferReqH {
     public:
-    // private: For now public, later to be improved
         nixlBackendEngine          *engine;
-        nixlDescList<nixlMetaDesc> *initiator_descs;
-        nixlDescList<nixlMetaDesc> *target_descs;
-        nixlBackendReqH            *backend_handle;
-        std::string                notif_msg;
-        transfer_op_t              backend_op;
+        nixlBackendReqH            *backendHandle;
 
-        transfer_state_t state;
+        nixlDescList<nixlMetaDesc> *initiatorDescs;
+        nixlDescList<nixlMetaDesc> *targetDescs;
 
-    inline nixlXferReqH() {}
-    inline ~nixlXferReqH() {
-        delete initiator_descs;
-        delete target_descs;
-        engine->releaseReqH(backend_handle);
-    }
+        std::string                remoteAgent;
+        std::string                notifMsg;
+
+        transfer_op_t              backendOp;
+        transfer_state_t           state;
+
+        inline nixlXferReqH() {}
+        inline ~nixlXferReqH() {
+            delete initiatorDescs;
+            delete targetDescs;
+            engine->releaseReqH(backendHandle);
+        }
 };
 
 #endif

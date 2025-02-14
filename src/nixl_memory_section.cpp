@@ -196,7 +196,7 @@ nixlLocalSection::~nixlLocalSection() {
 
 nixlRemoteSection::nixlRemoteSection (std::string& agent_name,
                    std::map<backend_type_t, nixlBackendEngine*> engine_map) {
-    this->agent_name   = agent_name;
+    this->agentName    = agent_name;
     backendToEngineMap = engine_map;
 }
 
@@ -218,7 +218,7 @@ int nixlRemoteSection::addDescList (const nixlDescList<nixlStringDesc>& mem_elms
     nixlBasicDesc *p = &out;
     int ret;
     for (int i=0; i<mem_elms.descCount(); ++i) {
-        ret = backend->loadRemote(mem_elms[i], out.metadata, agent_name);
+        ret = backend->loadRemote(mem_elms[i], out.metadata, agentName);
         // In case of errors, no need to remove the previous entries
         // Agent will delete the full object.
         if (ret<0)

@@ -88,11 +88,8 @@ int main()
     req_dst_descs.addDesc(req_dst);
 
     std::cout << "Transfer request from " << addr1 << " to " << addr2 << "\n";
-    // Posting a request, to be updated to return an async handler,
-    // or an ID that later can be used to check the status as a new method
-    // Also maybe we would remove the WRITE and let the backend class decide the op
     nixlXferReqH* req_handle;
-    ret1 = A1.createTransferReq(req_src_descs, req_dst_descs, "Agent2", "", 1, req_handle);
+    ret1 = A1.createTransferReq(req_src_descs, req_dst_descs, "Agent2", "", 0, req_handle);
     assert(ret1 == 0);
 
     ret1 = A1.postRequest(req_handle);

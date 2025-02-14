@@ -64,7 +64,7 @@ class nixlLocalSection : public nixlMemSection {
 
 class nixlRemoteSection : public nixlMemSection {
     private:
-        std::string agent_name;
+        std::string agentName;
 
         int addDescList (const nixlDescList<nixlStringDesc>& mem_elms,
                          nixlBackendEngine *backend);

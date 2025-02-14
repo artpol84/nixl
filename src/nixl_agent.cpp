@@ -40,7 +40,7 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams *params) {
     if (data.nixlBackendEngines.count(backend_type)!=0)
         return nullptr;
 
-    params->local_agent = data.name;
+    params->localAgent = data.name;
     switch (backend_type) { // For supported backends
         case UCX:
             backend = (nixlBackendEngine*) new nixlUcxEngine(
@@ -54,7 +54,7 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams *params) {
         backend_type = backend->getType(); // For safety, should be redundant
         data.nixlBackendEngines[backend_type] = backend;
         data.memorySection.addBackendHandler(backend);
-        data.connMd[backend_type] = backend->getConnInfo();
+        data.connMD[backend_type] = backend->getConnInfo();
     }
     return backend;
 }
@@ -121,35 +121,40 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
 
     nixlXferReqH *handle = new nixlXferReqH;
     // Might not need unified and sorted info
-    handle->initiator_descs = new nixlDescList<nixlMetaDesc> (
+    handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
                                       local_descs.getType(),
                                       local_descs.isUnifiedAddr(),
                                       local_descs.isSorted());
 
     handle->engine = data.memorySection.findQuery(local_descs,
-                          *handle->initiator_descs, remote_descs.getType(),
+                          *handle->initiatorDescs, remote_descs.getType(),
                           data.remoteBackends[remote_agent]);
 
     if (handle->engine==nullptr)
         return -1;
 
-    handle->target_descs = new nixlDescList<nixlMetaDesc>(
+    handle->targetDescs = new nixlDescList<nixlMetaDesc>(
                                    remote_descs.getType(),
                                    remote_descs.isUnifiedAddr(),
                                    remote_descs.isSorted());
 
     // Based on the decided local backend, we check the remote counterpart
     ret = data.remoteSections[remote_agent]->populate(remote_descs,
-               *handle->target_descs, handle->engine->getType());
+               *handle->targetDescs, handle->engine->getType());
     if (ret<0)
         return ret;
 
-    handle->notif_msg = notif_msg;
-    // Based on notif_msg we can set WRITE_W_NOTIF
-    handle->backend_op = direction ? WRITE : READ;
+    handle->remoteAgent = remote_agent;
+    handle->notifMsg    = notif_msg;
+
+    if (notif_msg.size()==0)
+        handle->backendOp = direction ? NIXL_RD         : NIXL_WR;
+    else
+        handle->backendOp = direction ? NIXL_RD_W_NOTIF : NIXL_WR_W_NOTIF;
+
     handle->state = NIXL_XFER_INIT;
 
-    req_handle = handle;
+    req_handle    = handle;
 
     // Not bookkeeping transferRequests, assuming user releases all
     return 0;
@@ -157,7 +162,7 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
 
 void nixlAgent::invalidateRequest(nixlXferReqH *req) {
     if (req->state != NIXL_XFER_DONE)
-        req->engine->releaseReqH(req->backend_handle);
+        req->engine->releaseReqH(req->backendHandle);
     delete req;
 }
 
@@ -166,35 +171,31 @@ int nixlAgent::postRequest(nixlXferReqH *req) {
         return -1;
     // We can't repost while a request is in progress
     if (req->state == NIXL_XFER_PROC) {
-        req->state = req->engine->checkTransfer(req->backend_handle);
+        req->state = req->engine->checkTransfer(req->backendHandle);
         if (req->state == NIXL_XFER_PROC)
             return -1;
     }
 
     // If state is NIXL_XFER_INIT or NIXL_XFER_DONE we can repost,
-    return (req->engine->transfer (*req->initiator_descs,
-                                   *req->target_descs,
-                                   req->backend_op,
-                                   req->notif_msg,
-                                   req->backend_handle));
-}
-
-int nixlAgent::sendNotification(nixlXferReqH *req) {
-    // TBD
-    return 0;
+    return (req->engine->transfer (*req->initiatorDescs,
+                                   *req->targetDescs,
+                                   req->backendOp,
+                                   req->remoteAgent,
+                                   req->notifMsg,
+                                   req->backendHandle));
 }
 
 transfer_state_t nixlAgent::getStatus (nixlXferReqH *req) {
     // If the state is done, no need to recheck.
     if (req->state != NIXL_XFER_DONE)
-        req->state = req->engine->checkTransfer(req->backend_handle);
+        req->state = req->engine->checkTransfer(req->backendHandle);
 
     return req->state;
 }
 
 std::string nixlAgent::getMetadata () const {
-    // data.connMd was populated when the backend was created
-    size_t conn_cnt = data.connMd.size();
+    // data.connMD was populated when the backend was created
+    size_t conn_cnt = data.connMD.size();
     backend_type_t backend_type;
 
     if (conn_cnt == 0) // Error
@@ -207,7 +208,7 @@ std::string nixlAgent::getMetadata () const {
     if (sd.addBuf("Conns", &conn_cnt, sizeof(conn_cnt)))
         return "";
 
-    for (auto &c : data.connMd) {
+    for (auto &c : data.connMD) {
         backend_type = c.first;
         if (sd.addBuf("t", &backend_type, sizeof(backend_type)))
             return "";

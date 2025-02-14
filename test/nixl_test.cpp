@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         std::cout << " Create transfer request with UCX backend\n ";
 
         ret = agent.createTransferReq(dram_for_ucx, dram_target_ucx,
-                                      "target", "", 1, treq);
+                                      "target", "", 0, treq);
         if (ret != 0) {
             std::cerr << "Error creating transfer request\n";
             exit(-1);

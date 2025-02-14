@@ -19,8 +19,8 @@ int main()
     // agent returns to them these pointers in the form of transfer_backend *
     nixlBackendEngine *ucx1, *ucx2;
 
-    init1.local_agent = agent1;
-    init2.local_agent = agent2;
+    init1.localAgent = agent1;
+    init2.localAgent = agent2;
 
     ucx1 = (nixlBackendEngine*) new nixlUcxEngine (&init1);
     ucx2 = (nixlBackendEngine*) new nixlUcxEngine (&init2);
@@ -122,10 +122,7 @@ int main()
 
     std::string test_str("test");
     std::cout << "Transferring from " << addr1 << " to " << addr2 << "\n";
-    // Posting a request, to be updated to return an async handler,
-    // or an ID that later can be used to check the status as a new method
-    // Also maybe we would remove the WRITE and let the backend class decide the op
-    ret1 = ucx1->transfer(req_src_descs, req_dst_descs, WRITE, test_str, handle);
+    ret1 = ucx1->transfer(req_src_descs, req_dst_descs, NIXL_WR, "Agent2", test_str, handle);
     assert(ret1 == 0);
 
     ucx1->progress();
@@ -139,8 +136,8 @@ int main()
         assert(status != -1);
     }
 
-    status = ucx1->sendNotification(agent2, test_str);
-    assert(status != -1);
+    // status = ucx1->sendNotification(agent2, test_str);
+    // assert(status != -1);
 
     // Do some checks on the data.
     for(size_t i = dst_offset; i<req_size; i++){
@@ -149,7 +146,7 @@ int main()
 
     std::cout << "Transfer verified\n";
 
-    notifList target_notifs;
+    notif_list_t target_notifs;
 
     ret2 = 0;
 

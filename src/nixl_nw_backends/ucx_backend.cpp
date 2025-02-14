@@ -87,7 +87,6 @@ nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params)
 
     uw->regAmCallback(CONN_CHECK, check_connection, this);
     uw->regAmCallback(NOTIF_STR, get_notif, this);
-    local_agent = init_params->local_agent;
 }
 
 // Through parent destructor the unregister will be called.
@@ -186,7 +185,7 @@ int nixlUcxEngine::makeConnection(std::string remote_agent) {
 
     ret = uw->sendAm(conn.ep, CONN_CHECK, 
                      &hdr, sizeof(struct nixl_ucx_am_hdr), 
-                     (void*) local_agent.data(), local_agent.size(), 
+                     (void*) localAgent.data(), localAgent.size(),
                      flags, req);
     
     if(ret != 0) {
@@ -236,7 +235,7 @@ int nixlUcxEngine::listenForConnection(std::string remote_agent) {
 
     ret = uw->sendAm(conn.ep, CONN_CHECK, 
                      &hdr, sizeof(struct nixl_ucx_am_hdr), 
-                     (void*) local_agent.data(), local_agent.size(), 
+                     (void*) localAgent.data(), localAgent.size(),
                      flags, req);
     
     if(ret != 0) {
@@ -344,6 +343,7 @@ int nixlUcxEngine::removeRemote (nixlBackendMD* input) {
 int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
                              nixlDescList<nixlMetaDesc> remote,
                              transfer_op_t op,
+                             std::string remote_agent,
                              std::string notif_msg,
                              nixlBackendReqH* &handle)
 {
@@ -371,11 +371,14 @@ int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
             return -1;
         }
 
+        // TODO: remote_agent and msg should be cached in nixlUCxReq or another way
+        // TODO: Cases for W_NOTIF be added
+
         switch (op) {
-        case READ:
+        case NIXL_RD:
             ret = uw->read(rmd->conn.ep, (uint64_t) raddr, rmd->rkey, laddr, lmd->mem, lsize, req);
             break;
-        case WRITE:
+        case NIXL_WR:
             ret = uw->write(rmd->conn.ep, laddr, lmd->mem, (uint64_t) raddr, rmd->rkey, lsize, req);
             break;
         default:
@@ -392,6 +395,7 @@ transfer_state_t nixlUcxEngine::checkTransfer (nixlBackendReqH* handle) {
     nixlUcxReq req;
 
     req.reqh = (void*) handle;
+    // TODO: if W_NOTIF, sendNotification(remote_agent, msg)
     return uw->test(req);
 }
 
@@ -427,7 +431,7 @@ int nixlUcxEngine::sendNotification(std::string remote_agent,
     hdr.op = NOTIF_STR;
     flags |= UCP_AM_SEND_FLAG_EAGER;
     
-    ser_des.addStr("name", local_agent);
+    ser_des.addStr("name", localAgent);
     ser_des.addStr("msg", msg);
     ser_msg = ser_des.exportStr();
     
@@ -445,7 +449,8 @@ int nixlUcxEngine::sendNotification(std::string remote_agent,
 
     return status;
 }
-int nixlUcxEngine::getNotifications(notifList &notif_list)
+
+int nixlUcxEngine::getNotifications(notif_list_t &notif_list)
 {
     int n_notifs;
 

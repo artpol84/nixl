@@ -33,7 +33,7 @@ class nixlAgentDataPrivate {
         nixlDeviceMD                                 deviceMeta;
 
         std::map<backend_type_t, nixlBackendEngine*> nixlBackendEngines;
-        std::map<backend_type_t, std::string>        connMd; // Local info
+        std::map<backend_type_t, std::string>        connMD; // Local info
 
         nixlLocalSection                             memorySection;
         nixlMetadataH                                mdHandler;

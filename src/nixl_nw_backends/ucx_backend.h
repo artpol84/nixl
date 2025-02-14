@@ -75,9 +75,8 @@ class nixlUcxEngine : nixlBackendEngine {
         nixlUcxWorker* uw;
         void *workerAddr;
         size_t workerSize;
-        std::string local_agent;
 
-        notifList notifs;
+        notif_list_t notifs;
 
         // Map of agent name to saved nixlUcxConnection info
         std::map<std::string, nixlUcxConnection> remoteConnMap;
@@ -110,7 +109,9 @@ class nixlUcxEngine : nixlBackendEngine {
         // MetaDesc instead of basic for local
         int transfer (nixlDescList<nixlMetaDesc> local,
                       nixlDescList<nixlMetaDesc> remote,
-                      transfer_op_t op, std::string notif_msg,
+                      transfer_op_t op,
+                      std::string remote_agent,
+                      std::string notif_msg,
                       nixlBackendReqH* &handle);
 
         transfer_state_t checkTransfer (nixlBackendReqH* handle);
@@ -119,9 +120,10 @@ class nixlUcxEngine : nixlBackendEngine {
 
         int progress();
 
+        // TODO: Should become private
         int sendNotification(std::string remote_agent, std::string msg);
 
-        int getNotifications(notifList &notif_list);
+        int getNotifications(notif_list_t &notif_list);
 
         //public function for UCX worker to mark connections as connected
         int updateConnMap(std::string remote_agent);
