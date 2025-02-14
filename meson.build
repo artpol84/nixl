@@ -24,7 +24,7 @@ cpp = meson.get_compiler('cpp')
 ucx_dep = dependency('ucx')
 cuda_dep = dependency('cuda', required : false)
 
-inc_dir = include_directories('include', 'include/internal', 'src', 'src/utils/serdes')
+inc_dir = include_directories('include', 'include/internal', 'src', 'src/utils/serdes', 'src/utils/data_structures')
 
 subdir('include')
 subdir('include/internal')

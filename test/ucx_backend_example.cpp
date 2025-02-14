@@ -3,9 +3,12 @@
 
 #include "ucx_backend.h"
 
+using namespace std;
+
 int main()
 {
     int ret1, ret2;
+    transfer_state_t ret3;
 
     // Example: assuming two agents running on the same machine,
     // with separate memory regions in DRAM
@@ -50,7 +53,13 @@ int main()
     // and length to register with the backend
     nixlBasicDesc buff1, buff2;
     nixlBackendMD* local_meta1, *local_meta2;
-    size_t len = 256;
+    // Number of transfer descriptors
+    int desc_cnt = 16; 
+    // Size of a single descriptor 
+    // UCX SHMem is using 16MB bounce buffers, 
+    // use large size to ensure that request is non-inline
+    size_t desc_size = 32 * 1024 * 1024; 
+    size_t len = desc_cnt * desc_size;
     void* addr1 = calloc(1, len);
     void* addr2 = calloc(1, len);
 
@@ -100,47 +109,58 @@ int main()
 
     // User creates a request, size of them should match. Example on Agent 1
     // The agent fills the metadata fields based on local_meta1 and remote_meta1
-    size_t req_size = 8;
-    size_t dst_offset = 8;
     nixlBackendReqH* handle;
 
     nixlDescList<nixlMetaDesc> req_src_descs (DRAM_SEG);
-    nixlMetaDesc req_src;
-    req_src.addr     = (uintptr_t) (((char*) addr1) + 16); //random offset
-    req_src.len      = req_size;
-    req_src.devId   = 0;
-    req_src.metadata = local_meta1;
-    req_src_descs.addDesc(req_src);
+    for(int i = 0; i < desc_cnt; i++) {
+        nixlMetaDesc req_src;
+        req_src.addr     = (uintptr_t) (((char*) addr1) + i * desc_size); //random offset
+        req_src.len      = desc_size;
+        req_src.devId   = 0;
+        req_src.metadata = local_meta1;
+        req_src_descs.addDesc(req_src);
+    }
 
     nixlDescList<nixlMetaDesc> req_dst_descs (DRAM_SEG);
-    nixlMetaDesc req_dst;
-    req_dst.addr   = (uintptr_t) ((char*) addr2) + dst_offset; //random offset
-    req_dst.len    = req_size;
-    req_dst.devId = 0;
-    req_dst.metadata = remote_meta1of2;
-    req_dst_descs.addDesc(req_dst);
+    for(int i = 0; i < desc_cnt; i++) {
+        nixlMetaDesc req_dst;
+        req_dst.addr   = (uintptr_t) ((char*) addr2 + i * desc_size); //random offset
+        req_dst.len    = desc_size;
+        req_dst.devId = 0;
+        req_dst.metadata = remote_meta1of2;
+        req_dst_descs.addDesc(req_dst);
+    }
 
     std::string test_str("test");
     std::cout << "Transferring from " << addr1 << " to " << addr2 << "\n";
-    ret1 = ucx1->transfer(req_src_descs, req_dst_descs, NIXL_WRITE, "Agent2", test_str, handle);
-    assert(ret1 == 0);
+
+    // Posting a request, to be updated to return an async handler,
+    // or an ID that later can be used to check the status as a new method
+    // Also maybe we would remove the WRITE and let the backend class decide the op
+    ret3 = ucx1->transfer(req_src_descs, req_dst_descs, NIXL_WRITE, "Agent2", test_str, handle);
+    assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
 
     ucx1->progress();
     ucx2->progress();
-    
-    int status = 0;
 
-    while(status == 0) {
-        status = ucx1->checkTransfer(handle);
-        ucx2->progress();
-        assert(status != -1);
+    if (ret3 == NIXL_XFER_DONE) {
+        cout << "WARNING: Tansfer request completed immmediately - no testing non-inline path" << endl;
+    } else {
+        cout << "NOTE: Testing non-inline Transfer path!" << endl;
+
+        while(ret3 == NIXL_XFER_PROC) {
+            ret3 = ucx1->checkTransfer(handle);
+            ucx2->progress();
+            assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
+        }
+        ucx1->releaseReqH(handle);
     }
 
     // status = ucx1->sendNotif(agent2, test_str);
     // assert(status != -1);
 
     // Do some checks on the data.
-    for(size_t i = dst_offset; i<req_size; i++){
+    for(size_t i = 0; i < len; i++){
         assert( ((uint8_t*) addr2)[i] == 0xbb);    
     }
 

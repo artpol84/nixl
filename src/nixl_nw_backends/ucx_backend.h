@@ -8,6 +8,7 @@
 #include "nixl.h"
 
 #include "utils/ucx/ucx_utils.h"
+#include "utils/data_structures/list_elem.h"
 
 typedef enum {CONN_CHECK, NOTIF_STR} ucx_cb_op_t;
 
@@ -84,14 +85,6 @@ class nixlUcxEngine : nixlBackendEngine {
         // Map of agent name to saved nixlUcxConnection info
         std::map<std::string, nixlUcxConnection> remoteConnMap;
 
-        // Local private data
-        //std::vector<nixlUcxPrivateMetadata> vram_public;
-        //std::vector<nixlUcxPrivateMetadata> dram_public;
-
-        // Map of remote string to a vector of it's public metadata
-        //std::map<std::string, std::vector<nixlUcxPublicMetadata>> vram_map;
-        //std::map<std::string, std::vector<nixlUcxPublicMetadata>> dram_map;
-
     public:
         nixlUcxEngine(nixlUcxInitParams* initParams);
 
@@ -111,15 +104,15 @@ class nixlUcxEngine : nixlBackendEngine {
 
         // MetaDesc instead of basic for local
         transfer_state_t transfer (nixlDescList<nixlMetaDesc> local,
-                         nixlDescList<nixlMetaDesc> remote,
-                         transfer_op_t op,
-                         std::string remote_agent,
-                         std::string notif_msg,
-                         nixlBackendReqH* &handle);
+                                    nixlDescList<nixlMetaDesc> remote,
+                                    transfer_op_t op,
+                                    std::string remote_agent,
+                                    std::string notif_msg,
+                                    nixlBackendReqH* &handle);
 
         transfer_state_t checkTransfer (nixlBackendReqH* handle);
 
-        void releaseReqH(nixlBackendReqH* handle) {}
+        void releaseReqH(nixlBackendReqH* handle);
 
         int progress();
 

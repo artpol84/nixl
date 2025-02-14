@@ -54,8 +54,8 @@ int main()
     nixlUcxReq req;
     uint8_t *buffer[2];
     uint8_t *chk_buffer;
-    int ret;
-    size_t buf_size = 128 * 1024 * 1024;
+    transfer_state_t ret;
+    size_t buf_size = 128 * 1024 * 1024; /* Use large buffer to ensure non-inline transfer */
     size_t i;
 
 #ifdef USE_VRAM
@@ -93,15 +93,23 @@ int main()
     memset(buffer[0], 0xda, buf_size);
 #endif
 
-    assert(0 == w[0].write(ep[0], buffer[0], mem[0], (uint64_t) buffer[1], rkey[0], buf_size/2, req));
+    ret = w[0].write(ep[0], buffer[0], mem[0], (uint64_t) buffer[1], rkey[0], buf_size/2, req);
+    
+    assert( ret == NIXL_XFER_DONE || ret == NIXL_XFER_PROC);
+    if (ret == NIXL_XFER_DONE) {
+        cout << "WARNING: WRITE request completed immmediately - no testing non-inline path" << endl;
+    } else {
+        cout << "NOTE: Testing non-inline WRITE path!" << endl;
+        assert( ((requestData *)req)->initialized == 1);
 
-    assert( !req || ((requestData *)req)->initialized == 1);
-    ret = 0;
-    do {
-        ret = w[0].test(req);
-	    w[1].progress();
-    } while(ret == NIXL_XFER_PROC);
-    assert(ret > 0);
+        ret = NIXL_XFER_PROC;
+        do {
+            ret = w[0].test(req);
+            w[1].progress();
+        } while( ret == NIXL_XFER_PROC);
+        assert(ret == NIXL_XFER_DONE);
+        w[0].reqRelease(req);
+    }
 
 #ifdef USE_VRAM
     checkCudaError(cudaMemcpy(chk_buffer, buffer[1], 128, cudaMemcpyDeviceToHost), "Failed to memcpy");
@@ -125,18 +133,26 @@ int main()
 #else
     memset(buffer[0], 0xbb, buf_size);
     memset(buffer[1], 0xbb, buf_size/3);
-    memset(buffer[1] + 32, 0xda, buf_size - buf_size / 3);
+    memset(buffer[1] + buf_size/3, 0xda, buf_size - buf_size / 3);
 #endif
-    assert(0 == w[0].read(ep[0], (uint64_t) buffer[1], rkey[0], buffer[0], mem[0], buf_size, req));
 
-    assert( !req || ((requestData *)req)->initialized == 1);
+    ret = w[0].read(ep[0], (uint64_t) buffer[1], rkey[0], buffer[0], mem[0], buf_size, req);
 
-    ret = 0;
-    do {
-        ret = w[0].test(req);
-        w[1].progress();
-    } while( ret == NIXL_XFER_PROC);
-    assert(ret > 0);
+    assert( ret == NIXL_XFER_DONE || ret == NIXL_XFER_PROC);
+    if (ret == NIXL_XFER_DONE) {
+        cout << "WARNING: READ request completed immmediately - no testing non-inline path" << endl;
+    } else {
+        cout << "NOTE: Testing non-inline READ path!" << endl;
+        assert( ((requestData *)req)->initialized == 1);
+
+        ret = NIXL_XFER_PROC;
+        do {
+            ret = w[0].test(req);
+            w[1].progress();
+        } while( ret == NIXL_XFER_PROC);
+        assert(ret == NIXL_XFER_DONE);
+        w[0].reqRelease(req);
+    }
 
 #ifdef USE_VRAM
     checkCudaError(cudaMemcpy(chk_buffer, buffer[0], buf_size, cudaMemcpyDeviceToHost), "Failed to memcpy");

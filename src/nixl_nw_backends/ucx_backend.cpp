@@ -1,6 +1,39 @@
 #include "ucx_backend.h"
 #include "serdes.h"
 
+
+class nixlUcxBckndReq : public nixlLinkElem<nixlUcxBckndReq>, public nixlBackendReqH {
+private:
+    int _completed;
+public:
+
+    nixlUcxBckndReq() : nixlLinkElem(), nixlBackendReqH() {
+        _completed = 0;
+    }
+
+    ~nixlUcxBckndReq() {
+        _completed = 0;
+    }
+
+    bool is_complete() { return _completed; }
+    void completed() { _completed = 1; }
+
+};
+    
+static void _requestInit(void *request)
+{
+    /* Initialize request in-place (aka "placement new")*/
+    new(request) nixlUcxBckndReq;
+}
+
+static void _requestFini(void *request)
+{
+    /* Finalize request */
+    nixlUcxBckndReq *req = (nixlUcxBckndReq*)request;
+    req->~nixlUcxBckndReq();
+}
+
+
 static ucs_status_t check_connection (void *arg, const void *header,
                                size_t header_length, void *data,
                                size_t length, 
@@ -81,7 +114,8 @@ nixlUcxEngine::nixlUcxEngine (nixlUcxInitParams* init_params)
     std::vector<std::string> devs; /* Empty vector */
     uint64_t n_addr;
 
-    uw = new nixlUcxWorker(devs, 0, NULL, NULL);
+    uw = new nixlUcxWorker(devs, sizeof(nixlUcxBckndReq), 
+                            _requestInit, _requestFini);
     uw->epAddr(n_addr, workerSize);
     workerAddr = (void*) n_addr;
 
@@ -349,15 +383,17 @@ transfer_state_t nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
 {
     size_t lcnt = local.descCount();
     size_t rcnt = remote.descCount();
-    size_t i, ret;
-
-    nixlUcxReq req;
+    size_t i;
+    transfer_state_t ret;
+    nixlUcxBckndReq dummy, *head = new (&dummy) nixlUcxBckndReq;
+    
 
     if (lcnt != rcnt) {
         return NIXL_XFER_ERR;
     }
 
     for(i = 0; i < lcnt; i++) {
+        nixlUcxReq req;
         void *laddr = (void*) local[i].addr;
         size_t lsize = local[i].len;
         void *raddr = (void*) remote[i].addr;
@@ -384,21 +420,90 @@ transfer_state_t nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
         default:
             return NIXL_XFER_ERR;
         }
+
+        /* if transfer wasn't immediately completed */
+        if (ret == NIXL_XFER_PROC) {
+            head->link((nixlUcxBckndReq*)req);
+        }
     }
 
-    handle = (nixlBackendReqH*) req;
-    // TODO: update if it's already DONE
-    if (ret)
-        return NIXL_XFER_ERR;
-    else
-        return NIXL_XFER_PROC;
+    handle = head->next();
+    return (NULL ==  head->next()) ? NIXL_XFER_DONE : NIXL_XFER_PROC;
 }
 
-transfer_state_t nixlUcxEngine::checkTransfer (nixlBackendReqH* handle) {
-    nixlUcxReq req;
+transfer_state_t nixlUcxEngine::checkTransfer (nixlBackendReqH* handle) 
+{
+    nixlUcxBckndReq *head = (nixlUcxBckndReq *)handle;
+    nixlUcxBckndReq *req = head;
+    transfer_state_t out_ret = NIXL_XFER_DONE;
 
-    req = (nixlUcxReq*) handle;
-    return uw->test(req);
+    /* If transfer has returned DONE - no check transfer */
+    if (NULL == head) {
+        /* Nothing to do */
+        return NIXL_XFER_ERR;
+    }
+
+    /* Go over all request updating their status */
+    while(req) {
+        transfer_state_t ret;
+        if (!req->is_complete()) {
+            ret = uw->test((nixlUcxReq)req);
+            switch (ret) {
+                case NIXL_XFER_DONE:
+                    /* Mark as completed */
+                    req->completed();
+                    break;
+                case NIXL_XFER_ERR:
+                    return ret;
+                case NIXL_XFER_PROC:
+                    out_ret = NIXL_XFER_PROC;
+                    break;
+                default:
+                    /* Any other ret value is unexpected */
+                    return NIXL_XFER_ERR;
+            }
+        }
+        req = req->next();
+    }
+
+    /* Remove completed requests keeping the first one as
+       request representative */
+    req = head->unlink();
+    while(req) {
+        nixlUcxBckndReq *next_req = req->unlink();
+        if (req->is_complete()) {
+            uw->reqRelease((nixlUcxReq)req);
+        } else {
+            /* Enqueue back */
+            head->link(req);
+        }
+        req = next_req;
+    }
+
+    return out_ret;
+}
+
+void nixlUcxEngine::releaseReqH(nixlBackendReqH* handle)
+{
+    nixlUcxBckndReq *head = (nixlUcxBckndReq *)handle;
+    nixlUcxBckndReq *req = head;
+
+    if (head->next() || !head->is_complete()) {
+        // TODO: Error log: uncompleted requests found! Cancelling ...
+        while(head) {
+            req = head;
+            head = req->unlink();
+            if (req->is_complete()) {
+                uw->reqRelease((nixlUcxReq)req);
+            } else {
+                uw->reqCancel((nixlUcxReq)req);
+            }
+        }
+    } else {
+        /* All requests have been completed.
+           Only release the head request */
+        uw->reqRelease((nixlUcxReq)head);
+    }
 }
 
 int nixlUcxEngine::progress() {

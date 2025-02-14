@@ -373,7 +373,7 @@ transfer_state_t nixlUcxWorker::write(nixlUcxEp &ep,
     return NIXL_XFER_PROC;
 }
 
-transfer_state_t nixlUcxWorker::test(nixlUcxReq &req)
+transfer_state_t nixlUcxWorker::test(nixlUcxReq req)
 {
     ucs_status_t status;
 
@@ -388,10 +388,20 @@ transfer_state_t nixlUcxWorker::test(nixlUcxReq &req)
     }
 
     if (status == UCS_OK ) {
-        ucp_request_free(req);
         return NIXL_XFER_DONE;
     } else {
         //TODO: error
         return NIXL_XFER_ERR;
     }
+}
+
+
+void nixlUcxWorker::reqRelease(nixlUcxReq req)
+{
+    ucp_request_free((void*)req);
+}
+
+void nixlUcxWorker::reqCancel(nixlUcxReq req)
+{
+    ucp_request_cancel(worker, (void*)req);
 }

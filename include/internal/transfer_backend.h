@@ -26,6 +26,9 @@ class nixlBackendInitParams {
 };
 
 class nixlBackendReqH {
+public:
+    nixlBackendReqH() { }
+    ~nixlBackendReqH() { }
 };
 
 // Main goal of BackendMetadata class is to have a common pointer type
