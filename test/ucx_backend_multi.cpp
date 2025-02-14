@@ -5,6 +5,7 @@
 #include "ucx_backend.h"
 
 volatile bool ready[2]  = {false, false};
+volatile bool done[2]  = {false, false};
 std::string conn_info[2];
 
 void test_thread(int id)
@@ -46,6 +47,9 @@ void test_thread(int id)
     assert(ret == 0);
 
     std::cout << "Thread passed with id " << id << "\n";
+
+    done[id] = true;
+    while(!done[!id]);
 }
 
 int main()
