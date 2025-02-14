@@ -8,6 +8,8 @@
 #include "internal/metadata_handler.h"
 #include "internal/transfer_request.h"
 
+typedef std::map<std::string, std::vector<std::string>> notif_map_t;
+
 // Main transfer object
 class nixlAgent {
     private:
@@ -47,13 +49,17 @@ class nixlAgent {
         // Invalidate transfer request if we no longer need it.
         void invalidateRequest (nixlXferReqH *req);
 
-        // Submit transfer requests
-        // The async handler is the TransferRequest object
-        int postRequest (nixlXferReqH *req);
+        // Submit a transfer request, which populates the req async handler.
+        // Returns the status of transfer, among NIXL_XFER_PROC/DONE/ERR.
+        transfer_state_t postRequest (nixlXferReqH *req);
 
         // Check the status of transfer requests
         transfer_state_t getStatus (nixlXferReqH *req);
 
+        // Add entries to the passed received notifications list, and
+        // return number of added entries, or -1 if there were an error.
+        // Elements are released within the Agent after this call.
+        int addNewNotifs(notif_map_t& notif_map);
 
         /*** Metadata handling through side channel ***/
 

@@ -122,7 +122,7 @@ int main()
 
     std::string test_str("test");
     std::cout << "Transferring from " << addr1 << " to " << addr2 << "\n";
-    ret1 = ucx1->transfer(req_src_descs, req_dst_descs, NIXL_WR, "Agent2", test_str, handle);
+    ret1 = ucx1->transfer(req_src_descs, req_dst_descs, NIXL_WRITE, "Agent2", test_str, handle);
     assert(ret1 == 0);
 
     ucx1->progress();
@@ -136,7 +136,7 @@ int main()
         assert(status != -1);
     }
 
-    // status = ucx1->sendNotification(agent2, test_str);
+    // status = ucx1->sendNotif(agent2, test_str);
     // assert(status != -1);
 
     // Do some checks on the data.
@@ -152,7 +152,7 @@ int main()
 
     while(ret2 == 0){
         ucx2->progress();
-        ret2 = ucx2->getNotifications(target_notifs);
+        ret2 = ucx2->getNotifs(target_notifs);
     }
 
     assert(ret2 == 1);

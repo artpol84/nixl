@@ -1,3 +1,6 @@
+#ifndef __UCX_UTILS_H
+#define __UCX_UTILS_H
+
 #include <ucp/api/ucp.h>
 #include "nixl.h"
 
@@ -89,3 +92,4 @@ public:
 
 };
 
+#endif

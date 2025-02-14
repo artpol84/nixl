@@ -63,7 +63,7 @@ static ucs_status_t get_notif (void *arg, const void *header,
     remote_name = ser_des.getStr("name");
     msg = ser_des.getStr("msg");
 
-    if(engine->appendNotification(remote_name, msg) == -1) {
+    if(engine->appendNotif(remote_name, msg) == -1) {
         //is this the best way to ERR?
         return UCS_ERR_INVALID_PARAM;
     }
@@ -115,7 +115,7 @@ int nixlUcxEngine::updateConnMap(std::string remote_agent) {
     return 0;
 }
 
-int nixlUcxEngine::appendNotification(std::string remote_agent, std::string notif) {
+int nixlUcxEngine::appendNotif(std::string remote_agent, std::string notif) {
     
     // TODO: [PERF] avoid heap allocation on the data path
     auto new_elm = std::make_pair(remote_agent, notif);
@@ -340,12 +340,12 @@ int nixlUcxEngine::removeRemote (nixlBackendMD* input) {
 /****************************************
  * Data movement
 *****************************************/
-int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
-                             nixlDescList<nixlMetaDesc> remote,
-                             transfer_op_t op,
-                             std::string remote_agent,
-                             std::string notif_msg,
-                             nixlBackendReqH* &handle)
+transfer_state_t nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
+                                          nixlDescList<nixlMetaDesc> remote,
+                                          transfer_op_t op,
+                                          std::string remote_agent,
+                                          std::string notif_msg,
+                                          nixlBackendReqH* &handle)
 {
     size_t lcnt = local.descCount();
     size_t rcnt = remote.descCount();
@@ -354,7 +354,7 @@ int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
     nixlUcxReq req;
 
     if (lcnt != rcnt) {
-        return -1;
+        return NIXL_XFER_ERR;
     }
 
     for(i = 0; i < lcnt; i++) {
@@ -368,34 +368,38 @@ int nixlUcxEngine::transfer (nixlDescList<nixlMetaDesc> local,
 
         if (lsize != rsize) {
             // TODO: err output
-            return -1;
+            return NIXL_XFER_ERR;
         }
 
         // TODO: remote_agent and msg should be cached in nixlUCxReq or another way
-        // TODO: Cases for W_NOTIF be added
+        // TODO: Cases for _NOTIF be added
 
         switch (op) {
-        case NIXL_RD:
+        case NIXL_READ:
             ret = uw->read(rmd->conn.ep, (uint64_t) raddr, rmd->rkey, laddr, lmd->mem, lsize, req);
             break;
-        case NIXL_WR:
+        case NIXL_WRITE:
             ret = uw->write(rmd->conn.ep, laddr, lmd->mem, (uint64_t) raddr, rmd->rkey, lsize, req);
             break;
         default:
-            return -1;
+            return NIXL_XFER_ERR;
         }
     }
 
     handle = (nixlBackendReqH*) req.reqh;
 
-    return ret;
+    // TODO: update if it's already DONE
+    if (ret)
+        return NIXL_XFER_ERR;
+    else
+        return NIXL_XFER_PROC;
 }
 
 transfer_state_t nixlUcxEngine::checkTransfer (nixlBackendReqH* handle) {
     nixlUcxReq req;
 
     req.reqh = (void*) handle;
-    // TODO: if W_NOTIF, sendNotification(remote_agent, msg)
+    // TODO: if _NOTIF, sendNotif(remote_agent, msg)
     return uw->test(req);
 }
 
@@ -408,8 +412,7 @@ int nixlUcxEngine::progress() {
 *****************************************/
 
 //agent will provide cached msg
-int nixlUcxEngine::sendNotification(std::string remote_agent, 
-                                    std::string msg) 
+int nixlUcxEngine::sendNotif(std::string remote_agent, std::string msg)
 {
     nixlSerDes ser_des;
     int status = 0;
@@ -450,7 +453,7 @@ int nixlUcxEngine::sendNotification(std::string remote_agent,
     return status;
 }
 
-int nixlUcxEngine::getNotifications(notif_list_t &notif_list)
+int nixlUcxEngine::getNotifs(notif_list_t &notif_list)
 {
     int n_notifs;
 

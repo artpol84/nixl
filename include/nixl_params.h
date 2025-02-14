@@ -1,5 +1,5 @@
-#ifndef _NIXL_METADATA_H
-#define _NIXL_METADATA_H
+#ifndef _NIXL_PARAMS_H
+#define _NIXL_PARAMS_H
 
 #include <string>
 #include <cstdint>

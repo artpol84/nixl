@@ -7,7 +7,7 @@
 
 // Might be removed to be decided by backend, or changed to high
 // level direction or so.
-typedef enum {NIXL_RD, NIXL_WR, NIXL_RD_W_NOTIF, NIXL_WR_W_NOTIF} transfer_op_t;
+typedef enum {NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF} transfer_op_t;
 typedef enum {NIXL_XFER_INIT, NIXL_XFER_PROC,
               NIXL_XFER_DONE, NIXL_XFER_ERR} transfer_state_t;
 typedef std::vector<std::pair<std::string, std::string>> notif_list_t;
@@ -125,18 +125,18 @@ class nixlStringDesc : public nixlBasicDesc {
         }
 };
 
-// Base backend engine class, hides away different backend implementaitons
-class nixlBackendEngine { // maybe rename to transfer_BackendEngine
-    protected:
+// Base backend engine class for different backend implementaitons
+class nixlBackendEngine {
+    private:
         backend_type_t        backendType;
-        nixlBackendInitParams *initParams;
+
+    protected:
         std::string           localAgent;
 
     public:
         nixlBackendEngine (nixlBackendInitParams *init_params) {
             this->backendType = init_params->getType();
             this->localAgent  = init_params->localAgent;
-            this->initParams  = init_params;
         }
 
         backend_type_t getType () const { return backendType; }
@@ -175,16 +175,17 @@ class nixlBackendEngine { // maybe rename to transfer_BackendEngine
 
         virtual int removeRemote (nixlBackendMD* input) = 0;
 
-        // Posting a request, to be updated to return an async handler
-        virtual int transfer (nixlDescList<nixlMetaDesc> local,
-                              nixlDescList<nixlMetaDesc> remote,
-                              transfer_op_t operation,
-                              std::string remote_agent,
-                              std::string notif_msg,
-                              nixlBackendReqH* &handle) = 0;
+        // Posting a request, which returns populates the async handle.
+        // Returns the status of transfer, among NIXL_XFER_PROC/DONE/ERR.
+        virtual transfer_state_t transfer (nixlDescList<nixlMetaDesc> local,
+                                           nixlDescList<nixlMetaDesc> remote,
+                                           transfer_op_t operation,
+                                           std::string remote_agent,
+                                           std::string notif_msg,
+                                           nixlBackendReqH* &handle) = 0;
 
         // Populate received notifications list. Elements are released within backend then.
-        virtual int getNotifications(notif_list_t &notif_list) = 0;
+        virtual int getNotifs(notif_list_t &notif_list) = 0;
 
         // Use a handle to progress backend engine and see if a transfer is completed or not
         virtual transfer_state_t checkTransfer(nixlBackendReqH* handle) = 0;

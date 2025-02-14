@@ -119,6 +119,7 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
     if (data.remoteSections.count(remote_agent)==0)
         return -1;
 
+    // TODO [Perf]: Avoid heap allocation on the datapath, maybe use a mem pool
     nixlXferReqH *handle = new nixlXferReqH;
     // Might not need unified and sorted info
     handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
@@ -148,9 +149,9 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
     handle->notifMsg    = notif_msg;
 
     if (notif_msg.size()==0)
-        handle->backendOp = direction ? NIXL_RD         : NIXL_WR;
+        handle->backendOp = direction ? NIXL_READ : NIXL_WRITE;
     else
-        handle->backendOp = direction ? NIXL_RD_W_NOTIF : NIXL_WR_W_NOTIF;
+        handle->backendOp = direction ? NIXL_RD_NOTIF : NIXL_WR_NOTIF;
 
     handle->state = NIXL_XFER_INIT;
 
@@ -166,14 +167,14 @@ void nixlAgent::invalidateRequest(nixlXferReqH *req) {
     delete req;
 }
 
-int nixlAgent::postRequest(nixlXferReqH *req) {
+transfer_state_t nixlAgent::postRequest(nixlXferReqH *req) {
     if (req==nullptr)
-        return -1;
+        return NIXL_XFER_ERR;
     // We can't repost while a request is in progress
     if (req->state == NIXL_XFER_PROC) {
         req->state = req->engine->checkTransfer(req->backendHandle);
         if (req->state == NIXL_XFER_PROC)
-            return -1;
+            return NIXL_XFER_ERR;
     }
 
     // If state is NIXL_XFER_INIT or NIXL_XFER_DONE we can repost,
@@ -191,6 +192,37 @@ transfer_state_t nixlAgent::getStatus (nixlXferReqH *req) {
         req->state = req->engine->checkTransfer(req->backendHandle);
 
     return req->state;
+}
+
+int nixlAgent::addNewNotifs(notif_map_t& notif_map) {
+    notif_list_t backend_list;
+    int ret, tot=0;
+    bool err=false;
+
+    // Doing best effort, if any backend errors out we return
+    // error but proceed with the rest. We can add metadata about
+    // the backend to the msg, but user could put it themselves.
+    for (auto & eng: data.nixlBackendEngines) {
+        ret = eng.second->getNotifs(backend_list);
+        if (ret<0)
+            err=true;
+
+        if (backend_list.size()==0)
+            continue;
+
+        for (auto & elm: backend_list) {
+            if (notif_map.count(elm.first)==0)
+                notif_map[elm.first] = std::vector<std::string>();
+
+            notif_map[elm.first].push_back(elm.second);
+            tot++;
+        }
+    }
+
+    if (err)
+        return -1;
+    else
+        return tot;
 }
 
 std::string nixlAgent::getMetadata () const {

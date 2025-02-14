@@ -1,5 +1,5 @@
-#ifndef SERDES_H
-#define SERDES_H
+#ifndef __SERDES_H
+#define __SERDES_H
 
 #include <cstring>
 #include <string>
@@ -32,4 +32,5 @@ public:
     static std::string _bytesToString(void *buf, ssize_t size);
     static void _stringToBytes(void* fill_buf, std::string s, ssize_t size);
 };
+
 #endif

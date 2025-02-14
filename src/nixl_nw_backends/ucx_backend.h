@@ -1,3 +1,6 @@
+#ifndef __UCX_BACKEND_H
+#define __UCX_BACKEND_H
+
 #include <vector>
 #include <cstring>
 #include <iostream>
@@ -107,12 +110,12 @@ class nixlUcxEngine : nixlBackendEngine {
         int removeRemote (nixlBackendMD* input);
 
         // MetaDesc instead of basic for local
-        int transfer (nixlDescList<nixlMetaDesc> local,
-                      nixlDescList<nixlMetaDesc> remote,
-                      transfer_op_t op,
-                      std::string remote_agent,
-                      std::string notif_msg,
-                      nixlBackendReqH* &handle);
+        transfer_state_t transfer (nixlDescList<nixlMetaDesc> local,
+                         nixlDescList<nixlMetaDesc> remote,
+                         transfer_op_t op,
+                         std::string remote_agent,
+                         std::string notif_msg,
+                         nixlBackendReqH* &handle);
 
         transfer_state_t checkTransfer (nixlBackendReqH* handle);
 
@@ -121,12 +124,13 @@ class nixlUcxEngine : nixlBackendEngine {
         int progress();
 
         // TODO: Should become private
-        int sendNotification(std::string remote_agent, std::string msg);
+        int sendNotif(std::string remote_agent, std::string msg);
 
-        int getNotifications(notif_list_t &notif_list);
+        int getNotifs(notif_list_t &notif_list);
 
         //public function for UCX worker to mark connections as connected
         int updateConnMap(std::string remote_agent);
-        int appendNotification(std::string remote_agent, std::string notif);
+        int appendNotif(std::string remote_agent, std::string notif);
 };
 
+#endif
