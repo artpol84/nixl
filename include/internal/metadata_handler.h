@@ -27,7 +27,7 @@ class nixlMetadataH {
         int removeLocalMetadata(std::string local_agent);
 };
 
-class nixlAgentDataPrivate {
+class nixlAgentData {
     public:
         std::string                                  name;
         nixlDeviceMD                                 deviceMeta;
@@ -41,8 +41,8 @@ class nixlAgentDataPrivate {
         std::map<std::string, nixlRemoteSection *>   remoteSections;
         std::map<std::string, backend_list_t>        remoteBackends;
 
-        nixlAgentDataPrivate() {}
-        ~nixlAgentDataPrivate();
+        nixlAgentData() {}
+        ~nixlAgentData();
 };
 
 #endif

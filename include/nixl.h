@@ -13,7 +13,7 @@ typedef std::map<std::string, std::vector<std::string>> notif_map_t;
 // Main transfer object
 class nixlAgent {
     private:
-        nixlAgentDataPrivate data;
+        nixlAgentData data;
 
     public:
 
@@ -39,22 +39,22 @@ class nixlAgent {
         /*** Transfer Request Handling ***/
 
         // populates the transfer request. Empty notif_msg means no notif
-        int createTransferReq (nixlDescList<nixlBasicDesc>& local_descs,
-                               nixlDescList<nixlBasicDesc>& remote_descs,
-                               std::string remote_agent,
-                               std::string notif_msg,
-                               int direction,
-                               nixlXferReqH* &req_handle);
+        int createXferReq (nixlDescList<nixlBasicDesc>& local_descs,
+                           nixlDescList<nixlBasicDesc>& remote_descs,
+                           std::string remote_agent,
+                           std::string notif_msg,
+                           int direction,
+                           nixlXferReqH* &req_handle);
 
         // Invalidate transfer request if we no longer need it.
-        void invalidateRequest (nixlXferReqH *req);
+        void invalidateXferReq (nixlXferReqH *req);
 
         // Submit a transfer request, which populates the req async handler.
         // Returns the status of transfer, among NIXL_XFER_PROC/DONE/ERR.
-        transfer_state_t postRequest (nixlXferReqH *req);
+        transfer_state_t postXferReq (nixlXferReqH *req);
 
         // Check the status of transfer requests
-        transfer_state_t getStatus (nixlXferReqH *req);
+        transfer_state_t getXferStatus (nixlXferReqH *req);
 
         // Add entries to the passed received notifications list, and
         // return number of added entries, or -1 if there were an error.
@@ -64,25 +64,25 @@ class nixlAgent {
         /*** Metadata handling through side channel ***/
 
         // Get nixl_metadata for this agent
-        std::string getMetadata () const;
+        std::string getLocalMD () const;
 
         // Load other agent's metadata and unpack it internally
-        int loadMetadata (std::string remote_metadata);
+        int loadRemoteMD (std::string remote_metadata);
 
         // Invalidate the remote section information cached locally
-        void invalidateRemoteMetadata (std::string remote_agent);
+        void invalidateRemoteMD (std::string remote_agent);
 
 
         /*** Metadata handling through central kv service, or for p2p test ***/
 
         // Send the local metadata to kv service to store it
-        int sendMetadata () const;
+        int sendLocalMD () const;
 
         // Request for a remote Agent's metadata, used for proactive prefetch
-        int fetchMetadata (std::string &remote_agent);
+        int fetchRemoteMD (std::string &remote_agent);
 
         // Sends messages to kv service to invalidate this Agent's metadata
-        void invalidateLocalMetadata ();
+        void invalidateLocalMD ();
 };
 
 #endif

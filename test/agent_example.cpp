@@ -61,14 +61,14 @@ int main()
     assert(ret1 == 0);
     assert(ret2 == 0);
 
-    std::string meta1 = A1.getMetadata();
-    std::string meta2 = A2.getMetadata();
+    std::string meta1 = A1.getLocalMD();
+    std::string meta2 = A2.getLocalMD();
 
     std::cout << "Agent1's Metadata: " << meta1 << "\n";
     std::cout << "Agent2's Metadata: " << meta2 << "\n";
 
-    ret1 = A1.loadMetadata (meta2);
-    ret1 = A2.loadMetadata (meta1);
+    ret1 = A1.loadRemoteMD (meta2);
+    ret1 = A2.loadRemoteMD (meta1);
 
     size_t req_size = 8;
     size_t dst_offset = 8;
@@ -89,17 +89,17 @@ int main()
 
     std::cout << "Transfer request from " << addr1 << " to " << addr2 << "\n";
     nixlXferReqH* req_handle;
-    ret1 = A1.createTransferReq(req_src_descs, req_dst_descs, "Agent2", "", 0, req_handle);
+    ret1 = A1.createXferReq(req_src_descs, req_dst_descs, "Agent2", "", 0, req_handle);
     assert(ret1 == 0);
 
-    ret1 = A1.postRequest(req_handle);
+    ret1 = A1.postXferReq(req_handle);
 
     std::cout << "Transfer was posted\n";
 
     int status = 0;
 
     while(status != NIXL_XFER_DONE) {
-        status = A1.getStatus(req_handle);
+        status = A1.getXferStatus(req_handle);
         assert(status != NIXL_XFER_ERR);
     }
 
@@ -110,10 +110,10 @@ int main()
 
     std::cout << "Transfer verified\n";
 
-    A1.invalidateRequest(req_handle);
+    A1.invalidateXferReq(req_handle);
     ret1 = A1.deregisterMem(dlist1, ucx1);
     ret2 = A2.deregisterMem(dlist2, ucx2);
 
-    A1.invalidateRemoteMetadata("Agent2");
-    A2.invalidateRemoteMetadata("Agent1");
+    A1.invalidateRemoteMD("Agent2");
+    A2.invalidateRemoteMD("Agent1");
 }

@@ -5,27 +5,25 @@
 #include <cstdint>
 #include "internal/transfer_backend.h"
 
-class nixlSysTopology {
-    // System Topology class TBD
-};
+// class nixlSysTopology {
+//     // TBD if needed
+// };
 
-// Per node device metadata information
+// Per Agent device metadata information. Also assigned IP for the
+// main process, or additional information required for central KV
+// service if used.
 class nixlDeviceMD {
-    // Information about the node that needs to be sent to ETCD
-    // Such as list of devices and their type, assigned IP to ETCD
-    // Some topology info might be added as well (Ryan's comment)
-    // TBD: Like Topology class - to get system specific information/tuning
     public:
-        nixlSysTopology topology;
+        // nixlSysTopology topology;
         std::string     srcIpAddress;
         uint16_t        srcPort;
 };
 
-// Example backend initialization data for UCX
+// Example backend initialization data for UCX.
+// For now UCX autodetects devices, later might add hints.
 class nixlUcxInitParams : public nixlBackendInitParams {
     public:
         backend_type_t getType () { return UCX; }
-        // TBD: Required parameters to initialize UCX that we need to get from the user
 };
 
 #endif

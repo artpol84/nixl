@@ -10,6 +10,8 @@
 
 typedef enum {UCX, GPUDIRECTIO, NVMe, NVMeoF} backend_type_t;
 typedef enum {DRAM_SEG, VRAM_SEG, BLK_SEG, FILE_SEG} memory_type_t;
+typedef enum {NIXL_XFER_INIT, NIXL_XFER_PROC,
+              NIXL_XFER_DONE, NIXL_XFER_ERR} transfer_state_t;
 
 // A basic descriptor class, contiguous in memory, with some supporting methods
 class nixlBasicDesc {

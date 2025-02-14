@@ -8,8 +8,6 @@
 // Might be removed to be decided by backend, or changed to high
 // level direction or so.
 typedef enum {NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF} transfer_op_t;
-typedef enum {NIXL_XFER_INIT, NIXL_XFER_PROC,
-              NIXL_XFER_DONE, NIXL_XFER_ERR} transfer_state_t;
 typedef std::vector<std::pair<std::string, std::string>> notif_list_t;
 
 // A base class to point to backend initialization data

@@ -2,7 +2,7 @@
 #include "ucx_backend.h"
 #include "serdes.h"
 
-nixlAgentDataPrivate::~nixlAgentDataPrivate() {
+nixlAgentData::~nixlAgentData() {
     for (auto & elm: remoteSections)
         delete elm.second;
     remoteSections.clear();
@@ -101,12 +101,12 @@ int nixlAgent::makeConnection(std::string remote_agent, int direction) {
     return 0;
 }
 
-int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
-                                 nixlDescList<nixlBasicDesc>& remote_descs,
-                                 std::string remote_agent,
-                                 std::string notif_msg,
-                                 int direction,
-                                 nixlXferReqH* &req_handle) {
+int nixlAgent::createXferReq(nixlDescList<nixlBasicDesc>& local_descs,
+                             nixlDescList<nixlBasicDesc>& remote_descs,
+                             std::string remote_agent,
+                             std::string notif_msg,
+                             int direction,
+                             nixlXferReqH* &req_handle) {
 
     // Check the correspondence between descriptor lists
     if (local_descs.descCount() != remote_descs.descCount())
@@ -161,13 +161,13 @@ int nixlAgent::createTransferReq(nixlDescList<nixlBasicDesc>& local_descs,
     return 0;
 }
 
-void nixlAgent::invalidateRequest(nixlXferReqH *req) {
+void nixlAgent::invalidateXferReq(nixlXferReqH *req) {
     if (req->state != NIXL_XFER_DONE)
         req->engine->releaseReqH(req->backendHandle);
     delete req;
 }
 
-transfer_state_t nixlAgent::postRequest(nixlXferReqH *req) {
+transfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
     if (req==nullptr)
         return NIXL_XFER_ERR;
     // We can't repost while a request is in progress
@@ -186,7 +186,7 @@ transfer_state_t nixlAgent::postRequest(nixlXferReqH *req) {
                                    req->backendHandle));
 }
 
-transfer_state_t nixlAgent::getStatus (nixlXferReqH *req) {
+transfer_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
     // If the state is done, no need to recheck.
     if (req->state != NIXL_XFER_DONE)
         req->state = req->engine->checkTransfer(req->backendHandle);
@@ -225,7 +225,7 @@ int nixlAgent::addNewNotifs(notif_map_t& notif_map) {
         return tot;
 }
 
-std::string nixlAgent::getMetadata () const {
+std::string nixlAgent::getLocalMD () const {
     // data.connMD was populated when the backend was created
     size_t conn_cnt = data.connMD.size();
     backend_type_t backend_type;
@@ -257,7 +257,7 @@ std::string nixlAgent::getMetadata () const {
     return sd.exportStr();
 }
 
-int nixlAgent::loadMetadata (std::string remote_metadata) {
+int nixlAgent::loadRemoteMD (std::string remote_metadata) {
     int count = 0;
     nixlSerDes sd;
     size_t conn_cnt;
@@ -321,7 +321,7 @@ int nixlAgent::loadMetadata (std::string remote_metadata) {
     return 0;
 }
 
-void nixlAgent::invalidateRemoteMetadata(std::string remote_agent) {
+void nixlAgent::invalidateRemoteMD(std::string remote_agent) {
     if (data.remoteSections.count(remote_agent)!=0) {
         delete data.remoteSections[remote_agent];
         data.remoteSections.erase(remote_agent);
@@ -332,16 +332,16 @@ void nixlAgent::invalidateRemoteMetadata(std::string remote_agent) {
     }
 }
 
-int nixlAgent::sendMetadata() const {
+int nixlAgent::sendLocalMD() const {
     // TBD
     return 0;
 }
 
-int nixlAgent::fetchMetadata (std::string &remote_agent) {
+int nixlAgent::fetchRemoteMD (std::string &remote_agent) {
     // TBD
     return 0;
 }
 
-void nixlAgent::invalidateLocalMetadata() {
+void nixlAgent::invalidateLocalMD() {
     //TBD
 }

@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
     /** Register memory in both initiator and target */
     agent.registerMem(dram_for_ucx, ucx);
     if (role == "target") {
-        tgt_metadata = agent.getMetadata();
+        tgt_metadata = agent.getLocalMD();
     }
 
     std::cout << " Start Control Path metadata exchanges \n";
@@ -186,30 +186,30 @@ int main(int argc, char *argv[]) {
         remote_serdes->importStr(remote_desc);
         nixlDescList<nixlBasicDesc> dram_target_ucx(remote_serdes);
         dram_target_ucx.print();
-        agent.loadMetadata(tgt_md_init);
+        agent.loadRemoteMD(tgt_md_init);
 
         std::cout << " End Control Path metadata exchanges \n";
         std::cout << " Start Data Path Exchanges \n\n";
         std::cout << " Create transfer request with UCX backend\n ";
 
-        ret = agent.createTransferReq(dram_for_ucx, dram_target_ucx,
-                                      "target", "", 0, treq);
+        ret = agent.createXferReq(dram_for_ucx, dram_target_ucx,
+                                  "target", "", 0, treq);
         if (ret != 0) {
             std::cerr << "Error creating transfer request\n";
             exit(-1);
         }
 
         std::cout << " Post the request with UCX backend\n ";
-        ret = agent.postRequest(treq);
+        ret = agent.postXferReq(treq);
         std::cout << " Initiator posted Data Path transfer\n";
         std::cout << " Waiting for completion\n";
 
         while (status != NIXL_XFER_DONE) {
-            status = agent.getStatus(treq);
+            status = agent.getXferStatus(treq);
             assert(status != NIXL_XFER_ERR);
         }
         std::cout << " Completed Sending Data using UCX backend\n";
-        agent.invalidateRequest(treq);
+        agent.invalidateXferReq(treq);
     }
 
     std::cout <<"Cleanup.. \n";
