@@ -62,7 +62,7 @@ bool nixlBasicDesc::covers (const nixlBasicDesc& query) const {
 bool nixlBasicDesc::overlaps (const nixlBasicDesc& query) const {
     if (devId != query.devId)
         return false;
-    if ((addr + len < query.addr) || (query.addr + query.len < addr))
+    if ((addr + len <= query.addr) || (query.addr + query.len <= addr))
         return false;
     return true;
 }
