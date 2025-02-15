@@ -15,22 +15,22 @@ private:
 
 public:
     nixlSerDes();
-    
+
     /* Ser/Des for Strings */
-    int addStr(std::string tag, std::string str);
-    std::string getStr(std::string tag);
+    int addStr(const std::string &tag, const std::string &str);
+    std::string getStr(const std::string &tag);
 
     /* Ser/Des for Byte buffers */
-    int addBuf(std::string tag, void* buf, ssize_t len);
-    ssize_t getBufLen(std::string tag);
-    int getBuf(std::string tag, void *buf, ssize_t len);
+    int addBuf(const std::string &tag, const void* buf, ssize_t len);
+    ssize_t getBufLen(const std::string &tag) const;
+    int getBuf(const std::string &tag, void *buf, ssize_t len);
 
     /* Ser/Des buffer management */
-    std::string exportStr();
-    int importStr(std::string sdbuf);
+    std::string exportStr() const;
+    int importStr(const std::string &sdbuf);
 
-    static std::string _bytesToString(void *buf, ssize_t size);
-    static void _stringToBytes(void* fill_buf, std::string s, ssize_t size);
+    static std::string _bytesToString(const void *buf, ssize_t size);
+    static void _stringToBytes(void* fill_buf, const std::string &s, ssize_t size);
 };
 
 #endif

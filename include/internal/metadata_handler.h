@@ -14,17 +14,17 @@ class nixlMetadataH {
     public:
         // Creates the connection to the metadata server
         nixlMetadataH() {}
-        nixlMetadataH(std::string& ip_address, uint16_t port);
+        nixlMetadataH(const std::string &ip_address, uint16_t port);
         ~nixlMetadataH();
 
         /** Sync the local section with the metadata server */
-        int sendLocalMetadata(std::string& local_md);
+        int sendLocalMetadata(const std::string &local_md);
 
         // Get a remote section from the metadata server
-        std::string getRemoteMd(std::string remote_agent);
+        std::string getRemoteMd(const std::string &remote_agent);
 
         // Invalidating the information in the metadata server
-        int removeLocalMetadata(std::string local_agent);
+        int removeLocalMetadata(const std::string &local_agent);
 };
 
 class nixlAgentData {
@@ -38,7 +38,7 @@ class nixlAgentData {
         nixlLocalSection                             memorySection;
         nixlMetadataH                                mdHandler;
 
-        std::map<std::string, nixlRemoteSection *>   remoteSections;
+        std::map<std::string, nixlRemoteSection*>    remoteSections;
         std::map<std::string, backend_list_t>        remoteBackends;
 
         nixlAgentData() {}

@@ -7,17 +7,17 @@ nixlSerDes::nixlSerDes() {
     mode = SERIALIZE;
 }
 
-std::string nixlSerDes::_bytesToString(void *buf, ssize_t size) {
+std::string nixlSerDes::_bytesToString(const void *buf, ssize_t size) {
     std::string ret_str = std::string(reinterpret_cast<const char*>(buf), size);
     return ret_str;
 }
 
-void nixlSerDes::_stringToBytes(void* fill_buf, std::string s, ssize_t size){
+void nixlSerDes::_stringToBytes(void* fill_buf, const std::string &s, ssize_t size){
     s.copy(reinterpret_cast<char*>(fill_buf), size); 
 }
 
 /* Ser/Des for Strings */
-int nixlSerDes::addStr(std::string tag, std::string str){
+int nixlSerDes::addStr(const std::string &tag, const std::string &str){
 
     size_t len = str.size();
 
@@ -29,7 +29,7 @@ int nixlSerDes::addStr(std::string tag, std::string str){
     return 0;
 }
 
-std::string nixlSerDes::getStr(std::string tag){
+std::string nixlSerDes::getStr(const std::string &tag){
 
     if(workingStr.compare(des_offset, tag.size(), tag) != 0){
        //incorrect tag
@@ -55,7 +55,7 @@ std::string nixlSerDes::getStr(std::string tag){
 }
 
 /* Ser/Des for Byte buffers */
-int nixlSerDes::addBuf(std::string tag, void* buf, ssize_t len){
+int nixlSerDes::addBuf(const std::string &tag, const void* buf, ssize_t len){
 
     workingStr.append(tag);
     workingStr.append(_bytesToString(&len, sizeof(ssize_t)));
@@ -65,7 +65,7 @@ int nixlSerDes::addBuf(std::string tag, void* buf, ssize_t len){
     return 0;
 }
 
-ssize_t nixlSerDes::getBufLen(std::string tag){
+ssize_t nixlSerDes::getBufLen(const std::string &tag) const{
     if(workingStr.compare(des_offset, tag.size(), tag) != 0){
        //incorrect tag
        return -1;
@@ -80,7 +80,7 @@ ssize_t nixlSerDes::getBufLen(std::string tag){
     return len;
 }
 
-int nixlSerDes::getBuf(std::string tag, void *buf, ssize_t len){
+int nixlSerDes::getBuf(const std::string &tag, void *buf, ssize_t len){
     if(workingStr.compare(des_offset, tag.size(), tag) != 0){
        //incorrect tag
        return -1;
@@ -99,12 +99,12 @@ int nixlSerDes::getBuf(std::string tag, void *buf, ssize_t len){
 }
 
 /* Ser/Des buffer management */
-std::string nixlSerDes::exportStr() {
+std::string nixlSerDes::exportStr() const {
 	std::string ret_str = workingStr;
     return ret_str;
 }
 
-int nixlSerDes::importStr(std::string sdbuf) {
+int nixlSerDes::importStr(const std::string &sdbuf) {
  
     if(sdbuf.compare(0, 11, "nixlSerDes|") != 0){
        //incorrect tag

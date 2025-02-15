@@ -75,9 +75,8 @@ class nixlUcxPublicMetadata : public nixlBackendMD {
 
 class nixlUcxEngine : nixlBackendEngine {
     private:
-        nixlUcxInitParams initParams;
         nixlUcxWorker* uw;
-        void *workerAddr;
+        void* workerAddr;
         size_t workerSize;
 
         notif_list_t notifs;
@@ -86,44 +85,45 @@ class nixlUcxEngine : nixlBackendEngine {
         std::map<std::string, nixlUcxConnection> remoteConnMap;
 
     public:
-        nixlUcxEngine(nixlUcxInitParams* initParams);
-
+        nixlUcxEngine(const nixlUcxInitParams* init_params);
         ~nixlUcxEngine();
 
         std::string getConnInfo() const;
-        int loadRemoteConnInfo (std::string remote_agent, std::string remote_conn_info);
-        int makeConnection(std::string remote_agent);
-        int listenForConnection(std::string remote_agent);
+        int loadRemoteConnInfo (const std::string &remote_agent,
+                                const std::string &remote_conn_info);
+        int makeConnection(const std::string &remote_agent);
+        int listenForConnection(const std::string &remote_agent);
 
-        int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type, nixlBackendMD* &out);
-        void deregisterMem (nixlBackendMD* desc);
+        int registerMem (const nixlBasicDesc &mem,
+                         const mem_type_t &mem_type,
+                         nixlBackendMD* &out);
+        void deregisterMem (nixlBackendMD* meta);
 
-        int loadRemote (nixlStringDesc input, nixlBackendMD* &output, std::string remote_agent);
-
-        int removeRemote (nixlBackendMD* input);
+        int loadRemoteMD (const nixlStringDesc &input,
+                          const mem_type_t &mem_type,
+                          const std::string &remote_agent,
+                          nixlBackendMD* &output);
+        int removeRemoteMD (nixlBackendMD* input);
 
         // MetaDesc instead of basic for local
-        transfer_state_t transfer (nixlDescList<nixlMetaDesc> local,
-                                    nixlDescList<nixlMetaDesc> remote,
-                                    transfer_op_t op,
-                                    std::string remote_agent,
-                                    std::string notif_msg,
-                                    nixlBackendReqH* &handle);
-
-        transfer_state_t checkTransfer (nixlBackendReqH* handle);
-
+        xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
+                               const nixlDescList<nixlMetaDesc> &remote,
+                               const xfer_op_t &op,
+                               const std::string &remote_agent,
+                               const std::string &notif_msg,
+                               nixlBackendReqH* &handle);
+        xfer_state_t checkXfer (nixlBackendReqH* handle);
         void releaseReqH(nixlBackendReqH* handle);
 
         int progress();
 
         // TODO: Should become private
-        int sendNotif(std::string remote_agent, std::string msg);
-
+        int sendNotif(const std::string &remote_agent, const std::string &msg);
         int getNotifs(notif_list_t &notif_list);
 
         //public function for UCX worker to mark connections as connected
-        int updateConnMap(std::string remote_agent);
-        int appendNotif(std::string remote_agent, std::string notif);
+        int updateConnMap(const std::string &remote_agent);
+        int appendNotif(const std::string &remote_agent, const std::string &notif);
 };
 
 #endif

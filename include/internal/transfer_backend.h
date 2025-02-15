@@ -7,7 +7,7 @@
 
 // Might be removed to be decided by backend, or changed to high
 // level direction or so.
-typedef enum {NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF} transfer_op_t;
+typedef enum {NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF} xfer_op_t;
 typedef std::vector<std::pair<std::string, std::string>> notif_list_t;
 
 // A base class to point to backend initialization data
@@ -19,7 +19,8 @@ class nixlBackendInitParams {
     public:
         std::string localAgent;
 
-        virtual backend_type_t getType () = 0;
+        virtual backend_type_t getType() const = 0;
+
         virtual ~nixlBackendInitParams() = default;
 };
 
@@ -54,7 +55,7 @@ class nixlBackendMD {
         }
 
         // To be able to populate when receiving data
-        int set(std::string) {
+        int set(const std::string &str) {
             return -1; // Not implemented
         }
 };
@@ -66,33 +67,33 @@ class nixlBackendMD {
 class nixlBackendConnMD {
   public:
     // And some other details
-    std::string   dstIpAddress;
-    uint16_t      dstPort;
+    std::string dstIpAddress;
+    uint16_t    dstPort;
 };
 
 // A pointer required to a metadata object for backends next to each BasicDesc
 class nixlMetaDesc : public nixlBasicDesc {
   public:
         // To be able to point to any object
-        nixlBackendMD *metadata;
+        nixlBackendMD* metadata;
 
         // Reuse parent constructor without the metadata
         using nixlBasicDesc::nixlBasicDesc;
 
         // No serializer or deserializer, using parent not to expose the metadata
 
-        inline friend bool operator==(const nixlMetaDesc& lhs, const nixlMetaDesc& rhs) {
+        inline friend bool operator==(const nixlMetaDesc &lhs, const nixlMetaDesc &rhs) {
             return (((nixlBasicDesc)lhs == (nixlBasicDesc)rhs) &&
                           (lhs.metadata == rhs.metadata));
         }
 
         // Main use case is to take the BasicDesc from another object, so just
         // the metadata part is separately copied here, used in DescList
-        inline void copyMeta (const nixlMetaDesc& meta) {
+        inline void copyMeta (const nixlMetaDesc &meta) {
             this->metadata = meta.metadata;
         }
 
-        inline void print(const std::string suffix) const {
+        inline void print(const std::string &suffix) const {
             nixlBasicDesc::print(", Backend ptr val: " +
                                  std::to_string((uintptr_t)metadata) + suffix);
         }
@@ -106,9 +107,9 @@ class nixlStringDesc : public nixlBasicDesc {
         // Reuse parent constructor without the metadata
         using nixlBasicDesc::nixlBasicDesc;
 
-        nixlStringDesc(const std::string& str); // Deserializer
+        nixlStringDesc(const std::string &str); // Deserializer
 
-        inline friend bool operator==(const nixlStringDesc& lhs, const nixlStringDesc& rhs){
+        inline friend bool operator==(const nixlStringDesc &lhs, const nixlStringDesc &rhs){
             return (((nixlBasicDesc)lhs == (nixlBasicDesc)rhs) &&
                           (lhs.metadata == rhs.metadata));
         }
@@ -117,11 +118,11 @@ class nixlStringDesc : public nixlBasicDesc {
             return nixlBasicDesc::serialize() + metadata;
         }
 
-        inline void copyMeta (const nixlStringDesc& meta){
+        inline void copyMeta (const nixlStringDesc &meta){
             this->metadata = meta.metadata;
         }
 
-        inline void print(const std::string suffix) const {
+        inline void print(const std::string &suffix) const {
             nixlBasicDesc::print(", Metadata: " + metadata + suffix);
         }
 };
@@ -135,7 +136,7 @@ class nixlBackendEngine {
         std::string           localAgent;
 
     public:
-        nixlBackendEngine (nixlBackendInitParams *init_params) {
+        nixlBackendEngine (const nixlBackendInitParams* init_params) {
             this->backendType = init_params->getType();
             this->localAgent  = init_params->localAgent;
         }
@@ -147,10 +148,11 @@ class nixlBackendEngine {
             return meta->get();
         }
 
-        virtual ~nixlBackendEngine () {};
+        virtual ~nixlBackendEngine () = default;
 
         // Register and deregister local memory
-        virtual int registerMem (const nixlBasicDesc &mem, memory_type_t mem_type,
+        virtual int registerMem (const nixlBasicDesc &mem,
+                                 const mem_type_t &mem_type,
                                  nixlBackendMD* &out) = 0;
         virtual void deregisterMem (nixlBackendMD* meta) = 0;
 
@@ -160,37 +162,39 @@ class nixlBackendEngine {
 
         // Deserialize from string the connection info for a remote node
         // The generated data should be deleted in nixlBackendEngine destructor
-        virtual int loadRemoteConnInfo (std::string remote_agent,
-                                        std::string remote_conn_info) = 0;
+        virtual int loadRemoteConnInfo (const std::string &remote_agent,
+                                        const std::string &remote_conn_info) = 0;
 
         // Make connection to a remote node identified by the name into loaded conn infos
-        virtual int makeConnection(std::string remote_agent) = 0;
+        virtual int makeConnection(const std::string &remote_agent) = 0;
 
         // Listen for connections from a remote agent
-        virtual int listenForConnection(std::string remote_agent) = 0;
+        virtual int listenForConnection(const std::string &remote_agent) = 0;
 
         // Add and remove remtoe metadata
-        virtual int loadRemote (nixlStringDesc input,
-                                nixlBackendMD* &output,
-                                std::string remote_agent) = 0;
+        virtual int loadRemoteMD (const nixlStringDesc &input,
+                                  const mem_type_t &mem_type,
+                                  const std::string &remote_agent,
+                                  nixlBackendMD* &output) = 0;
 
-        virtual int removeRemote (nixlBackendMD* input) = 0;
+        virtual int removeRemoteMD (nixlBackendMD* input) = 0;
 
         // Posting a request, which returns populates the async handle.
         // Returns the status of transfer, among NIXL_XFER_PROC/DONE/ERR.
-        virtual transfer_state_t transfer (nixlDescList<nixlMetaDesc> local,
-                                           nixlDescList<nixlMetaDesc> remote,
-                                           transfer_op_t operation,
-                                           std::string remote_agent,
-                                           std::string notif_msg,
-                                           nixlBackendReqH* &handle) = 0;
+        virtual xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
+                                       const nixlDescList<nixlMetaDesc> &remote,
+                                       const xfer_op_t &operation,
+                                       const std::string &remote_agent,
+                                       const std::string &notif_msg,
+                                       nixlBackendReqH* &handle) = 0;
 
         // Populate received notifications list. Elements are released within backend then.
         virtual int getNotifs(notif_list_t &notif_list) = 0;
 
         // Use a handle to progress backend engine and see if a transfer is completed or not
-        virtual transfer_state_t checkTransfer(nixlBackendReqH* handle) = 0;
+        virtual xfer_state_t checkXfer(nixlBackendReqH* handle) = 0;
 
+        //Backend aborts the transfer if necessary, and destructs the relevant objects
         virtual void releaseReqH(nixlBackendReqH* handle) = 0;
 
         // Force backend engine worker to progress

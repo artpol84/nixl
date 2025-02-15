@@ -13,7 +13,7 @@ nixlAgentData::~nixlAgentData() {
 
 }
 
-nixlMetadataH::nixlMetadataH(std::string& ip_address, uint16_t port){
+nixlMetadataH::nixlMetadataH(const std::string& ip_address, uint16_t port){
     this->ipAddress = ip_address;
     this->port      = port;
 }
@@ -32,7 +32,7 @@ nixlAgent::nixlAgent(const std::string &name,
 nixlAgent::~nixlAgent() {
 }
 
-nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams *params) {
+nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
     nixlBackendEngine* backend;
     backend_type_t backend_type = params->getType();
 
@@ -59,22 +59,22 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams *params) {
     return backend;
 }
 
-int nixlAgent::registerMem(const nixlDescList<nixlBasicDesc>& descs,
-                           nixlBackendEngine *backend) {
+int nixlAgent::registerMem(const nixlDescList<nixlBasicDesc> &descs,
+                           nixlBackendEngine* backend) {
     return (data.memorySection.addDescList(descs, backend));
 }
 
-int nixlAgent::deregisterMem(const nixlDescList<nixlBasicDesc>& descs,
-                             nixlBackendEngine *backend) {
+int nixlAgent::deregisterMem(const nixlDescList<nixlBasicDesc> &descs,
+                             nixlBackendEngine* backend) {
     // Might not need unified and sorted info
     nixlDescList<nixlMetaDesc> resp(descs.getType(),
                                     descs.isUnifiedAddr(),
                                     descs.isSorted());
-    data.memorySection.populate(descs, resp, backend->getType());
+    data.memorySection.populate(descs, backend->getType(), resp);
     return (data.memorySection.remDescList(resp, backend));
 }
 
-int nixlAgent::makeConnection(std::string remote_agent, int direction) {
+int nixlAgent::makeConnection(const std::string &remote_agent, int direction) {
     nixlBackendEngine* eng;
     int ret;
     int count = 0;
@@ -101,10 +101,10 @@ int nixlAgent::makeConnection(std::string remote_agent, int direction) {
     return 0;
 }
 
-int nixlAgent::createXferReq(nixlDescList<nixlBasicDesc>& local_descs,
-                             nixlDescList<nixlBasicDesc>& remote_descs,
-                             std::string remote_agent,
-                             std::string notif_msg,
+int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
+                             const nixlDescList<nixlBasicDesc> &remote_descs,
+                             const std::string &remote_agent,
+                             const std::string &notif_msg,
                              int direction,
                              nixlXferReqH* &req_handle) {
 
@@ -128,8 +128,9 @@ int nixlAgent::createXferReq(nixlDescList<nixlBasicDesc>& local_descs,
                                       local_descs.isSorted());
 
     handle->engine = data.memorySection.findQuery(local_descs,
-                          *handle->initiatorDescs, remote_descs.getType(),
-                          data.remoteBackends[remote_agent]);
+                          remote_descs.getType(),
+                          data.remoteBackends[remote_agent],
+                          *handle->initiatorDescs);
 
     if (handle->engine==nullptr)
         return -1;
@@ -141,7 +142,7 @@ int nixlAgent::createXferReq(nixlDescList<nixlBasicDesc>& local_descs,
 
     // Based on the decided local backend, we check the remote counterpart
     ret = data.remoteSections[remote_agent]->populate(remote_descs,
-               *handle->targetDescs, handle->engine->getType());
+               handle->engine->getType(), *handle->targetDescs);
     if (ret<0)
         return ret;
 
@@ -157,7 +158,7 @@ int nixlAgent::createXferReq(nixlDescList<nixlBasicDesc>& local_descs,
 
     req_handle    = handle;
 
-    // Not bookkeeping transferRequests, assuming user releases all
+    // Not bookkeeping xferRequests, assuming user releases all
     return 0;
 }
 
@@ -167,18 +168,18 @@ void nixlAgent::invalidateXferReq(nixlXferReqH *req) {
     delete req;
 }
 
-transfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
+xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
     if (req==nullptr)
         return NIXL_XFER_ERR;
     // We can't repost while a request is in progress
     if (req->state == NIXL_XFER_PROC) {
-        req->state = req->engine->checkTransfer(req->backendHandle);
+        req->state = req->engine->checkXfer(req->backendHandle);
         if (req->state == NIXL_XFER_PROC)
             return NIXL_XFER_ERR;
     }
 
     // If state is NIXL_XFER_INIT or NIXL_XFER_DONE we can repost,
-    return (req->engine->transfer (*req->initiatorDescs,
+    return (req->engine->postXfer (*req->initiatorDescs,
                                    *req->targetDescs,
                                    req->backendOp,
                                    req->remoteAgent,
@@ -186,15 +187,15 @@ transfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
                                    req->backendHandle));
 }
 
-transfer_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
+xfer_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
     // If the state is done, no need to recheck.
     if (req->state != NIXL_XFER_DONE)
-        req->state = req->engine->checkTransfer(req->backendHandle);
+        req->state = req->engine->checkXfer(req->backendHandle);
 
     return req->state;
 }
 
-int nixlAgent::addNewNotifs(notif_map_t& notif_map) {
+int nixlAgent::addNewNotifs(notif_map_t &notif_map) {
     notif_list_t backend_list;
     int ret, tot=0;
     bool err=false;
@@ -257,7 +258,7 @@ std::string nixlAgent::getLocalMD () const {
     return sd.exportStr();
 }
 
-int nixlAgent::loadRemoteMD (std::string remote_metadata) {
+int nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
     int count = 0;
     nixlSerDes sd;
     size_t conn_cnt;
@@ -321,7 +322,7 @@ int nixlAgent::loadRemoteMD (std::string remote_metadata) {
     return 0;
 }
 
-void nixlAgent::invalidateRemoteMD(std::string remote_agent) {
+void nixlAgent::invalidateRemoteMD(const std::string &remote_agent) {
     if (data.remoteSections.count(remote_agent)!=0) {
         delete data.remoteSections[remote_agent];
         data.remoteSections.erase(remote_agent);
@@ -337,11 +338,11 @@ int nixlAgent::sendLocalMD() const {
     return 0;
 }
 
-int nixlAgent::fetchRemoteMD (std::string &remote_agent) {
+int nixlAgent::fetchRemoteMD (const std::string &remote_agent) {
     // TBD
     return 0;
 }
 
-void nixlAgent::invalidateLocalMD() {
+void nixlAgent::invalidateLocalMD() const {
     //TBD
 }

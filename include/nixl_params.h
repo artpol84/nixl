@@ -23,7 +23,7 @@ class nixlDeviceMD {
 // For now UCX autodetects devices, later might add hints.
 class nixlUcxInitParams : public nixlBackendInitParams {
     public:
-        backend_type_t getType () { return UCX; }
+        inline backend_type_t getType() const { return UCX; }
 };
 
 #endif

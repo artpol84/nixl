@@ -54,7 +54,7 @@ int main()
     nixlUcxReq req;
     uint8_t *buffer[2];
     uint8_t *chk_buffer;
-    transfer_state_t ret;
+    xfer_state_t ret;
     size_t buf_size = 128 * 1024 * 1024; /* Use large buffer to ensure non-inline transfer */
     size_t i;
 

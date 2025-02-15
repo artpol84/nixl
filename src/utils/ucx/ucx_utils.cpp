@@ -323,7 +323,7 @@ int nixlUcxWorker::progress()
     return ucp_worker_progress(worker);
 }
 
-transfer_state_t nixlUcxWorker::read(nixlUcxEp &ep,
+xfer_state_t nixlUcxWorker::read(nixlUcxEp &ep,
             uint64_t raddr, nixlUcxRkey &rk,
             void *laddr, nixlUcxMem &mem,
             size_t size, nixlUcxReq &req)
@@ -348,7 +348,7 @@ transfer_state_t nixlUcxWorker::read(nixlUcxEp &ep,
     return NIXL_XFER_PROC;
 }
 
-transfer_state_t nixlUcxWorker::write(nixlUcxEp &ep,
+xfer_state_t nixlUcxWorker::write(nixlUcxEp &ep,
         void *laddr, nixlUcxMem &mem,
         uint64_t raddr, nixlUcxRkey &rk,
         size_t size, nixlUcxReq &req)
@@ -373,7 +373,7 @@ transfer_state_t nixlUcxWorker::write(nixlUcxEp &ep,
     return NIXL_XFER_PROC;
 }
 
-transfer_state_t nixlUcxWorker::test(nixlUcxReq req)
+xfer_state_t nixlUcxWorker::test(nixlUcxReq req)
 {
     ucs_status_t status;
 

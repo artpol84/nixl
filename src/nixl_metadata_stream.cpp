@@ -139,7 +139,7 @@ void nixlMDStreamListener::startListenerForClients() {
                                  this);
 }
 
-nixlMDStreamClient::nixlMDStreamClient(const std::string& listenerAddress,
+nixlMDStreamClient::nixlMDStreamClient(const std::string &listenerAddress,
                                        int port) : nixlMetadataStream(port),
                                        listenerAddress(listenerAddress) {}
 
@@ -176,7 +176,7 @@ bool nixlMDStreamClient::connectListener() {
 }
 
 
-void nixlMDStreamClient::sendData(const std::string& data) {
+void nixlMDStreamClient::sendData(const std::string &data) {
     if (send(socketFd, data.c_str(), data.size(), 0) < 0) {
         std::cerr << "Send failed\n";
     }

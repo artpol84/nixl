@@ -75,15 +75,15 @@ public:
 
     /* Data access */
     int progress();
-    transfer_state_t read(nixlUcxEp &ep,
-                            uint64_t raddr, nixlUcxRkey &rk,
-                            void *laddr, nixlUcxMem &mem,
-                            size_t size, nixlUcxReq &req);
-    transfer_state_t write(nixlUcxEp &ep,
-                            void *laddr, nixlUcxMem &mem,
-                            uint64_t raddr, nixlUcxRkey &rk,
-                            size_t size, nixlUcxReq &req);
-    transfer_state_t test(nixlUcxReq req);
+    xfer_state_t read(nixlUcxEp &ep,
+                      uint64_t raddr, nixlUcxRkey &rk,
+                      void *laddr, nixlUcxMem &mem,
+                      size_t size, nixlUcxReq &req);
+    xfer_state_t write(nixlUcxEp &ep,
+                      void *laddr, nixlUcxMem &mem,
+                      uint64_t raddr, nixlUcxRkey &rk,
+                      size_t size, nixlUcxReq &req);
+    xfer_state_t test(nixlUcxReq req);
     void reqRelease(nixlUcxReq req);
     void reqCancel(nixlUcxReq req);
 };

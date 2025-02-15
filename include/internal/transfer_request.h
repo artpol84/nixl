@@ -5,17 +5,17 @@
 // and verified DescLists, and other state and metadata needed for a NIXL transfer
 class nixlXferReqH {
     public:
-        nixlBackendEngine          *engine;
-        nixlBackendReqH            *backendHandle;
+        nixlBackendEngine*          engine;
+        nixlBackendReqH*            backendHandle;
 
-        nixlDescList<nixlMetaDesc> *initiatorDescs;
-        nixlDescList<nixlMetaDesc> *targetDescs;
+        nixlDescList<nixlMetaDesc>* initiatorDescs;
+        nixlDescList<nixlMetaDesc>* targetDescs;
 
-        std::string                remoteAgent;
-        std::string                notifMsg;
+        std::string                 remoteAgent;
+        std::string                 notifMsg;
 
-        transfer_op_t              backendOp;
-        transfer_state_t           state;
+        xfer_op_t                   backendOp;
+        xfer_state_t                state;
 
         inline nixlXferReqH() {}
         inline ~nixlXferReqH() {
