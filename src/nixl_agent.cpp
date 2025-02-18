@@ -84,7 +84,7 @@ int nixlAgent::makeConnection(const std::string &remote_agent, int direction) {
 
     // For now making all the possible connections, later might take hints
     for (auto & r_eng: data.remoteBackends[remote_agent]) {
-        if(data.nixlBackendEngines.count(r_eng)!=0) {
+        if (data.nixlBackendEngines.count(r_eng)!=0) {
             eng = data.nixlBackendEngines[r_eng];
             if (direction)
                 ret = eng->listenForConnection(remote_agent);
@@ -118,8 +118,12 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
     int ret;
     if (data.remoteSections.count(remote_agent)==0)
         return -1;
+    // TODO: when central KV is supported, add a call to fetchRemoteMD
 
     // TODO [Perf]: Avoid heap allocation on the datapath, maybe use a mem pool
+    // TODO [Perf]: merge descriptors if source and remote device are the same,
+    //              and also back to back in memory (unlikly case).
+
     nixlXferReqH *handle = new nixlXferReqH;
     // Might not need unified and sorted info
     handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
@@ -132,10 +136,17 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
                           data.remoteBackends[remote_agent],
                           *handle->initiatorDescs);
 
-    if (handle->engine==nullptr)
+    if (handle->engine==nullptr) {
+        delete handle;
         return -1;
+    }
 
-    handle->targetDescs = new nixlDescList<nixlMetaDesc>(
+    if ((notif_msg.size()!=0) && (!handle->engine->supportsNotif())) {
+        delete handle;
+        return -1;
+    }
+
+    handle->targetDescs = new nixlDescList<nixlMetaDesc> (
                                    remote_descs.getType(),
                                    remote_descs.isUnifiedAddr(),
                                    remote_descs.isSorted());
@@ -143,8 +154,10 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
     // Based on the decided local backend, we check the remote counterpart
     ret = data.remoteSections[remote_agent]->populate(remote_descs,
                handle->engine->getType(), *handle->targetDescs);
-    if (ret<0)
+    if (ret<0) {
+        delete handle;
         return ret;
+    }
 
     handle->remoteAgent = remote_agent;
     handle->notifMsg    = notif_msg;
@@ -195,32 +208,54 @@ xfer_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
     return req->state;
 }
 
-int nixlAgent::addNewNotifs(notif_map_t &notif_map) {
+int nixlAgent::genNotif(const std::string &remote_agent,
+                        const std::string &msg,
+                        nixlBackendEngine* backend) {
+    if (backend!=nullptr)
+        return backend->genNotif(remote_agent, msg);
+
+    // TODO: add logic to choose between backends if multiple support it
+    for (auto & eng: data.nixlBackendEngines) {
+        if (eng.second->supportsNotif()) {
+            // TODO: check if remote has this backend
+            return eng.second->genNotif(remote_agent, msg);
+        }
+    }
+    return -1;
+}
+
+int nixlAgent::getNewNotifs(notif_map_t &notif_map) {
     notif_list_t backend_list;
-    int ret, tot=0;
-    bool err=false;
+    int ret, bad_ret, tot=0;
+    bool any_backend = false;
 
     // Doing best effort, if any backend errors out we return
     // error but proceed with the rest. We can add metadata about
     // the backend to the msg, but user could put it themselves.
     for (auto & eng: data.nixlBackendEngines) {
-        ret = eng.second->getNotifs(backend_list);
-        if (ret<0)
-            err=true;
+        if (eng.second->supportsNotif()) {
+            any_backend = true;
+            backend_list.clear();
+            ret = eng.second->getNotifs(backend_list);
+            if (ret<0)
+                bad_ret=ret;
 
-        if (backend_list.size()==0)
-            continue;
+            if (backend_list.size()==0)
+                continue;
 
-        for (auto & elm: backend_list) {
-            if (notif_map.count(elm.first)==0)
-                notif_map[elm.first] = std::vector<std::string>();
+            for (auto & elm: backend_list) {
+                if (notif_map.count(elm.first)==0)
+                    notif_map[elm.first] = std::vector<std::string>();
 
-            notif_map[elm.first].push_back(elm.second);
-            tot++;
+                notif_map[elm.first].push_back(elm.second);
+                tot++;
+            }
         }
     }
 
-    if (err)
+    if (bad_ret)
+        return bad_ret;
+    else if (!any_backend)
         return -1;
     else
         return tot;

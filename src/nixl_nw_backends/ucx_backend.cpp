@@ -562,6 +562,9 @@ int nixlUcxEngine::getNotifs(notif_list_t &notif_list)
 {
     int n_notifs;
 
+    if (notif_list.size()!=0)
+        return -1;
+
     notif_list = notifs;
     n_notifs = notifs.size();
     notifs.clear();

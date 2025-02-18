@@ -32,13 +32,13 @@ class nixlAgent {
         int deregisterMem (const nixlDescList<nixlBasicDesc> &descs,
                            nixlBackendEngine* backend);
 
-        // Make connectionproactively, instead of at transfer time
+        // Make connection proactively, instead of at transfer time
         int makeConnection (const std::string &remote_agent, int direction);
 
 
         /*** Transfer Request Handling ***/
 
-        // populates the transfer request. Empty notif_msg means no notif
+        // populates the transfer request. Empty notif_msg means no notification
         int createXferReq (const nixlDescList<nixlBasicDesc> &local_descs,
                            const nixlDescList<nixlBasicDesc> &remote_descs,
                            const std::string &remote_agent,
@@ -46,24 +46,36 @@ class nixlAgent {
                            int direction,
                            nixlXferReqH* &req_handle);
 
-        // Invalidate transfer request if we no longer need it.
-        void invalidateXferReq (nixlXferReqH* req);
-
         // Submit a transfer request, which populates the req async handler.
-        // Returns the status of transfer, among NIXL_XFER_PROC/DONE/ERR.
         xfer_state_t postXferReq (nixlXferReqH* req);
 
         // Check the status of transfer requests
         xfer_state_t getXferStatus (nixlXferReqH* req);
 
-        // Add entries to the passed received notifications list, and
-        // return number of added entries, or -1 if there were an error.
-        // Elements are released within the Agent after this call.
-        int addNewNotifs(notif_map_t &notif_map);
+        // Invalidate transfer request if we no longer need it.
+        // Will abort a running transfer.
+        void invalidateXferReq (nixlXferReqH* req);
+
+
+        /*** Notification Handling ***/
+
+        // Add entries to the passed received notifications list (can be
+        // non-empty), and return number of added entries, or -1 if there was
+        // an error. Elements are released within the Agent after this call.
+        int getNewNotifs (notif_map_t &notif_map);
+
+        // Generate a notification, not bound to a transfer, e.g., for control.
+        // Can be used after the remote metadata is exchanged. Will be received
+        // in notif list. Nixl will choose a backend if null is passed.
+        int genNotif (const std::string &remote_agent,
+                      const std::string &msg,
+                      nixlBackendEngine* backend = nullptr);
+
 
         /*** Metadata handling through side channel ***/
 
         // Get nixl_metadata for this agent
+        // The std::string used for serialized MD can have \0 values.
         std::string getLocalMD () const;
 
         // Load other agent's metadata and unpack it internally

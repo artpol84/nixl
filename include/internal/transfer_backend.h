@@ -130,10 +130,10 @@ class nixlStringDesc : public nixlBasicDesc {
 // Base backend engine class for different backend implementaitons
 class nixlBackendEngine {
     private:
-        backend_type_t        backendType;
+        backend_type_t backendType;
 
     protected:
-        std::string           localAgent;
+        std::string    localAgent;
 
     public:
         nixlBackendEngine (const nixlBackendInitParams* init_params) {
@@ -147,6 +147,10 @@ class nixlBackendEngine {
         std::string getPublicData (const nixlBackendMD* meta) const {
             return meta->get();
         }
+
+        // Determines if a backend supports sending notifications. Related methods are not
+        // pure virtual, and return errors, as parent shouldn't call if supportsNotif is false.
+        virtual bool supportsNotif () const = 0;
 
         virtual ~nixlBackendEngine () = default;
 
@@ -166,9 +170,11 @@ class nixlBackendEngine {
                                         const std::string &remote_conn_info) = 0;
 
         // Make connection to a remote node identified by the name into loaded conn infos
+        // Child might just return 0, if making proactive connections are not necessary.
         virtual int makeConnection(const std::string &remote_agent) = 0;
 
         // Listen for connections from a remote agent
+        // Child might just return 0, if making proactive connections are not necessary.
         virtual int listenForConnection(const std::string &remote_agent) = 0;
 
         // Add and remove remtoe metadata
@@ -181,15 +187,13 @@ class nixlBackendEngine {
 
         // Posting a request, which returns populates the async handle.
         // Returns the status of transfer, among NIXL_XFER_PROC/DONE/ERR.
+        // Empty notif_msg means no notification, or can be ignored if supportsNotif is false.
         virtual xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
                                        const nixlDescList<nixlMetaDesc> &remote,
                                        const xfer_op_t &operation,
                                        const std::string &remote_agent,
                                        const std::string &notif_msg,
                                        nixlBackendReqH* &handle) = 0;
-
-        // Populate received notifications list. Elements are released within backend then.
-        virtual int getNotifs(notif_list_t &notif_list) = 0;
 
         // Use a handle to progress backend engine and see if a transfer is completed or not
         virtual xfer_state_t checkXfer(nixlBackendReqH* handle) = 0;
@@ -199,6 +203,15 @@ class nixlBackendEngine {
 
         // Force backend engine worker to progress
         virtual int progress() { return 0; }
+
+        // Populate an empty received notif list. Elements are released within backend then.
+        virtual int getNotifs(notif_list_t &notif_list) { return -1; }
+
+        // Generates a standalone notification, not bound to a transfer.
+        // Used for extra sync or ctrl msgs.
+        virtual int genNotif(const std::string &remote_agent, const std::string &msg) {
+            return -1;
+        }
 };
 
 #endif

@@ -88,6 +88,8 @@ class nixlUcxEngine : nixlBackendEngine {
         nixlUcxEngine(const nixlUcxInitParams* init_params);
         ~nixlUcxEngine();
 
+        bool supportsNotif () const { return true; }
+
         std::string getConnInfo() const;
         int loadRemoteConnInfo (const std::string &remote_agent,
                                 const std::string &remote_conn_info);
@@ -120,6 +122,10 @@ class nixlUcxEngine : nixlBackendEngine {
         // TODO: Should become private
         int sendNotif(const std::string &remote_agent, const std::string &msg);
         int getNotifs(notif_list_t &notif_list);
+
+        int genNotif(const std::string &remote_agent, const std::string &msg) {
+            return sendNotif(remote_agent, msg);
+        }
 
         //public function for UCX worker to mark connections as connected
         int updateConnMap(const std::string &remote_agent);
