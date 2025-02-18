@@ -15,7 +15,7 @@ project('nixl', 'CPP',
                 'werror=true',
                 'cpp_std=c++11',
                 'prefix=/opt/nvidia/nvda_nixl'],
-    meson_version: '>= 0.57.0'
+    meson_version: '>= 0.64.0'
 )
 
 # set up some global vars for compiler, platform, configuration, etc.
