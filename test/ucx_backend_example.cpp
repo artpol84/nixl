@@ -12,6 +12,11 @@ static string op2string(xfer_op_t op)
             return string("READ");
         case NIXL_WRITE:
             return string("WRITE");
+        // TODO: update if necessary
+        case NIXL_RD_FLUSH:
+            return string("READ");
+        case NIXL_WR_FLUSH:
+            return string("WRITE");
         case NIXL_RD_NOTIF:
             return string("READ/NOTIF");
         case NIXL_WR_NOTIF:

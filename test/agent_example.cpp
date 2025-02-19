@@ -7,6 +7,7 @@
 int main()
 {
     int ret1, ret2;
+    std::string ret_s1, ret_s2;
 
     // Example: assuming two agents running on the same machine,
     // with separate memory regions in DRAM
@@ -67,8 +68,8 @@ int main()
     std::cout << "Agent1's Metadata: " << meta1 << "\n";
     std::cout << "Agent2's Metadata: " << meta2 << "\n";
 
-    ret1 = A1.loadRemoteMD (meta2);
-    ret1 = A2.loadRemoteMD (meta1);
+    ret_s1 = A1.loadRemoteMD (meta2);
+    ret_s2 = A2.loadRemoteMD (meta1);
 
     size_t req_size = 8;
     size_t dst_offset = 8;
@@ -89,7 +90,7 @@ int main()
 
     std::cout << "Transfer request from " << addr1 << " to " << addr2 << "\n";
     nixlXferReqH* req_handle;
-    ret1 = A1.createXferReq(req_src_descs, req_dst_descs, "Agent2", "", 0, req_handle);
+    ret1 = A1.createXferReq(req_src_descs, req_dst_descs, "Agent2", "", NIXL_WRITE, req_handle);
     assert(ret1 == 0);
 
     ret1 = A1.postXferReq(req_handle);

@@ -446,7 +446,7 @@ xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
         }
 
         // TODO: remote_agent and msg should be cached in nixlUCxReq or another way
-        // TODO: Cases for _NOTIF be added
+        // TODO: Cases for _FLUSH be added
 
         switch (op) {
         case NIXL_READ:

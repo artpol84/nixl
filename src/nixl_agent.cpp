@@ -105,7 +105,7 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
                              const nixlDescList<nixlBasicDesc> &remote_descs,
                              const std::string &remote_agent,
                              const std::string &notif_msg,
-                             int direction,
+                             const xfer_op_t &operation,
                              nixlXferReqH* &req_handle) {
 
     // Check the correspondence between descriptor lists
@@ -114,6 +114,10 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
     for (int i=0; i<local_descs.descCount(); ++i)
         if (local_descs[i].len != remote_descs[i].len)
             return -1;
+
+    if ((notif_msg.size()==0) &&
+        ((operation==NIXL_WR_NOTIF) || (operation==NIXL_RD_NOTIF)))
+        return -1;
 
     int ret;
     if (data.remoteSections.count(remote_agent)==0)
@@ -161,15 +165,10 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
 
     handle->remoteAgent = remote_agent;
     handle->notifMsg    = notif_msg;
+    handle->backendOp   = operation;
+    handle->state       = NIXL_XFER_INIT;
 
-    if (notif_msg.size()==0)
-        handle->backendOp = direction ? NIXL_READ : NIXL_WRITE;
-    else
-        handle->backendOp = direction ? NIXL_RD_NOTIF : NIXL_WR_NOTIF;
-
-    handle->state = NIXL_XFER_INIT;
-
-    req_handle    = handle;
+    req_handle = handle;
 
     // Not bookkeeping xferRequests, assuming user releases all
     return 0;
@@ -294,7 +293,7 @@ std::string nixlAgent::getLocalMD () const {
     return sd.exportStr();
 }
 
-int nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
+std::string nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
     int count = 0;
     nixlSerDes sd;
     size_t conn_cnt;
@@ -303,38 +302,38 @@ int nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
     backend_set_t supported_backends;
 
     if (sd.importStr(remote_metadata)<0)
-        return -1;
+        return "";
 
     std::string remote_agent = sd.getStr("Agent");
     if (remote_agent.size()==0)
-        return -1;
+        return "";
 
     if (sd.getBuf("Conns", &conn_cnt, sizeof(conn_cnt)))
-        return -1;
+        return "";
 
     if (conn_cnt<1)
-        return -1;
+        return "";
 
     for (size_t i=0; i<conn_cnt; ++i) {
         if (sd.getBuf("t", &backend_type, sizeof(backend_type)))
-            return -1;
+            return "";
         conn_info = sd.getStr("c");
         if (conn_info.size()==0)
-            return -1;
+            return "";
 
         // Current agent might not support a remote backend
         if (data.nixlBackendEngines.count(backend_type)!=0) {
             if (data.nixlBackendEngines[backend_type]->
                     loadRemoteConnInfo(remote_agent, conn_info)<0)
-                return -1; // Error in load
+                return ""; // Error in load
             count++;
             supported_backends.insert(backend_type);
         }
     }
 
-    // No common backend, no point in loading the rest
+    // No common backend, no point in loading the rest, unexpected
     if (count == 0)
-        return -1;
+        return "";
 
     // If there was an issue and we return -1 while some connections
     // are loaded, they will be deleted in backend destructor.
@@ -342,7 +341,7 @@ int nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
 
     conn_info = sd.getStr("");
     if (conn_info != "MemSection")
-        return -1;
+        return "";
 
     data.remoteSections[remote_agent] = new nixlRemoteSection(
                         remote_agent, data.nixlBackendEngines);
@@ -350,35 +349,40 @@ int nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
     if (data.remoteSections[remote_agent]->loadRemoteData(&sd)<0) {
         delete data.remoteSections[remote_agent];
         data.remoteSections.erase(remote_agent);
-        return -1;
+        return "";
     }
 
     data.remoteBackends[remote_agent] = supported_backends;
 
-    return 0;
+    return remote_agent;
 }
 
-void nixlAgent::invalidateRemoteMD(const std::string &remote_agent) {
+int nixlAgent::invalidateRemoteMD(const std::string &remote_agent) {
+    int ret = -1;
     if (data.remoteSections.count(remote_agent)!=0) {
         delete data.remoteSections[remote_agent];
         data.remoteSections.erase(remote_agent);
+        ret = 0;
     }
 
     if (data.remoteBackends.count(remote_agent)!=0) {
         data.remoteBackends.erase(remote_agent);
+        ret = 0;
     }
+    return ret;
 }
 
 int nixlAgent::sendLocalMD() const {
-    // TBD
+    // TODO
     return 0;
 }
 
 int nixlAgent::fetchRemoteMD (const std::string &remote_agent) {
-    // TBD
+    // TODO
     return 0;
 }
 
-void nixlAgent::invalidateLocalMD() const {
-    //TBD
+int nixlAgent::invalidateLocalMD() const {
+    // TODO
+    return 0;
 }

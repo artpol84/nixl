@@ -43,7 +43,7 @@ class nixlAgent {
                            const nixlDescList<nixlBasicDesc> &remote_descs,
                            const std::string &remote_agent,
                            const std::string &notif_msg,
-                           int direction,
+                           const xfer_op_t &operation,
                            nixlXferReqH* &req_handle);
 
         // Submit a transfer request, which populates the req async handler.
@@ -74,15 +74,16 @@ class nixlAgent {
 
         /*** Metadata handling through side channel ***/
 
-        // Get nixl_metadata for this agent
+        // Get nixl_metadata for this agent. Empty string means error.
         // The std::string used for serialized MD can have \0 values.
         std::string getLocalMD () const;
 
-        // Load other agent's metadata and unpack it internally
-        int loadRemoteMD (const std::string &remote_metadata);
+        // Load other agent's metadata and unpack it internally.
+        // Returns the found agent name in metadata, or "" in case of error.
+        std::string loadRemoteMD (const std::string &remote_metadata);
 
         // Invalidate the remote section information cached locally
-        void invalidateRemoteMD (const std::string &remote_agent);
+        int invalidateRemoteMD (const std::string &remote_agent);
 
 
         /*** Metadata handling through central kv service, or for p2p test ***/
@@ -94,7 +95,7 @@ class nixlAgent {
         int fetchRemoteMD (const std::string &remote_agent);
 
         // Sends messages to kv service to invalidate this Agent's metadata
-        void invalidateLocalMD () const;
+        int invalidateLocalMD () const;
 };
 
 #endif
