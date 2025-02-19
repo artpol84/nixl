@@ -39,5 +39,103 @@ def test_list():
 
     assert test_list.isEmpty()
 
+def test_agent():
+
+    name1 = "Agent1"
+    name2 = "Agent2"
+
+    devices = nixl.nixlDeviceMD()
+    init1 = nixl.nixlUcxInitParams()
+    init2 = nixl.nixlUcxInitParams()
+
+    agent1 = nixl.nixlAgent(name1, devices)
+    agent2 = nixl.nixlAgent(name2, devices)
+
+    ucx1 = agent1.createBackend(init1)
+    ucx2 = agent2.createBackend(init2)
+
+    size = 256
+    addr1 = nixl.malloc_passthru(size)
+    addr2 = nixl.malloc_passthru(size)
+
+    buff1 = nixl.nixlBasicDesc(addr1, size, 0)
+    buff2 = nixl.nixlBasicDesc(addr2, size, 0)
+
+    print(buff1.m_addr)
+    print(buff2.m_addr)
+
+    nixl.ba_buf(addr1, size)
+
+    reg_list1 = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
+    reg_list1.addDesc(buff1)
+
+    reg_list2 = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
+    reg_list2.addDesc(buff2)
+
+    ret = agent1.registerMem(reg_list1, ucx1)
+    assert ret == 0
+
+    ret = agent2.registerMem(reg_list2, ucx2)
+    assert ret == 0
+
+    meta1 = agent1.getLocalMD()
+    meta2 = agent2.getLocalMD()
+
+    print("Agent1 MD: ")
+    print(meta1)
+    print("Agent2 MD: ")
+    print(meta2)
+
+    ret = agent1.loadRemoteMD(meta2)
+    assert ret == 0
+    ret = agent2.loadRemoteMD(meta1)
+    assert ret == 0
+
+    offset = 8
+    req_size = 8
+
+    src_buff = nixl.nixlBasicDesc(addr1 + offset, req_size, 0)
+    dst_buff = nixl.nixlBasicDesc(addr2 + offset, req_size, 0)
+
+    src_list = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
+    src_list.addDesc(src_buff)
+
+    dst_list = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
+    dst_list.addDesc(dst_buff)
+
+    print("Transfer from " + str(addr1 + offset) + " to " + str(addr2 + offset))
+
+    handle = agent1.createXferReq(src_list, dst_list, name2, "", 0);
+    assert handle != None
+
+    ret = agent1.postXferReq(handle)
+    assert ret != nixl.NIXL_XFER_ERR
+
+    print("Transfer posted")
+
+    status = 0
+    while status != nixl.NIXL_XFER_DONE:
+        status = agent1.getXferStatus(handle)
+        assert status != nixl.NIXL_XFER_ERR
+    
+    nixl.verify_transfer(addr1 + offset, addr2 + offset, req_size)
+
+    print("Transfer verified")
+
+    agent1.invalidateXferReq(handle)
+
+    ret = agent1.deregisterMem(reg_list1, ucx1)
+    assert ret == 0
+
+    ret = agent2.deregisterMem(reg_list2, ucx2)
+    assert ret == 0
+
+    agent1.invalidateRemoteMD(name2)
+    agent2.invalidateRemoteMD(name1)
+
+    nixl.free_passthru(addr1)
+    nixl.free_passthru(addr2)
+
 test_desc()
 test_list()
+test_agent()
