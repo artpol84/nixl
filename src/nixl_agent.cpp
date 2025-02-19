@@ -217,8 +217,9 @@ int nixlAgent::genNotif(const std::string &remote_agent,
     // TODO: add logic to choose between backends if multiple support it
     for (auto & eng: data.nixlBackendEngines) {
         if (eng.second->supportsNotif()) {
-            // TODO: check if remote has this backend
-            return eng.second->genNotif(remote_agent, msg);
+            if (data.remoteBackends[remote_agent].count(
+                                    eng.second->getType()) != 0)
+                return eng.second->genNotif(remote_agent, msg);
         }
     }
     return -1;
@@ -299,7 +300,7 @@ int nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
     size_t conn_cnt;
     std::string conn_info;
     backend_type_t backend_type;
-    std::vector<backend_type_t> supported_backends;
+    backend_set_t supported_backends;
 
     if (sd.importStr(remote_metadata)<0)
         return -1;
@@ -327,7 +328,7 @@ int nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
                     loadRemoteConnInfo(remote_agent, conn_info)<0)
                 return -1; // Error in load
             count++;
-            supported_backends.push_back(backend_type);
+            supported_backends.insert(backend_type);
         }
     }
 

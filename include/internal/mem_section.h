@@ -4,23 +4,17 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <set>
 #include "nixl_descriptors.h"
 #include "nixl.h"
 #include "internal/transfer_backend.h"
 
 typedef std::pair<mem_type_t, backend_type_t> section_key_t;
-typedef std::vector<backend_type_t>           backend_list_t;
+typedef std::set<backend_type_t>              backend_set_t;
 
 class nixlMemSection {
     protected:
-        // For flexibility can be merged, and have index per each in the
-        // memtoBackendMap, which gets updated per insertion/deletion
-        backend_list_t dramBackends;
-        backend_list_t vramBackends;
-        backend_list_t blockBackends;
-        backend_list_t fileBackends;
-
-        std::map<mem_type_t,  backend_list_t*>                memToBackendMap;
+        std::map<mem_type_t,     backend_set_t>               memToBackendMap;
         std::map<section_key_t,  nixlDescList<nixlMetaDesc>*> sectionMap;
         // Replica of what Agent has, but tiny in size and helps with modularity
         std::map<backend_type_t, nixlBackendEngine*>          backendToEngineMap;
@@ -54,7 +48,7 @@ class nixlLocalSection : public nixlMemSection {
         // on that, and returns the backend pointer that can use the resp
         nixlBackendEngine* findQuery (const nixlDescList<nixlBasicDesc> &query,
                                const mem_type_t remote_mem_type,
-                               const backend_list_t remote_backends,
+                               const backend_set_t remote_backends,
                                nixlDescList<nixlMetaDesc> &resp) const;
 
         int serialize(nixlSerDes* serializer) const;

@@ -6,13 +6,16 @@
 
 /*** Class nixlMemSection implementation ***/
 
-nixlMemSection:: nixlMemSection () {
-    // This map should be exposed if going the plugin path
-    memToBackendMap.insert({DRAM_SEG, &dramBackends});
-    memToBackendMap.insert({VRAM_SEG, &vramBackends});
-    memToBackendMap.insert({BLK_SEG,  &blockBackends});
-    memToBackendMap.insert({FILE_SEG, &fileBackends});
+// For full polymorphic, we can make it dynamic allocation.
+nixlMemSection::nixlMemSection () {
+    memToBackendMap[DRAM_SEG] = std::set<backend_type_t>();
+    memToBackendMap[VRAM_SEG] = std::set<backend_type_t>();
+    memToBackendMap[BLK_SEG]  = std::set<backend_type_t>();
+    memToBackendMap[FILE_SEG] = std::set<backend_type_t>();
 }
+
+// It's pure virtual, but base also class needs a destructor due to its memebrs.
+nixlMemSection::~nixlMemSection () {}
 
 int nixlMemSection::populate (const nixlDescList<nixlBasicDesc> &query,
                               const backend_type_t &backend_type,
@@ -25,19 +28,6 @@ int nixlMemSection::populate (const nixlDescList<nixlBasicDesc> &query,
         return -1;
     else
         return it->second->populate(query, resp);
-}
-
-// Eventhough it's pure virtual, base class needs a destructor,
-// Which can be used for the final clean up, after child classes
-// have released the elements pointed to.
-nixlMemSection::~nixlMemSection () {
-    dramBackends.clear();
-    vramBackends.clear();
-    blockBackends.clear();
-    fileBackends.clear();
-    memToBackendMap.clear();
-    sectionMap.clear();
-    backendToEngineMap.clear();
 }
 
 /*** Class nixlLocalSection implementation ***/
@@ -76,12 +66,13 @@ int nixlLocalSection::addDescList (const nixlDescList<nixlBasicDesc> &mem_elms,
     // Find the MetaDesc list, or add it to the map
     mem_type_t     mem_type     = mem_elms.getType();
     backend_type_t backend_type = backend->getType();
-    section_key_t sec_key = std::make_pair(mem_type, backend_type);
+    section_key_t  sec_key      = std::make_pair(mem_type, backend_type);
+
     auto it = sectionMap.find(sec_key);
     if (it==sectionMap.end()) { // New desc list
         sectionMap[sec_key] = new nixlDescList<nixlMetaDesc>(
                                   mem_type, mem_elms.isUnifiedAddr(), true);
-        memToBackendMap[mem_type]->push_back(backend_type);
+        memToBackendMap[mem_type].insert(backend_type);
     }
     nixlDescList<nixlMetaDesc> *target = sectionMap[sec_key];
 
@@ -132,9 +123,7 @@ int nixlLocalSection::remDescList (const nixlDescList<nixlMetaDesc> &mem_elms,
     if (target->descCount()==0){
         delete target;
         sectionMap.erase(sec_key);
-        std::vector<backend_type_t> *backend_list = memToBackendMap[mem_type];
-        backend_list->erase(std::remove(backend_list->begin(),
-             backend_list->end(), backend_type), backend_list->end());
+        memToBackendMap[mem_type].erase(backend_type);
     }
 
     return 0;
@@ -143,13 +132,12 @@ int nixlLocalSection::remDescList (const nixlDescList<nixlMetaDesc> &mem_elms,
 nixlBackendEngine* nixlLocalSection::findQuery(
                        const nixlDescList<nixlBasicDesc> &query,
                        const mem_type_t remote_mem_type,
-                       const backend_list_t remote_backends,
+                       const backend_set_t remote_backends,
                        nixlDescList<nixlMetaDesc> &resp) const {
 
     auto it = memToBackendMap.find(query.getType());
     if (it==memToBackendMap.end())
         return nullptr;
-    std::vector<backend_type_t> *supported_backends = it->second;
 
     // Decision making based on supported local backends for this
     // memory type, supported remote backends and remote memory type
@@ -157,7 +145,7 @@ nixlBackendEngine* nixlLocalSection::findQuery(
     // complete option (overkill) is to try all possible scenarios and
     // see which populates on both side are successful and then decide
 
-    for (auto & elm : *supported_backends) {
+    for (auto & elm : it->second) {
         // If populate fails, it clears the resp before return
         if (populate(query, elm, resp) == 0)
             return backendToEngineMap.at(elm);
@@ -210,7 +198,7 @@ int nixlRemoteSection::addDescList (const nixlDescList<nixlStringDesc>& mem_elms
     section_key_t sec_key = std::make_pair(mem_type, backend_type);
     sectionMap[sec_key] = new nixlDescList<nixlMetaDesc>(
                               mem_type, mem_elms.isUnifiedAddr(), true);
-    memToBackendMap[mem_type]->push_back(backend_type);
+    memToBackendMap[mem_type].insert(backend_type);
     nixlDescList<nixlMetaDesc> *target = sectionMap[sec_key];
 
     // Add entries to the target list

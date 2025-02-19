@@ -39,7 +39,7 @@ class nixlAgentData {
         nixlMetadataH                                mdHandler;
 
         std::map<std::string, nixlRemoteSection*>    remoteSections;
-        std::map<std::string, backend_list_t>        remoteBackends;
+        std::map<std::string, backend_set_t>         remoteBackends;
 
         nixlAgentData() {}
         ~nixlAgentData();
