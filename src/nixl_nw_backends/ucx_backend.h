@@ -78,11 +78,37 @@ class nixlUcxEngine : nixlBackendEngine {
         nixlUcxWorker* uw;
         void* workerAddr;
         size_t workerSize;
-
         notif_list_t notifs;
 
         // Map of agent name to saved nixlUcxConnection info
         std::map<std::string, nixlUcxConnection> remoteConnMap;
+
+        class nixlUcxBckndReq : public nixlLinkElem<nixlUcxBckndReq>, public nixlBackendReqH {
+            private:
+                int _completed;
+            public:
+            
+                nixlUcxBckndReq() : nixlLinkElem(), nixlBackendReqH() {
+                    _completed = 0;
+                }
+            
+                ~nixlUcxBckndReq() {
+                    _completed = 0;
+                }
+            
+                bool is_complete() { return _completed; }
+                void completed() { _completed = 1; }
+        };
+        
+        static void _requestInit(void *request);
+        static void _requestFini(void *request);
+        void requestReset(nixlUcxBckndReq *req) {
+            _requestInit((void *)req);
+        }
+
+        xfer_state_t sendNotifPriv(const std::string &remote_agent,
+                                   const std::string &msg, nixlUcxReq &req);
+        int retHelper(xfer_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req);
 
     public:
         nixlUcxEngine(const nixlUcxInitParams* init_params);
@@ -119,12 +145,11 @@ class nixlUcxEngine : nixlBackendEngine {
 
         int progress();
 
-        // TODO: Should become private
-        int sendNotif(const std::string &remote_agent, const std::string &msg);
         int getNotifs(notif_list_t &notif_list);
 
         int genNotif(const std::string &remote_agent, const std::string &msg) {
-            return sendNotif(remote_agent, msg);
+            // TODO: Implement after progress thread is implemented
+            return -1;
         }
 
         //public function for UCX worker to mark connections as connected

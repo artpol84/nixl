@@ -1,39 +1,6 @@
 #include "ucx_backend.h"
 #include "serdes.h"
-
-
-class nixlUcxBckndReq : public nixlLinkElem<nixlUcxBckndReq>, public nixlBackendReqH {
-private:
-    int _completed;
-public:
-
-    nixlUcxBckndReq() : nixlLinkElem(), nixlBackendReqH() {
-        _completed = 0;
-    }
-
-    ~nixlUcxBckndReq() {
-        _completed = 0;
-    }
-
-    bool is_complete() { return _completed; }
-    void completed() { _completed = 1; }
-
-};
-    
-static void _requestInit(void *request)
-{
-    /* Initialize request in-place (aka "placement new")*/
-    new(request) nixlUcxBckndReq;
-}
-
-static void _requestFini(void *request)
-{
-    /* Finalize request */
-    nixlUcxBckndReq *req = (nixlUcxBckndReq*)request;
-    req->~nixlUcxBckndReq();
-}
-
-
+  
 static ucs_status_t check_connection (void *arg, const void *header,
                                       size_t header_length, void *data,
                                       size_t length,
@@ -107,6 +74,19 @@ static ucs_status_t get_notif (void *arg, const void *header,
     //TODO: ack notification
 
     return UCS_OK;
+}
+
+void nixlUcxEngine::_requestInit(void *request)
+{
+    /* Initialize request in-place (aka "placement new")*/
+    new(request) nixlUcxBckndReq;
+}
+
+void nixlUcxEngine::_requestFini(void *request)
+{
+    /* Finalize request */
+    nixlUcxBckndReq *req = (nixlUcxBckndReq*)request;
+    req->~nixlUcxBckndReq();
 }
 
 nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
@@ -376,6 +356,60 @@ int nixlUcxEngine::removeRemoteMD (nixlBackendMD* input) {
 /****************************************
  * Data movement
 *****************************************/
+
+//agent will provide cached msg
+xfer_state_t nixlUcxEngine::sendNotifPriv(const std::string &remote_agent,
+                                          const std::string &msg, nixlUcxReq &req)
+{
+    nixlSerDes ser_des;
+    std::string ser_msg;
+    nixlUcxConnection conn;
+    struct nixl_ucx_am_hdr hdr;
+    uint32_t flags = 0;
+
+    auto search = remoteConnMap.find(remote_agent);
+
+    if(search == remoteConnMap.end()) {
+        //TODO: err: remote connection not found
+        return NIXL_XFER_ERR;
+    }
+
+    conn = remoteConnMap[remote_agent];
+
+    hdr.op = NOTIF_STR;
+    flags |= UCP_AM_SEND_FLAG_EAGER;
+    
+    ser_des.addStr("name", localAgent);
+    ser_des.addStr("msg", msg);
+    ser_msg = ser_des.exportStr();
+    
+    return uw->sendAm(conn.ep, NOTIF_STR, 
+                      &hdr, sizeof(struct nixl_ucx_am_hdr), 
+                      (void*) ser_msg.data(), ser_msg.size(), 
+                      flags, req);
+}
+
+
+int nixlUcxEngine::retHelper(xfer_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req)
+{
+    /* if transfer wasn't immediately completed */
+    switch(ret) {
+        case NIXL_XFER_PROC:
+            head->link((nixlUcxBckndReq*)req);
+            break;
+        case NIXL_XFER_DONE:
+            // Nothing to do
+            break;
+        default:
+            // Error. Release all previously initiated ops and exit:
+            if (head->next()) {
+                releaseReqH(head->next());
+            }
+            return -1;
+    }
+    return 0;
+}
+
 xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
                                       const nixlDescList<nixlMetaDesc> &remote,
                                       const xfer_op_t &op,
@@ -388,6 +422,9 @@ xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
     size_t i;
     xfer_state_t ret;
     nixlUcxBckndReq dummy, *head = new (&dummy) nixlUcxBckndReq;
+    nixlUcxPrivateMetadata *lmd;
+    nixlUcxPublicMetadata *rmd;
+    nixlUcxReq req;
     
 
     if (lcnt != rcnt) {
@@ -395,14 +432,13 @@ xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
     }
 
     for(i = 0; i < lcnt; i++) {
-        nixlUcxReq req;
         void *laddr = (void*) local[i].addr;
         size_t lsize = local[i].len;
         void *raddr = (void*) remote[i].addr;
         size_t rsize = remote[i].len;
 
-        nixlUcxPrivateMetadata *lmd = (nixlUcxPrivateMetadata*) local[i].metadata;
-        nixlUcxPublicMetadata *rmd = (nixlUcxPublicMetadata*) remote[i].metadata; //typecast?
+        lmd = (nixlUcxPrivateMetadata*) local[i].metadata;
+        rmd = (nixlUcxPublicMetadata*) remote[i].metadata;
 
         if (lsize != rsize) {
             // TODO: err output
@@ -414,19 +450,41 @@ xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
 
         switch (op) {
         case NIXL_READ:
+        case NIXL_RD_NOTIF:
             ret = uw->read(rmd->conn.ep, (uint64_t) raddr, rmd->rkey, laddr, lmd->mem, lsize, req);
             break;
         case NIXL_WRITE:
+        case NIXL_WR_NOTIF:
             ret = uw->write(rmd->conn.ep, laddr, lmd->mem, (uint64_t) raddr, rmd->rkey, lsize, req);
             break;
         default:
             return NIXL_XFER_ERR;
         }
 
-        /* if transfer wasn't immediately completed */
-        if (ret == NIXL_XFER_PROC) {
-            head->link((nixlUcxBckndReq*)req);
+        if (retHelper(ret, head, req)) {
+            return ret;
         }
+    }
+
+    rmd = (nixlUcxPublicMetadata*) remote[0].metadata;
+    ret = uw->flushEp(rmd->conn.ep, req);
+    if (retHelper(ret, head, req)) {
+        return ret;
+    }
+
+    switch (op) {
+        case NIXL_RD_NOTIF:
+        case NIXL_WR_NOTIF:
+            ret = sendNotifPriv(remote_agent, notif_msg, req);
+            if (retHelper(ret, head, req)) {
+                return ret;
+            }
+            break;
+        case NIXL_WRITE:
+        case NIXL_READ:
+            break;
+        default:
+            return NIXL_XFER_ERR;
     }
 
     handle = head->next();
@@ -474,6 +532,7 @@ xfer_state_t nixlUcxEngine::checkXfer (nixlBackendReqH* handle)
     while(req) {
         nixlUcxBckndReq *next_req = req->unlink();
         if (req->is_complete()) {
+            requestReset(req);
             uw->reqRelease((nixlUcxReq)req);
         } else {
             /* Enqueue back */
@@ -493,9 +552,11 @@ void nixlUcxEngine::releaseReqH(nixlBackendReqH* handle)
     if (head->next() || !head->is_complete()) {
         // TODO: Error log: uncompleted requests found! Cancelling ...
         while(head) {
+            bool done = req->is_complete();
             req = head;
             head = req->unlink();
-            if (req->is_complete()) {
+            requestReset(req);
+            if (done) {
                 uw->reqRelease((nixlUcxReq)req);
             } else {
                 uw->reqCancel((nixlUcxReq)req);
@@ -515,48 +576,6 @@ int nixlUcxEngine::progress() {
 /****************************************
  * Notifications
 *****************************************/
-
-//agent will provide cached msg
-int nixlUcxEngine::sendNotif(const std::string &remote_agent, const std::string &msg)
-{
-    nixlSerDes ser_des;
-    int status = 0;
-    std::string ser_msg;
-    nixlUcxConnection conn;
-    nixlUcxReq req;
-    struct nixl_ucx_am_hdr hdr;
-    uint32_t flags = 0;
-
-    auto search = remoteConnMap.find(remote_agent);
-
-    if(search == remoteConnMap.end()) {
-        //TODO: err: remote connection not found
-        return -1;
-    }
-
-    conn = remoteConnMap[remote_agent];
-
-    hdr.op = NOTIF_STR;
-    flags |= UCP_AM_SEND_FLAG_EAGER;
-    
-    ser_des.addStr("name", localAgent);
-    ser_des.addStr("msg", msg);
-    ser_msg = ser_des.exportStr();
-    
-    status = uw->sendAm(conn.ep, NOTIF_STR, 
-                        &hdr, sizeof(struct nixl_ucx_am_hdr), 
-                        (void*) ser_msg.data(), ser_msg.size(), 
-                        flags, req);
-
-    if(status) {
-        //TODO: err
-        return status;
-    }
-
-    while(status == 0) status = uw->test(req);
-
-    return status;
-}
 
 int nixlUcxEngine::getNotifs(notif_list_t &notif_list)
 {

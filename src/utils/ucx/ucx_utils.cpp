@@ -278,25 +278,29 @@ int nixlUcxWorker::regAmCallback(unsigned msg_id, ucp_am_recv_callback_t cb, voi
     return 0;
 }
 
-int nixlUcxWorker::sendAm(nixlUcxEp &ep, unsigned msg_id, void* hdr, size_t hdr_len, void* buffer, size_t len, uint32_t flags, nixlUcxReq &req)
+xfer_state_t nixlUcxWorker::sendAm(nixlUcxEp &ep, unsigned msg_id, 
+                                   void* hdr, size_t hdr_len,
+                                   void* buffer, size_t len,
+                                   uint32_t flags, nixlUcxReq &req)
 {
-    ucs_status_ptr_t status;
+    ucs_status_ptr_t request;
     ucp_request_param_t param = {0};
 
     param.op_attr_mask |= UCP_OP_ATTR_FIELD_FLAGS;
     param.flags         = flags;
 
-    status = ucp_am_send_nbx(ep.eph, msg_id, hdr, hdr_len, buffer, len, &param);
+    request = ucp_am_send_nbx(ep.eph, msg_id, hdr, hdr_len, buffer, len, &param);
 
-    if(UCS_PTR_IS_ERR(status)) 
-    {
-        //TODO: error handling
-        return -1;
+    if (request == NULL ) {
+        return NIXL_XFER_DONE;
+    } else if (UCS_PTR_IS_ERR(request)) {
+        /* TODO: MSW_NET_ERROR(priv->net, "unable to complete UCX request (%s)\n",
+                         ucs_status_string(UCS_PTR_STATUS(request))); */
+        return NIXL_XFER_ERR;
     }
 
-    req = (void*)status; 
-   
-    return 0;
+    req = (void*)request;
+    return NIXL_XFER_PROC;
 }
 
 int nixlUcxWorker::getRndvData(void* data_desc, void* buffer, size_t len, const ucp_request_param_t *param, nixlUcxReq &req)
@@ -395,6 +399,25 @@ xfer_state_t nixlUcxWorker::test(nixlUcxReq req)
     }
 }
 
+xfer_state_t nixlUcxWorker::flushEp(nixlUcxEp &ep, nixlUcxReq &req)
+{
+    ucp_request_param_t param;
+    ucs_status_ptr_t request;
+
+    param.op_attr_mask = 0;
+    request = ucp_ep_flush_nbx(ep.eph, &param);
+    
+    if (request == NULL ) {
+        return NIXL_XFER_DONE;
+    } else if (UCS_PTR_IS_ERR(request)) {
+        /* TODO: MSW_NET_ERROR(priv->net, "unable to complete UCX request (%s)\n",
+                         ucs_status_string(UCS_PTR_STATUS(request))); */
+        return NIXL_XFER_ERR;
+    }
+
+    req = (void*)request;
+    return NIXL_XFER_PROC;
+}
 
 void nixlUcxWorker::reqRelease(nixlUcxReq req)
 {
