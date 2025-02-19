@@ -3,6 +3,7 @@ import nixl_bindings as nixl
 def test_desc():
 
     test_desc1 = nixl.nixlBasicDesc(1000, 105, 0)
+    test_desc1b = nixl.nixlBasicDesc(1000, 105, 0)
     test_desc2 = nixl.nixlBasicDesc(1010, 30, 0)
     test_desc3 = nixl.nixlBasicDesc(990, 20, 0)
 
@@ -14,6 +15,9 @@ def test_desc():
 
     assert test_desc1.covers(test_desc2)
     assert test_desc1.overlaps(test_desc3)
+
+    assert test_desc1 == test_desc1b
+    assert test_desc1 != test_desc2
 
 def test_list():
 
@@ -34,7 +38,12 @@ def test_list():
     
     print(test_list.descCount())
     assert test_list.descCount() == 3
-    
+   
+    test_list.remDesc(1)
+    assert test_list.descCount() == 2
+
+    assert test_list[0] == test_desc1
+
     test_list.clear()
 
     assert test_list.isEmpty()

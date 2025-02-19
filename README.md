@@ -13,6 +13,12 @@ NIXL is an abstraction library to abstract memory of heterogeneous devices, i.e.
 Ubuntu: sudo apt install build-essential meson ninja-build cmake uuid-dev pkg-config
 Fedora: sudo dnf install gcc-c++ meson ninja-build cmake uuid-dev pkg-config
 ```
+
+### pybind ###
+```
+pip3 install pybind11
+```
+
 ### UCX install ###
 
 UCX version 1.17.0 was used for nixl backend testing. This is available from the latest
@@ -67,6 +73,17 @@ Date:   Thu Jan 23 14:26:00 2024 +0800
     Signed-off-by: John Smith <jsmith@corp.com>
 ```
 
+## pybind11 Python Interface
+
+The pybind11 bindings for the public facing NIXL API are available in src/pybind. These bindings implement the headers in the include directory, but not include/internal. Some sample tests for how to use the NIXL Python module are available in the python directory.
+
+The Python module will be built by default, to make it easy to import you can include either the build or install directory to your PYTHONPATH, see:
+
+```
+export PYTHONPATH=$PYTHONPATH:<path to build>/src/pybind
+### or
+export PYTHONPATH=$PYTHONPATH:<path to install>/lib64/python3.9/site-packages/
+```
 
 ## License
 TBD

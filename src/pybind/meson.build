@@ -10,3 +10,8 @@ py.extension_module('nixl_bindings',
            include_directories: [inc_dir],
            install: true)
 
+py.extension_module('nixl_utils',
+           'nixl_utils.cpp', 
+           dependencies: [pybind_dep],
+           install: true)
+
