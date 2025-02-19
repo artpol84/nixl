@@ -5,10 +5,96 @@
 
 using namespace std;
 
+static string op2string(xfer_op_t op)
+{
+    switch(op) {
+        case NIXL_READ:
+            return string("READ");
+        case NIXL_WRITE:
+            return string("WRITE");
+        case NIXL_RD_NOTIF:
+            return string("READ/NOTIF");
+        case NIXL_WR_NOTIF:
+            return string("WRITE/NOTIF");
+    }
+    return string("ERR-OP");
+}
+
+void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
+                     nixlDescList<nixlMetaDesc> &req_src_descs,
+                     nixlDescList<nixlMetaDesc> &req_dst_descs,
+                     void* addr1, void* addr2, size_t len, 
+                     xfer_op_t op)
+{
+    int ret2;
+    xfer_state_t ret3;
+    nixlBackendReqH* handle;
+
+    std::string test_str("test");
+    std::cout << "\t" << op2string(op) << " from " << addr1 << " to " << addr2 << "\n";
+
+    // Posting a request, to be updated to return an async handler,
+    // or an ID that later can be used to check the status as a new method
+    // Also maybe we would remove the WRITE and let the backend class decide the op
+    ret3 = ucx1->postXfer(req_src_descs, req_dst_descs, op, "Agent2", test_str, handle);
+    assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
+
+    ucx1->progress();
+    ucx2->progress();
+
+    if (ret3 == NIXL_XFER_DONE) {
+        cout << "\t\tWARNING: Tansfer request completed immmediately - no testing non-inline path" << endl;
+    } else {
+        cout << "\t\tNOTE: Testing non-inline Transfer path!" << endl;
+
+        while(ret3 == NIXL_XFER_PROC) {
+            ret3 = ucx1->checkXfer(handle);
+            ucx2->progress();
+            assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
+        }
+        ucx1->releaseReqH(handle);
+    }
+
+
+    switch (op) {
+        case NIXL_RD_NOTIF:
+        case NIXL_WR_NOTIF: {
+            /* Test notification path */
+            notif_list_t target_notifs;
+
+            cout << "\t\tChecking notification flow: " << flush;
+            ret2 = 0;
+
+            while(ret2 == 0){
+                ucx1->progress();
+                ret2 = ucx2->getNotifs(target_notifs);
+            }
+
+            assert(ret2 == 1);
+
+            assert(target_notifs.front().first == "Agent1");
+            assert(target_notifs.front().second == test_str);
+
+            cout << "OK" << endl;
+            break;
+        }
+        default:
+            break;
+    }
+
+    cout << "\t\tData verification: " << flush;
+
+    // Perform correctness check.
+    for(size_t i = 0; i < len; i++){
+        assert( ((uint8_t*) addr2)[i] == ((uint8_t*) addr1)[i]);    
+    }
+    cout << "OK" << endl;
+}
+
 int main()
 {
     int ret1, ret2;
-    xfer_state_t ret3;
+    int iter = 10;
 
     // Example: assuming two agents running on the same machine,
     // with separate memory regions in DRAM
@@ -40,13 +126,6 @@ int main()
     assert(ret1 == 0);
     assert(ret2 == 0);
 
-    //This won't work single threaded
-    //ret1 = ucx1-> listenForConnection(agent2);
-    //ret2 = ucx2-> makeConnection(agent1);
-
-    assert(ret1 == 0);
-    assert(ret2 == 0);
-
     std::cout << "Synchronous handshake complete\n";
 
     // User allocates memories, and passes the corresponding address
@@ -63,8 +142,6 @@ int main()
     void* addr1 = calloc(1, len);
     void* addr2 = calloc(1, len);
 
-    memset(addr1, 0xbb, len);
-    memset(addr2, 0, len);
 
     buff1.addr   = (uintptr_t) addr1;
     buff1.len    = len;
@@ -107,10 +184,6 @@ int main()
     assert(ret1 == 0);
     assert(ret2 == 0);
 
-    // User creates a request, size of them should match. Example on Agent 1
-    // The agent fills the metadata fields based on local_meta1 and remote_meta1
-    nixlBackendReqH* handle;
-
     nixlDescList<nixlMetaDesc> req_src_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
         nixlMetaDesc req_src;
@@ -131,59 +204,20 @@ int main()
         req_dst_descs.addDesc(req_dst);
     }
 
-    std::string test_str("test");
-    std::cout << "Transferring from " << addr1 << " to " << addr2 << "\n";
+    xfer_op_t ops[] = {  NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF };
 
-    // Posting a request, to be updated to return an async handler,
-    // or an ID that later can be used to check the status as a new method
-    // Also maybe we would remove the WRITE and let the backend class decide the op
-    ret3 = ucx1->postXfer(req_src_descs, req_dst_descs, NIXL_WRITE, "Agent2", test_str, handle);
-    assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
-
-    ucx1->progress();
-    ucx2->progress();
-
-    if (ret3 == NIXL_XFER_DONE) {
-        cout << "WARNING: Tansfer request completed immmediately - no testing non-inline path" << endl;
-    } else {
-        cout << "NOTE: Testing non-inline Transfer path!" << endl;
-
-        while(ret3 == NIXL_XFER_PROC) {
-            ret3 = ucx1->checkXfer(handle);
-            ucx2->progress();
-            assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
+    for (size_t i = 0; i < sizeof(ops)/sizeof(ops[i]); i++){
+        cout << op2string(ops[i]) << " test (" << iter << ") iterations" <<endl;
+        for(int k = 0; k < iter; k++ ) {
+            /* Init data */
+            memset(addr1, 0xbb, len);
+            memset(addr2, 0, len);
+        
+            /* Test */
+            performTransfer(ucx1, ucx2, req_src_descs, req_dst_descs,
+                            addr1, addr2, len, ops[i]);
         }
-        ucx1->releaseReqH(handle);
     }
-
-#if 0
-    // status = ucx1->sendNotif(agent2, test_str);
-    // assert(status != -1);
-#endif
-
-    // Do some checks on the data.
-    for(size_t i = 0; i < len; i++){
-        assert( ((uint8_t*) addr2)[i] == 0xbb);    
-    }
-
-    std::cout << "Transfer verified\n";
-
-#if 0
-    // TODO: Fix notifications
-    notif_list_t target_notifs;
-
-    ret2 = 0;
-
-    while(ret2 == 0){
-        ucx2->progress();
-        ret2 = ucx2->getNotifs(target_notifs);
-    }
-
-    assert(ret2 == 1);
-
-    assert(target_notifs.front().first == agent1);
-    assert(target_notifs.front().second == test_str);
-#endif
 
     // At the end we deregister the memories, by agent knowing all the registered regions
     ucx1->deregisterMem(local_meta1);
