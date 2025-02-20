@@ -299,7 +299,6 @@ std::string nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
     size_t conn_cnt;
     std::string conn_info;
     backend_type_t backend_type;
-    backend_set_t supported_backends;
 
     if (sd.importStr(remote_metadata)<0)
         return "";
@@ -318,16 +317,22 @@ std::string nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
         if (sd.getBuf("t", &backend_type, sizeof(backend_type)))
             return "";
         conn_info = sd.getStr("c");
-        if (conn_info.size()==0)
+        if (conn_info.size()==0) // Fine if doing marginal updates
             return "";
 
         // Current agent might not support a remote backend
         if (data.nixlBackendEngines.count(backend_type)!=0) {
+
+            // No need to reload the same conn info, maybe TODO to improve
+            if (data.remoteBackends.count(remote_agent)!=0)
+                if (data.remoteBackends[remote_agent].count(backend_type)!=0)
+                    continue;
+
             if (data.nixlBackendEngines[backend_type]->
                     loadRemoteConnInfo(remote_agent, conn_info)<0)
                 return ""; // Error in load
             count++;
-            supported_backends.insert(backend_type);
+            data.remoteBackends[remote_agent].insert(backend_type);
         }
     }
 
@@ -339,20 +344,20 @@ std::string nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
     // are loaded, they will be deleted in backend destructor.
     // the backend connection list for this agent will be empty.
 
+    // It's just a check, not introducing section_info
     conn_info = sd.getStr("");
     if (conn_info != "MemSection")
         return "";
 
-    data.remoteSections[remote_agent] = new nixlRemoteSection(
-                        remote_agent, data.nixlBackendEngines);
+    if (data.remoteSections.count(remote_agent) == 0)
+        data.remoteSections[remote_agent] = new nixlRemoteSection(
+                            remote_agent, data.nixlBackendEngines);
 
     if (data.remoteSections[remote_agent]->loadRemoteData(&sd)<0) {
         delete data.remoteSections[remote_agent];
         data.remoteSections.erase(remote_agent);
         return "";
     }
-
-    data.remoteBackends[remote_agent] = supported_backends;
 
     return remote_agent;
 }

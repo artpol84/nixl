@@ -81,6 +81,8 @@ int nixlLocalSection::addDescList (const nixlDescList<nixlBasicDesc> &mem_elms,
     nixlBasicDesc *p = &out;
     int ret;
     for (int i=0; i<mem_elms.descCount(); ++i) {
+        // TODO: check if fully covered, continue. If partially covered
+        //       split and get new metadata for the new part
         ret = backend->registerMem(mem_elms[i], mem_type, out.metadata);
         if (ret<0) {
             for (int j=0; j<i; ++j) {
@@ -196,9 +198,10 @@ int nixlRemoteSection::addDescList (const nixlDescList<nixlStringDesc>& mem_elms
     mem_type_t     mem_type     = mem_elms.getType();
     backend_type_t backend_type = backend->getType();
     section_key_t sec_key = std::make_pair(mem_type, backend_type);
-    sectionMap[sec_key] = new nixlDescList<nixlMetaDesc>(
-                              mem_type, mem_elms.isUnifiedAddr(), true);
-    memToBackendMap[mem_type].insert(backend_type);
+    if (sectionMap.count(sec_key) == 0)
+        sectionMap[sec_key] = new nixlDescList<nixlMetaDesc>(
+                                  mem_type, mem_elms.isUnifiedAddr(), true);
+    memToBackendMap[mem_type].insert(backend_type); // Fine to overwrite, it's a set
     nixlDescList<nixlMetaDesc> *target = sectionMap[sec_key];
 
     // Add entries to the target list
@@ -206,13 +209,16 @@ int nixlRemoteSection::addDescList (const nixlDescList<nixlStringDesc>& mem_elms
     nixlBasicDesc *p = &out;
     int ret;
     for (int i=0; i<mem_elms.descCount(); ++i) {
-        ret = backend->loadRemoteMD(mem_elms[i], mem_type, agentName, out.metadata);
-        // In case of errors, no need to remove the previous entries
-        // Agent will delete the full object.
-        if (ret<0)
-            return ret;
-        *p = mem_elms[i]; // Copy the basic desc part
-        target->addDesc(out);
+        // TODO: remote might change the metadata, have to keep stringDesc to compare
+        if (target->getIndex((const nixlBasicDesc) mem_elms[i]) < 0) {
+            ret = backend->loadRemoteMD(mem_elms[i], mem_type, agentName, out.metadata);
+            // In case of errors, no need to remove the previous entries
+            // Agent will delete the full object.
+            if (ret<0)
+                return ret;
+            *p = mem_elms[i]; // Copy the basic desc part
+            target->addDesc(out);
+        }
     }
     return 0;
 }
