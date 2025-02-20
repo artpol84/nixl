@@ -328,8 +328,10 @@ std::string nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
 
             // No need to reload the same conn info, maybe TODO to improve
             if (data.remoteBackends.count(remote_agent)!=0)
-                if (data.remoteBackends[remote_agent].count(backend_type)!=0)
+                if (data.remoteBackends[remote_agent].count(backend_type)!=0) {
+                    count++;
                     continue;
+                }
 
             if (data.nixlBackendEngines[backend_type]->
                     loadRemoteConnInfo(remote_agent, conn_info)<0)
