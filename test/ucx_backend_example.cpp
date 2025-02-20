@@ -44,8 +44,6 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
     ret3 = ucx1->postXfer(req_src_descs, req_dst_descs, op, "Agent2", test_str, handle);
     assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
 
-    ucx1->progress();
-    ucx2->progress();
 
     if (ret3 == NIXL_XFER_DONE) {
         cout << "\t\tWARNING: Tansfer request completed immmediately - no testing non-inline path" << endl;
@@ -54,7 +52,6 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
 
         while(ret3 == NIXL_XFER_PROC) {
             ret3 = ucx1->checkXfer(handle);
-            ucx2->progress();
             assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
         }
         ucx1->releaseReqH(handle);
@@ -71,7 +68,6 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
             ret2 = 0;
 
             while(ret2 == 0){
-                ucx1->progress();
                 ret2 = ucx2->getNotifs(target_notifs);
             }
 

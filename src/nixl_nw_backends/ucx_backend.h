@@ -4,6 +4,8 @@
 #include <vector>
 #include <cstring>
 #include <iostream>
+#include <thread>
+#include <mutex>
 
 #include "nixl.h"
 
@@ -75,11 +77,22 @@ class nixlUcxPublicMetadata : public nixlBackendMD {
 
 class nixlUcxEngine : nixlBackendEngine {
     private:
+
+        /* UCX data */
         nixlUcxContext* uc;
         nixlUcxWorker* uw;
         void* workerAddr;
         size_t workerSize;
-        notif_list_t notifs;
+
+        /* Progress thread data */
+        volatile bool pthr_stop, pthr_active;
+        int no_sync_iters;
+        std::thread pthr;
+
+        /* Notifications */
+        notif_list_t notifMainList;
+        std::mutex  notifMtx;
+        notif_list_t notifPthrPriv, notifPthr;
 
         // Map of agent name to saved nixlUcxConnection info
         std::map<std::string, nixlUcxConnection> remoteConnMap;
@@ -104,26 +117,58 @@ class nixlUcxEngine : nixlBackendEngine {
             
                 bool is_complete() { return _completed; }
                 void completed() { _completed = 1; }
-
-
         };
 
+        // Threading infrastructure
+        //   TODO: move the thread management one outside of NIXL common infra
+        void progressFunc();
+        void startProgressThread();
+        void stopProgressThread();
+        bool isProgressThread(){
+            return (std::this_thread::get_id() == pthr.get_id());
+        }
+    
+        // Request management
         static void _requestInit(void *request);
         static void _requestFini(void *request);
         void requestReset(nixlUcxBckndReq *req) {
             _requestInit((void *)req);
         }
 
-        xfer_state_t sendNotifPriv(const std::string &remote_agent,
-                                   const std::string &msg, nixlUcxReq &req);
-        int retHelper(xfer_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req);
+        // Connection helper
+        static ucs_status_t
+        connectionCheckAmCb(void *arg, const void *header,
+                            size_t header_length, void *data,
+                            size_t length,
+                            const ucp_am_recv_param_t *param);
 
+        static ucs_status_t
+        connectionTermAmCb(void *arg, const void *header,
+                            size_t header_length, void *data,
+                            size_t length,
+                            const ucp_am_recv_param_t *param);
+
+        // Notifications
+        static ucs_status_t notifAmCb(void *arg, const void *header,
+                                      size_t header_length, void *data,
+                                      size_t length,
+                                      const ucp_am_recv_param_t *param);
+        xfer_state_t notifSendPriv(const std::string &remote_agent,
+                                   const std::string &msg, nixlUcxReq &req);
+        void notifProgress();
+        void notifCombineHelper(notif_list_t &src, notif_list_t &tgt);
+        void notifProgressCombineHelper(notif_list_t &src, notif_list_t &tgt);
+
+
+        // Data transfer (priv)
+        int retHelper(xfer_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req);
     public:
         nixlUcxEngine(const nixlUcxInitParams* init_params);
         ~nixlUcxEngine();
 
         bool supportsNotif () const { return true; }
 
+        /* Object management */
         std::string getConnInfo() const;
         int loadRemoteConnInfo (const std::string &remote_agent,
                                 const std::string &remote_conn_info);
@@ -141,7 +186,7 @@ class nixlUcxEngine : nixlBackendEngine {
                           nixlBackendMD* &output);
         int removeRemoteMD (nixlBackendMD* input);
 
-        // MetaDesc instead of basic for local
+        // Data transfer
         xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
                                const nixlDescList<nixlMetaDesc> &remote,
                                const xfer_op_t &op,
@@ -163,7 +208,6 @@ class nixlUcxEngine : nixlBackendEngine {
         //public function for UCX worker to mark connections as connected
         int checkConn(const std::string &remote_agent);
         int endConn(const std::string &remote_agent);
-        int appendNotif(const std::string &remote_agent, const std::string &notif);
 };
 
 #endif
