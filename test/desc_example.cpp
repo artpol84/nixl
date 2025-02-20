@@ -128,11 +128,11 @@ int main()
     std::cout << dlist1.getIndex(meta3) << "\n";
     dlist1.remDesc(0);
     std::cout << dlist1.getIndex(meta3) << "\n";
-    assert(dlist2.remDesc(meta1)==-1);
-    dlist2.remDesc(meta3);
+    assert(dlist2.remDesc(dlist2.getIndex(meta1))==-1);
+    dlist2.remDesc(dlist2.getIndex(meta3));
     assert(dlist2.getIndex(meta3)==-1);
     assert(dlist3.getIndex(meta1)==-1);
-    assert (dlist3.remDesc(meta4)==-1);
+    assert (dlist3.remDesc(dlist3.getIndex(meta4))==-1);
 
     dlist1.print();
     dlist2.print();

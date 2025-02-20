@@ -192,18 +192,8 @@ int nixlDescList<T>::addDesc (const T &desc) {
 
 template <class T>
 int nixlDescList<T>::remDesc (int index){
-    if ((size_t) index >= descs.size())
+    if (((size_t) index >= descs.size()) || (index < 0))
         return -1;
-    descs.erase(descs.begin() + index);
-    return 0;
-}
-
-template <class T>
-int nixlDescList<T>::remDesc (const T &desc) {
-    int index = getIndex(desc);
-    if (index < 0)
-        return -1;
-
     descs.erase(descs.begin() + index);
     return 0;
 }
