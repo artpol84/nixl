@@ -8,6 +8,11 @@ extern "C"
 
 #include "nixl.h"
 
+typedef enum {
+    NIXL_UCX_MT_SINGLE,
+    NIXL_UCX_MT_CTX,
+    NIXL_UCX_MT_WORKER
+} nixl_ucx_mt_t;
 class nixlUcxEp {
 private:
     ucp_ep_h  eph;
@@ -36,22 +41,30 @@ public:
 
 typedef void * nixlUcxReq;
 
-class nixlUcxWorker {
+class nixlUcxContext {
 private:
     /* Local UCX stuff */
     ucp_context_h ctx;
-    ucp_worker_h worker;
-
+    nixl_ucx_mt_t mt_type;
 public:
 
     typedef void req_cb_t(void *request);
-    nixlUcxWorker(std::vector<std::string> devices, size_t req_size, req_cb_t init_cb, req_cb_t fini_cb);
-    //{
-        // Create UCX worker spanning provided devices
-        // Have a special conf when we want UCX to detect devices
-        // automatically
-    //}
+    nixlUcxContext(std::vector<std::string> devices,
+                    size_t req_size, req_cb_t init_cb, req_cb_t fini_cb,
+                    nixl_ucx_mt_t mt_type);
+    ~nixlUcxContext();
 
+    friend class nixlUcxWorker;
+};
+
+class nixlUcxWorker {
+private:
+    /* Local UCX stuff */
+    nixlUcxContext *ctx;
+    ucp_worker_h worker;
+
+public:
+    nixlUcxWorker(nixlUcxContext *ctx);
     ~nixlUcxWorker();
 
     /* Connection */

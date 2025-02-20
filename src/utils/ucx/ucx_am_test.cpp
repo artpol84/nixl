@@ -76,9 +76,15 @@ int main()
 {
     vector<string> devs;
     devs.push_back("mlx5_0");
+
+    nixlUcxContext c[2] = {
+        nixlUcxContext(devs, 0, NULL, NULL, NIXL_UCX_MT_SINGLE),
+        nixlUcxContext(devs, 0, NULL, NULL, NIXL_UCX_MT_SINGLE)
+    };
+
     nixlUcxWorker w[2] = { 
-        nixlUcxWorker(devs, 0, NULL, NULL), 
-        nixlUcxWorker(devs, 0, NULL, NULL) 
+        nixlUcxWorker(&c[2]),
+        nixlUcxWorker(&c[2])
     };
     nixlUcxEp ep[2];
     nixlUcxReq req;

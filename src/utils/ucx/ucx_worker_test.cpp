@@ -66,10 +66,17 @@ void completeRequest(nixlUcxWorker w[2], std::string op, bool is_flush, xfer_sta
 int main()
 {
     vector<string> devs;
-//    devs.push_back("mlx5_0");
+    // TODO: pass dev name for testing
+    // in CI it would be goot to test both SHM and IB
+    //devs.push_back("mlx5_0");
+    nixlUcxContext c[2] = {
+        nixlUcxContext(devs, sizeof(requestData), nixlUcxRequestInit, NULL, NIXL_UCX_MT_SINGLE),
+        nixlUcxContext(devs, sizeof(requestData), nixlUcxRequestInit, NULL, NIXL_UCX_MT_SINGLE)
+    };
+
     nixlUcxWorker w[2] = {
-        nixlUcxWorker(devs, sizeof(requestData), nixlUcxRequestInit, NULL), 
-        nixlUcxWorker(devs, sizeof(requestData), nixlUcxRequestInit, NULL),
+        nixlUcxWorker(&c[0]),
+        nixlUcxWorker(&c[1])
     };
     nixlUcxEp ep[2];
     nixlUcxMem mem[2];
@@ -180,5 +187,7 @@ int main()
         w[i].memDereg(mem[i]);
         assert(0 == w[i].disconnect(ep[i]));
     }
+
+
 
 }

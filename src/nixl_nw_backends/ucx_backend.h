@@ -75,6 +75,7 @@ class nixlUcxPublicMetadata : public nixlBackendMD {
 
 class nixlUcxEngine : nixlBackendEngine {
     private:
+        nixlUcxContext* uc;
         nixlUcxWorker* uw;
         void* workerAddr;
         size_t workerSize;

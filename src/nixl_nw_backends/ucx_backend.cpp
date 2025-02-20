@@ -117,8 +117,9 @@ nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
     std::vector<std::string> devs; /* Empty vector */
     uint64_t n_addr;
 
-    uw = new nixlUcxWorker(devs, sizeof(nixlUcxBckndReq), 
-                            _requestInit, _requestFini);
+    uc = new nixlUcxContext(devs, sizeof(nixlUcxBckndReq),
+                           _requestInit, _requestFini, NIXL_UCX_MT_WORKER);
+    uw = new nixlUcxWorker(uc);
     uw->epAddr(n_addr, workerSize);
     workerAddr = (void*) n_addr;
 

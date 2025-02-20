@@ -7,20 +7,30 @@
 using namespace std;
 
 
-nixlUcxWorker::nixlUcxWorker(std::vector<std::string> devs,
+nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
                             size_t req_size, 
-                            nixlUcxWorker::req_cb_t init_cb = NULL,
-                            nixlUcxWorker::req_cb_t fini_cb = NULL )
+                            nixlUcxContext::req_cb_t init_cb,
+                            nixlUcxContext::req_cb_t fini_cb,
+                            nixl_ucx_mt_t __mt_type)
 {
     ucp_params_t ucp_params;
     ucp_config_t *ucp_config;
-    ucp_worker_params_t worker_params;
     ucs_status_t status = UCS_OK;
+
+    mt_type = __mt_type;
 
     ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES | UCP_PARAM_FIELD_MT_WORKERS_SHARED |
                             UCP_PARAM_FIELD_ESTIMATED_NUM_EPS;
     ucp_params.features = UCP_FEATURE_RMA | UCP_FEATURE_AMO32 | UCP_FEATURE_AMO64 | UCP_FEATURE_AM;
-    ucp_params.mt_workers_shared = 1;
+    switch(mt_type) {
+        case NIXL_UCX_MT_SINGLE:
+        case NIXL_UCX_MT_WORKER:
+            ucp_params.mt_workers_shared = 0;
+            break;
+        case NIXL_UCX_MT_CTX:
+            ucp_params.mt_workers_shared = 1;
+            break;
+    }
     ucp_params.estimated_num_eps = 3;
 
     if (req_size) {
@@ -59,24 +69,47 @@ nixlUcxWorker::nixlUcxWorker(std::vector<std::string> devs,
         return;
     }
     ucp_config_release(ucp_config);
+}
+
+nixlUcxContext::~nixlUcxContext()
+{
+    ucp_cleanup(ctx);
+}
+
+
+nixlUcxWorker::nixlUcxWorker(nixlUcxContext *_ctx)
+{
+    ucp_worker_params_t worker_params;
+    ucs_status_t status = UCS_OK;
+
+    ctx = _ctx;
 
     memset(&worker_params, 0, sizeof(worker_params));
     worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
-    worker_params.thread_mode = UCS_THREAD_MODE_SERIALIZED;
 
-    status = ucp_worker_create(ctx, &worker_params, &worker);
+    switch (ctx->mt_type) {
+        case NIXL_UCX_MT_CTX:
+            worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
+            break;
+        case NIXL_UCX_MT_SINGLE:
+            worker_params.thread_mode = UCS_THREAD_MODE_SERIALIZED;
+            break;
+        case NIXL_UCX_MT_WORKER:
+            worker_params.thread_mode = UCS_THREAD_MODE_MULTI;
+            break;
+    }
+
+    status = ucp_worker_create(ctx->ctx, &worker_params, &worker);
     if (status != UCS_OK)
     {
        // TODO: MSW_NET_ERROR(priv->net, "failed to create ucp_worker (%s)\n", ucs_status_string(status));
         return;
     }
-
 }
 
 nixlUcxWorker::~nixlUcxWorker()
 {
     ucp_worker_destroy(worker);
-    ucp_cleanup(ctx);
 }
 
 int nixlUcxWorker::epAddr(uint64_t &addr, size_t &size)
@@ -206,7 +239,7 @@ int nixlUcxWorker::memReg(void *addr, size_t size, nixlUcxMem &mem)
         .length  = mem.size,
     };
 
-    status = ucp_mem_map(ctx, &mem_params, &mem.memh);
+    status = ucp_mem_map(ctx->ctx, &mem_params, &mem.memh);
     if (status != UCS_OK) {
         /* TODOL: MSW_NET_ERROR(priv->net, "failed to ucp_mem_map (%s)\n", ucs_status_string(status)); */
         return -1;
@@ -221,7 +254,7 @@ size_t nixlUcxWorker::packRkey(nixlUcxMem &mem, uint64_t &addr, size_t &size)
     ucs_status_t status;
     void *rkey_buf;
 
-    status = ucp_rkey_pack(ctx, mem.memh, &rkey_buf, &size);
+    status = ucp_rkey_pack(ctx->ctx, mem.memh, &rkey_buf, &size);
     if (status != UCS_OK) {
         /* TODO: MSW_NET_ERROR(priv->net, "failed to ucp_rkey_pack (%s)\n", ucs_status_string(status)); */
         return -1;
@@ -242,7 +275,7 @@ size_t nixlUcxWorker::packRkey(nixlUcxMem &mem, uint64_t &addr, size_t &size)
 
 void nixlUcxWorker::memDereg(nixlUcxMem &mem)
 {
-    ucp_mem_unmap(ctx, mem.memh);
+    ucp_mem_unmap(ctx->ctx, mem.memh);
 }
 
 /* ===========================================
