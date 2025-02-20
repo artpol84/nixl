@@ -170,11 +170,8 @@ class nixlBackendEngine {
 
         // Make connection to a remote node identified by the name into loaded conn infos
         // Child might just return 0, if making proactive connections are not necessary.
-        virtual int makeConnection(const std::string &remote_agent) = 0;
-
-        // Listen for connections from a remote agent
-        // Child might just return 0, if making proactive connections are not necessary.
-        virtual int listenForConnection(const std::string &remote_agent) = 0;
+        virtual int connect(const std::string &remote_agent) = 0;
+        virtual int disconnect(const std::string &remote_agent) = 0;
 
         // Add and remove remtoe metadata
         virtual int loadRemoteMD (const nixlStringDesc &input,
@@ -200,7 +197,8 @@ class nixlBackendEngine {
         //Backend aborts the transfer if necessary, and destructs the relevant objects
         virtual void releaseReqH(nixlBackendReqH* handle) = 0;
 
-        // Force backend engine worker to progress
+        // Force backend engine worker to progress.
+        // Listening for connections should be handled in this method as well.
         virtual int progress() { return 0; }
 
         // Populate an empty received notif list. Elements are released within backend then.
@@ -211,6 +209,8 @@ class nixlBackendEngine {
         virtual int genNotif(const std::string &remote_agent, const std::string &msg) {
             return -1;
         }
+
+        // TODO: make agent a friend, and all the methods to be protected.
 };
 
 #endif

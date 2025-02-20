@@ -39,11 +39,12 @@ void test_thread(int id)
     ret = ucxw->loadRemoteConnInfo(other, conn_info[!id]);
     assert(ret == 0);
 
-    if(id){
-        ret = ucxw->makeConnection(other);
-    } else {
-        ret = ucxw->listenForConnection(other);
-    }
+    // TODO: to be checked
+    // if(id){
+    ret = ucxw->connect(other);
+    // } else {
+    //     ret = ucxw->listenForConnection(other);
+    // }
     assert(ret == 0);
 
     std::cout << "Thread passed with id " << id << "\n";

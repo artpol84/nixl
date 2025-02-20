@@ -71,7 +71,7 @@ static ucs_status_t get_notif (void *arg, const void *header,
     //debugging
     //std::cout << " finished am to connect to " << remote_agent << "\n";
    
-    //TODO: ack notification
+    //TODO?: ack notification
 
     return UCS_OK;
 }
@@ -176,7 +176,8 @@ int nixlUcxEngine::loadRemoteConnInfo (const std::string &remote_agent,
     return 0;
 }
 
-int nixlUcxEngine::makeConnection(const std::string &remote_agent) {
+// TODO: update as the listenForConnection will be removed
+int nixlUcxEngine::connect(const std::string &remote_agent) {
     struct nixl_ucx_am_hdr hdr;
     nixlUcxConnection conn;
     uint32_t flags = 0;
@@ -221,6 +222,12 @@ int nixlUcxEngine::makeConnection(const std::string &remote_agent) {
     return 0;
 }
 
+// TODO to be implemented
+int nixlUcxEngine::disconnect(const std::string &remote_agent) {
+    return 0;
+}
+
+// TODO: Remove
 int nixlUcxEngine::listenForConnection(const std::string &remote_agent) {
     
     nixlUcxConnection conn;
@@ -570,6 +577,7 @@ void nixlUcxEngine::releaseReqH(nixlBackendReqH* handle)
 }
 
 int nixlUcxEngine::progress() {
+    // TODO: add listen for connection handling if necessary
     return uw->progress();
 }
 
@@ -580,6 +588,8 @@ int nixlUcxEngine::progress() {
 int nixlUcxEngine::getNotifs(notif_list_t &notif_list)
 {
     int n_notifs;
+
+    while (progress());
 
     if (notif_list.size()!=0)
         return -1;

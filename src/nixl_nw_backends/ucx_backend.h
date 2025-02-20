@@ -119,7 +119,10 @@ class nixlUcxEngine : nixlBackendEngine {
         std::string getConnInfo() const;
         int loadRemoteConnInfo (const std::string &remote_agent,
                                 const std::string &remote_conn_info);
-        int makeConnection(const std::string &remote_agent);
+        int connect(const std::string &remote_agent);
+        int disconnect(const std::string &remote_agent);
+
+        // TODO: Remove
         int listenForConnection(const std::string &remote_agent);
 
         int registerMem (const nixlBasicDesc &mem,

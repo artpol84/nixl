@@ -33,7 +33,7 @@ class nixlAgent {
                            nixlBackendEngine* backend);
 
         // Make connection proactively, instead of at transfer time
-        int makeConnection (const std::string &remote_agent, int direction);
+        int makeConnection (const std::string &remote_agent);
 
 
         /*** Transfer Request Handling ***/
@@ -62,7 +62,7 @@ class nixlAgent {
         // Add entries to the passed received notifications list (can be
         // non-empty), and return number of added entries, or -1 if there was
         // an error. Elements are released within the Agent after this call.
-        int getNewNotifs (notif_map_t &notif_map);
+        int getNotifs (notif_map_t &notif_map);
 
         // Generate a notification, not bound to a transfer, e.g., for control.
         // Can be used after the remote metadata is exchanged. Will be received

@@ -11,10 +11,12 @@
 typedef enum {UCX, GPUDIRECTIO, NVMe, NVMeoF} backend_type_t;
 typedef enum {DRAM_SEG, VRAM_SEG, BLK_SEG, FILE_SEG} mem_type_t;
 
-typedef enum {NIXL_XFER_INIT, NIXL_XFER_PROC,
+typedef enum {NIXL_XFER_PRE, NIXL_XFER_INIT, NIXL_XFER_PROC,
               NIXL_XFER_DONE, NIXL_XFER_ERR} xfer_state_t;
 typedef enum {NIXL_READ,  NIXL_RD_FLUSH, NIXL_RD_NOTIF,
               NIXL_WRITE, NIXL_WR_FLUSH, NIXL_WR_NOTIF} xfer_op_t;
+
+// TODO: add ERROR names
 
 // A basic descriptor class, contiguous in memory, with some supporting methods
 class nixlBasicDesc {

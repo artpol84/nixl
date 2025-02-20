@@ -5,12 +5,12 @@
 nixlAgentData::~nixlAgentData() {
     for (auto & elm: remoteSections)
         delete elm.second;
-    remoteSections.clear();
 
     for (auto & elm: nixlBackendEngines)
         delete elm.second;
-    nixlBackendEngines.clear();
 
+    // TODO: deregister memories left in the local section
+    // TODO: Delete the transfer requests
 }
 
 nixlMetadataH::nixlMetadataH(const std::string& ip_address, uint16_t port){
@@ -74,7 +74,7 @@ int nixlAgent::deregisterMem(const nixlDescList<nixlBasicDesc> &descs,
     return (data.memorySection.remDescList(resp, backend));
 }
 
-int nixlAgent::makeConnection(const std::string &remote_agent, int direction) {
+int nixlAgent::makeConnection(const std::string &remote_agent) {
     nixlBackendEngine* eng;
     int ret;
     int count = 0;
@@ -86,10 +86,7 @@ int nixlAgent::makeConnection(const std::string &remote_agent, int direction) {
     for (auto & r_eng: data.remoteBackends[remote_agent]) {
         if (data.nixlBackendEngines.count(r_eng)!=0) {
             eng = data.nixlBackendEngines[r_eng];
-            if (direction)
-                ret = eng->listenForConnection(remote_agent);
-            else
-                ret = eng->makeConnection(remote_agent);
+            ret = eng->connect(remote_agent);
             if (ret)
                 return ret;
             count++;
@@ -168,9 +165,11 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
     handle->backendOp   = operation;
     handle->state       = NIXL_XFER_INIT;
 
+    // TODO: when supporting metadata server, we might get to PRE state
+
     req_handle = handle;
 
-    // Not bookkeeping xferRequests, assuming user releases all
+    // TODO: Add bookkeeping of xferRequests per target agent
     return 0;
 }
 
@@ -183,6 +182,8 @@ void nixlAgent::invalidateXferReq(nixlXferReqH *req) {
 xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
     if (req==nullptr)
         return NIXL_XFER_ERR;
+    // TODO: add NIXL_XFER_PRE handling after metadata server is added
+
     // We can't repost while a request is in progress
     if (req->state == NIXL_XFER_PROC) {
         req->state = req->engine->checkXfer(req->backendHandle);
@@ -200,6 +201,8 @@ xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
 }
 
 xfer_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
+    // TODO: add NIXL_XFER_PRE handling after metadata server is added
+
     // If the state is done, no need to recheck.
     if (req->state != NIXL_XFER_DONE)
         req->state = req->engine->checkXfer(req->backendHandle);
@@ -224,7 +227,7 @@ int nixlAgent::genNotif(const std::string &remote_agent,
     return -1;
 }
 
-int nixlAgent::getNewNotifs(notif_map_t &notif_map) {
+int nixlAgent::getNotifs(notif_map_t &notif_map) {
     notif_list_t backend_list;
     int ret, bad_ret, tot=0;
     bool any_backend = false;
@@ -371,9 +374,13 @@ int nixlAgent::invalidateRemoteMD(const std::string &remote_agent) {
     }
 
     if (data.remoteBackends.count(remote_agent)!=0) {
+        for (auto & elm: data.remoteBackends[remote_agent])
+            data.nixlBackendEngines[elm]->disconnect(remote_agent);
         data.remoteBackends.erase(remote_agent);
         ret = 0;
     }
+
+    // TODO: Put the transfers belonging to this remote into ERR state
     return ret;
 }
 
