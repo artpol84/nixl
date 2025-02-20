@@ -83,23 +83,30 @@ class nixlUcxEngine : nixlBackendEngine {
         // Map of agent name to saved nixlUcxConnection info
         std::map<std::string, nixlUcxConnection> remoteConnMap;
 
-        class nixlUcxBckndReq : public nixlLinkElem<nixlUcxBckndReq>, public nixlBackendReqH {
+		class nixlUcxBckndReq : public nixlLinkElem<nixlUcxBckndReq>, public nixlBackendReqH {
             private:
                 int _completed;
             public:
-            
+                std::string *amBuffer;
+
                 nixlUcxBckndReq() : nixlLinkElem(), nixlBackendReqH() {
                     _completed = 0;
+                    amBuffer = NULL;
                 }
             
                 ~nixlUcxBckndReq() {
                     _completed = 0;
+                    if (amBuffer) {
+                        delete amBuffer;
+                    }
                 }
             
                 bool is_complete() { return _completed; }
                 void completed() { _completed = 1; }
+
+
         };
-        
+
         static void _requestInit(void *request);
         static void _requestFini(void *request);
         void requestReset(nixlUcxBckndReq *req) {

@@ -364,15 +364,17 @@ int nixlUcxEngine::removeRemoteMD (nixlBackendMD* input) {
  * Data movement
 *****************************************/
 
-//agent will provide cached msg
-xfer_state_t nixlUcxEngine::sendNotifPriv(const std::string &remote_agent,
-                                          const std::string &msg, nixlUcxReq &req)
+xfer_state_t
+nixlUcxEngine::sendNotifPriv(const std::string &remote_agent,
+                             const std::string &msg, nixlUcxReq &req)
 {
     nixlSerDes ser_des;
-    std::string ser_msg;
+    std::string *ser_msg;
     nixlUcxConnection conn;
-    struct nixl_ucx_am_hdr hdr;
+    // TODO - temp fix, need to have an mpool
+    static struct nixl_ucx_am_hdr hdr;
     uint32_t flags = 0;
+    xfer_state_t ret;
 
     auto search = remoteConnMap.find(remote_agent);
 
@@ -388,13 +390,21 @@ xfer_state_t nixlUcxEngine::sendNotifPriv(const std::string &remote_agent,
     
     ser_des.addStr("name", localAgent);
     ser_des.addStr("msg", msg);
-    ser_msg = ser_des.exportStr();
+    // TODO: replace with mpool for performance
+    ser_msg = new std::string(ser_des.exportStr());
     
-    return uw->sendAm(conn.ep, NOTIF_STR, 
+    ret = uw->sendAm(conn.ep, NOTIF_STR, 
                       &hdr, sizeof(struct nixl_ucx_am_hdr), 
-                      (void*) ser_msg.data(), ser_msg.size(), 
+                      (void*) ser_msg->data(), ser_msg->size(), 
                       flags, req);
+
+    if (ret == NIXL_XFER_PROC) {
+        nixlUcxBckndReq* nReq = (nixlUcxBckndReq*)req;
+        nReq->amBuffer = ser_msg;
+    }
+    return ret;
 }
+
 
 
 int nixlUcxEngine::retHelper(xfer_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req)

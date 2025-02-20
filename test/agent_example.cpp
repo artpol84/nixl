@@ -90,24 +90,32 @@ int main()
 
     std::cout << "Transfer request from " << addr1 << " to " << addr2 << "\n";
     nixlXferReqH* req_handle;
-    ret1 = A1.createXferReq(req_src_descs, req_dst_descs, "Agent2", "", NIXL_WRITE, req_handle);
+    
+    ret1 = A1.createXferReq(req_src_descs, req_dst_descs, agent2, "notification", NIXL_WR_NOTIF, req_handle);
     assert(ret1 == 0);
 
-    ret1 = A1.postXferReq(req_handle);
+    xfer_state_t status = A1.postXferReq(req_handle);
 
     std::cout << "Transfer was posted\n";
 
-    int status = 0;
+    notif_map_t notif_map;
+    ret2 = 0;
 
-    while(status != NIXL_XFER_DONE) {
-        status = A1.getXferStatus(req_handle);
+    while(status != NIXL_XFER_DONE || ret2 == 0) {
+        if(status != NIXL_XFER_DONE) status = A1.getXferStatus(req_handle);
+        if(ret2 == 0) ret2 = A2.getNotifs(notif_map);
         assert(status != NIXL_XFER_ERR);
+        assert(ret2 >= 0);
     }
 
     // Do some checks on the data.
     for(size_t i = dst_offset; i<req_size; i++){
         assert( ((uint8_t*) addr2)[i] == 0xbb);
     }
+
+    std::vector<std::string> agent1_notifs = notif_map[agent1];
+    assert(agent1_notifs.size() == 1);
+    assert(agent1_notifs.front() == "notification");
 
     std::cout << "Transfer verified\n";
 

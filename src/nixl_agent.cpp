@@ -229,7 +229,7 @@ int nixlAgent::genNotif(const std::string &remote_agent,
 
 int nixlAgent::getNotifs(notif_map_t &notif_map) {
     notif_list_t backend_list;
-    int ret, bad_ret, tot=0;
+    int ret, bad_ret=0, tot=0;
     bool any_backend = false;
 
     // Doing best effort, if any backend errors out we return
