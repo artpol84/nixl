@@ -1,5 +1,6 @@
 import nixl_bindings as nixl
 import nixl_utils
+import pickle
 
 def test_desc():
 
@@ -33,6 +34,14 @@ def test_list():
     test_list.addDesc(test_desc3)
 
     test_list.print()
+
+    pickled_list = pickle.dumps(test_list)
+
+    print(pickled_list)
+
+    unpickled_list = pickle.loads(pickled_list)
+
+    assert unpickled_list == test_list
 
     assert test_list.getType() == nixl.DRAM_SEG
     assert test_list.isUnifiedAddr()

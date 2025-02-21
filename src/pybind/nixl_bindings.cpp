@@ -70,7 +70,22 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("addDesc", &nixlDescList<nixlBasicDesc>::addDesc)
         .def("remDesc", &nixlDescList<nixlBasicDesc>::remDesc)
         .def("clear", &nixlDescList<nixlBasicDesc>::clear)
-        .def("print", &nixlDescList<nixlBasicDesc>::print);
+        .def("print", &nixlDescList<nixlBasicDesc>::print)
+        .def(py::pickle(
+            [](const nixlDescList<nixlBasicDesc>& self) { // __getstate__
+                nixlSerDes serdes;
+                int ret = self.serialize(&serdes);
+                assert(ret == 0);
+                return py::bytes(serdes.exportStr());
+            },
+            [](py::bytes serdes_str) { // __setstate__
+                nixlSerDes serdes;
+                serdes.importStr(std::string(serdes_str));
+                nixlDescList<nixlBasicDesc> newObj = 
+                    nixlDescList<nixlBasicDesc>(&serdes);
+                return newObj;
+            }
+        ));
 
     py::class_<nixlUcxInitParams>(m, "nixlUcxInitParams")
         //implicit constructor
