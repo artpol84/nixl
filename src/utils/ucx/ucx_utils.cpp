@@ -146,24 +146,20 @@ int nixlUcxWorker::disconnect(nixlUcxEp &ep)
 
     if (UCS_PTR_IS_ERR(request)) {
         //TODO: proper cleanup
-	//if (UCS_PTR_IS_ERR(request)) {
+        //if (UCS_PTR_IS_ERR(request)) {
         //    MSW_NET_ERROR(priv->net, "ucp_disconnect_nb() failed: %s",
         //                 ucs_status_string(UCS_PTR_STATUS(request)));
         //    return -1;
         //}
-	return -1;
+        return -1;
     }
 
-    while(ucp_request_check_status(request) == UCS_INPROGRESS) {
-        ucp_worker_progress(worker);
+    if (request) {
+        while(ucp_request_check_status(request) == UCS_INPROGRESS) {
+            ucp_worker_progress(worker);
+        }
+        ucp_request_free(request);
     }
-
-    //status is not set anywhere, not sure where it should be set
-    //if (status == UCS_INPROGRESS) {
-    //    return 0;
-    //}
-
-    ucp_request_free(request);
 
     return 0;
 }

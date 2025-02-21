@@ -40,10 +40,33 @@ static void nixlUcxRequestInit(void *request)
     req->initialized = 1;
 }
 
+void completeRequest(nixlUcxWorker w[2], std::string op, bool is_flush, xfer_state_t ret,  nixlUcxReq &req)
+{
+    assert( ret == NIXL_XFER_DONE || ret == NIXL_XFER_PROC);
+    if (ret == NIXL_XFER_DONE) {
+        if (!is_flush) {
+            cout << "WARNING: " << op << " request completed immmediately - no testing non-inline path" << endl;
+        }
+    } else {
+        if (!is_flush) {
+            cout << "NOTE: Testing non-inline " << op << " path!" << endl;
+        }
+        assert( ((requestData *)req)->initialized == 1);
+
+        ret = NIXL_XFER_PROC;
+        do {
+            ret = w[0].test(req);
+            w[1].progress();
+        } while( ret == NIXL_XFER_PROC);
+        assert(ret == NIXL_XFER_DONE);
+        w[0].reqRelease(req);
+    }
+}
+
 int main()
 {
     vector<string> devs;
-    devs.push_back("mlx5_0");
+//    devs.push_back("mlx5_0");
     nixlUcxWorker w[2] = {
         nixlUcxWorker(devs, sizeof(requestData), nixlUcxRequestInit, NULL), 
         nixlUcxWorker(devs, sizeof(requestData), nixlUcxRequestInit, NULL),
@@ -83,7 +106,9 @@ int main()
         free((void*) addr);
     }
 
-    /* Test Write operation */
+    /* =========================================
+     *   Test Write operation
+     * ========================================= */
 
 #ifdef USE_VRAM
     checkCudaError(cudaMemset(buffer[1], 0xbb, buf_size), "Failed to memset");
@@ -93,23 +118,13 @@ int main()
     memset(buffer[0], 0xda, buf_size);
 #endif
 
+    // Write request
     ret = w[0].write(ep[0], buffer[0], mem[0], (uint64_t) buffer[1], rkey[0], buf_size/2, req);
-    
-    assert( ret == NIXL_XFER_DONE || ret == NIXL_XFER_PROC);
-    if (ret == NIXL_XFER_DONE) {
-        cout << "WARNING: WRITE request completed immmediately - no testing non-inline path" << endl;
-    } else {
-        cout << "NOTE: Testing non-inline WRITE path!" << endl;
-        assert( ((requestData *)req)->initialized == 1);
+    completeRequest(w, std::string("WRITE"), false, ret, req);
 
-        ret = NIXL_XFER_PROC;
-        do {
-            ret = w[0].test(req);
-            w[1].progress();
-        } while( ret == NIXL_XFER_PROC);
-        assert(ret == NIXL_XFER_DONE);
-        w[0].reqRelease(req);
-    }
+    // Flush to ensure that all data is in-place
+    ret = w[0].flushEp(ep[0], req);
+    completeRequest(w, std::string("WRITE"), true, ret, req);
 
 #ifdef USE_VRAM
     checkCudaError(cudaMemcpy(chk_buffer, buffer[1], 128, cudaMemcpyDeviceToHost), "Failed to memcpy");
@@ -124,7 +139,9 @@ int main()
         assert(chk_buffer[i] == 0xbb);
     }
 
-    /* Test Read operation */
+    /* =========================================
+     *   Test Read operation
+     * ========================================= */
 
 #ifdef USE_VRAM
     checkCudaError(cudaMemset(buffer[0], 0xbb, buf_size), "Failed to memset");
@@ -136,23 +153,13 @@ int main()
     memset(buffer[1] + buf_size/3, 0xda, buf_size - buf_size / 3);
 #endif
 
+    // Read request
     ret = w[0].read(ep[0], (uint64_t) buffer[1], rkey[0], buffer[0], mem[0], buf_size, req);
+    completeRequest(w, std::string("READ"), false, ret, req);
 
-    assert( ret == NIXL_XFER_DONE || ret == NIXL_XFER_PROC);
-    if (ret == NIXL_XFER_DONE) {
-        cout << "WARNING: READ request completed immmediately - no testing non-inline path" << endl;
-    } else {
-        cout << "NOTE: Testing non-inline READ path!" << endl;
-        assert( ((requestData *)req)->initialized == 1);
-
-        ret = NIXL_XFER_PROC;
-        do {
-            ret = w[0].test(req);
-            w[1].progress();
-        } while( ret == NIXL_XFER_PROC);
-        assert(ret == NIXL_XFER_DONE);
-        w[0].reqRelease(req);
-    }
+    // Flush to ensure that all data is in-place
+    ret = w[0].flushEp(ep[0], req);
+    completeRequest(w, std::string("READ"), true, ret, req);
 
 #ifdef USE_VRAM
     checkCudaError(cudaMemcpy(chk_buffer, buffer[0], buf_size, cudaMemcpyDeviceToHost), "Failed to memcpy");
