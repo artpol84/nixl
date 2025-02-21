@@ -10,7 +10,7 @@
 #include "utils/ucx/ucx_utils.h"
 #include "utils/data_structures/list_elem.h"
 
-typedef enum {CONN_CHECK, NOTIF_STR} ucx_cb_op_t;
+typedef enum {CONN_CHECK, NOTIF_STR, DISCONNECT} ucx_cb_op_t;
 
 struct nixl_ucx_am_hdr {
     ucx_cb_op_t op;
@@ -161,6 +161,7 @@ class nixlUcxEngine : nixlBackendEngine {
 
         //public function for UCX worker to mark connections as connected
         int checkConn(const std::string &remote_agent);
+        int endConn(const std::string &remote_agent);
         int appendNotif(const std::string &remote_agent, const std::string &notif);
 };
 

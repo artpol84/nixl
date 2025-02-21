@@ -6,6 +6,7 @@
 
 volatile bool ready[2]  = {false, false};
 volatile bool done[2]  = {false, false};
+volatile bool disconnect[2]  = {false, false};
 std::string conn_info[2];
 
 void test_thread(int id)
@@ -50,6 +51,19 @@ void test_thread(int id)
         if(id) ucxw->progress();
 
     std::cout << "Thread passed with id " << id << "\n";
+
+    //test one-sided disconnect
+    if(!id)
+        ucxw->disconnect(other);
+
+    disconnect[id] = true;
+    //wait for other
+    while(!disconnect[!id]);
+
+    //let disconnect process
+    ucxw->progress();
+
+    std::cout << "Thread disconnected with id " << id << "\n";
 }
 
 int main()

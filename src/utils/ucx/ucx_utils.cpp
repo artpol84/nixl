@@ -139,7 +139,6 @@ int nixlUcxWorker::connect(void* addr, size_t size, nixlUcxEp &ep)
     return 0;
 }
 
-/* TODO: non-blocking disconnect for cleanup performance! */
 int nixlUcxWorker::disconnect(nixlUcxEp &ep)
 {
     ucs_status_ptr_t request = ucp_ep_close_nb(ep.eph, UCP_EP_CLOSE_MODE_FLUSH);
@@ -158,6 +157,28 @@ int nixlUcxWorker::disconnect(nixlUcxEp &ep)
         while(ucp_request_check_status(request) == UCS_INPROGRESS) {
             ucp_worker_progress(worker);
         }
+        ucp_request_free(request);
+    }
+
+    return 0;
+}
+
+int nixlUcxWorker::disconnect_nb(nixlUcxEp &ep)
+{
+    ucs_status_ptr_t request = ucp_ep_close_nb(ep.eph, UCP_EP_CLOSE_MODE_FLUSH);
+
+    if (UCS_PTR_IS_ERR(request)) {
+        //TODO: proper cleanup
+        //if (UCS_PTR_IS_ERR(request)) {
+        //    MSW_NET_ERROR(priv->net, "ucp_disconnect_nb() failed: %s",
+        //                 ucs_status_string(UCS_PTR_STATUS(request)));
+        //    return -1;
+        //}
+        return -1;
+    }
+
+    if (request) {
+        //don't care
         ucp_request_free(request);
     }
 

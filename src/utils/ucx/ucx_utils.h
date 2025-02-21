@@ -58,6 +58,7 @@ public:
     int epAddr(uint64_t &addr, size_t &size);
     int connect(void* addr, size_t size, nixlUcxEp &ep);
     int disconnect(nixlUcxEp &ep);
+    int disconnect_nb(nixlUcxEp &ep);
 
     /* Memory management */
     int memReg(void *addr, size_t size, nixlUcxMem &mem);

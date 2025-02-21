@@ -123,6 +123,7 @@ int main()
     ret1 = A1.deregisterMem(dlist1, ucx1);
     ret2 = A2.deregisterMem(dlist2, ucx2);
 
+    //only initiator should call invalidate
     A1.invalidateRemoteMD("Agent2");
-    A2.invalidateRemoteMD("Agent1");
+    //A2.invalidateRemoteMD("Agent1");
 }

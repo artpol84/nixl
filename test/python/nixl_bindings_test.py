@@ -164,8 +164,9 @@ def test_agent():
     ret = agent2.deregisterMem(reg_list2, ucx2)
     assert ret == 0
 
+    #Only initiator should call invalidate
     agent1.invalidateRemoteMD(name2)
-    agent2.invalidateRemoteMD(name1)
+    #agent2.invalidateRemoteMD(name1)
 
     nixl_utils.free_passthru(addr1)
     nixl_utils.free_passthru(addr2)

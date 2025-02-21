@@ -235,4 +235,11 @@ int main()
 
     // Agent will remove the local and remote sections that kept these descriptors,
     // And destructors are called outmatically at the end
+    
+    // Test one-sided disconnect (initiator only)
+    ucx1->disconnect(agent2);
+
+    // let disconnect process
+    ucx1->progress();
+    ucx2->progress();
 }
