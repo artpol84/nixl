@@ -129,9 +129,6 @@ class nixlUcxEngine : nixlBackendEngine {
         int connect(const std::string &remote_agent);
         int disconnect(const std::string &remote_agent);
 
-        // TODO: Remove
-        int listenForConnection(const std::string &remote_agent);
-
         int registerMem (const nixlBasicDesc &mem,
                          const mem_type_t &mem_type,
                          nixlBackendMD* &out);
@@ -163,7 +160,7 @@ class nixlUcxEngine : nixlBackendEngine {
         }
 
         //public function for UCX worker to mark connections as connected
-        int updateConnMap(const std::string &remote_agent);
+        int checkConn(const std::string &remote_agent);
         int appendNotif(const std::string &remote_agent, const std::string &notif);
 };
 

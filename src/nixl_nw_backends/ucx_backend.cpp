@@ -11,9 +11,6 @@ static ucs_status_t check_connection (void *arg, const void *header,
     std::string remote_agent( (char*) data, length);
     nixlUcxEngine* engine = (nixlUcxEngine*) arg;
 
-    //debugging
-    //std::cout << " received am to establish connection from " << remote_agent << "\n";
-
     if(hdr->op != CONN_CHECK) {
         //is this the best way to ERR?
         return UCS_ERR_INVALID_PARAM;
@@ -25,14 +22,11 @@ static ucs_status_t check_connection (void *arg, const void *header,
         return UCS_ERR_INVALID_PARAM;
     }
 
-    if(engine->updateConnMap(remote_agent) == -1) {
-        //is this the best way to ERR?
+    if(!engine->checkConn(remote_agent)) {
+        //TODO: received connect AM from agent we don't recognize
         return UCS_ERR_INVALID_PARAM;
     }
-    
-    //debugging
-    //std::cout << " finished am to connect to " << remote_agent << "\n";
-    
+
     return UCS_OK;
 }
 
@@ -115,20 +109,6 @@ nixlUcxEngine::~nixlUcxEngine () {
  * Helpers
 *****************************************/
 
-int nixlUcxEngine::updateConnMap(const std::string &remote_agent) {
-    nixlUcxConnection conn;
-    auto search = remoteConnMap.find(remote_agent);
-
-    if(search == remoteConnMap.end()) {
-        //TODO: err: remote connection not found
-        return -1;
-    }
-
-    remoteConnMap[remote_agent].connected = true;
-
-    return 0;
-}
-
 int nixlUcxEngine::appendNotif(const std::string &remote_agent, const std::string &notif) {
     
     // TODO: [PERF] avoid heap allocation on the data path
@@ -142,6 +122,14 @@ int nixlUcxEngine::appendNotif(const std::string &remote_agent, const std::strin
 /****************************************
  * Connection management
 *****************************************/
+int nixlUcxEngine::checkConn(const std::string &remote_agent) {
+     if(remoteConnMap.find(remote_agent) == remoteConnMap.end()) {
+        //not found
+        return -1;
+    }   
+    return 0;
+}
+
 std::string nixlUcxEngine::getConnInfo() const {
     return nixlSerDes::_bytesToString(workerAddr, workerSize);
 }
@@ -181,9 +169,8 @@ int nixlUcxEngine::connect(const std::string &remote_agent) {
     struct nixl_ucx_am_hdr hdr;
     nixlUcxConnection conn;
     uint32_t flags = 0;
-    int ret = 0;
+    xfer_state_t ret;
     nixlUcxReq req;
-    volatile bool done = false;
 
     auto search = remoteConnMap.find(remote_agent);
 
@@ -203,78 +190,21 @@ int nixlUcxEngine::connect(const std::string &remote_agent) {
                      (void*) localAgent.data(), localAgent.size(),
                      flags, req);
     
-    if(ret != 0) {
-        //TODO: error
+    if(ret == NIXL_XFER_ERR) {
+        //TODO: ucx error
         return -1;
     }
 
     //wait for AM to send
-    while(ret == 0){
+    while(ret == NIXL_XFER_PROC){
         ret = uw->test(req);
     }
 
-    //wait for remote agent to complete handshake
-    while(!done){ 
-        uw->progress();
-        done = remoteConnMap[remote_agent].connected;
-    }
-    
     return 0;
 }
 
 // TODO to be implemented
 int nixlUcxEngine::disconnect(const std::string &remote_agent) {
-    return 0;
-}
-
-// TODO: Remove
-int nixlUcxEngine::listenForConnection(const std::string &remote_agent) {
-    
-    nixlUcxConnection conn;
-    struct nixl_ucx_am_hdr hdr;
-    uint32_t flags = 0;
-    nixlUcxReq req;
-    int ret = 0;
-    volatile bool done = false;
- 
-    auto search = remoteConnMap.find(remote_agent);
-    if(search == remoteConnMap.end()) {
-        //TODO: err: remote connection not found
-        return -1;
-    }
-
-    conn = remoteConnMap[remote_agent];   
-
-    while(!done){
-        uw->progress();
-        done = remoteConnMap[remote_agent].connected;   
-    }
-
-    hdr.op = CONN_CHECK;
-    //agent names should never be long enough to need RNDV
-    flags |= UCP_AM_SEND_FLAG_EAGER;
-
-    ret = uw->sendAm(conn.ep, CONN_CHECK, 
-                     &hdr, sizeof(struct nixl_ucx_am_hdr), 
-                     (void*) localAgent.data(), localAgent.size(),
-                     flags, req);
-    
-    if(ret != 0) {
-        //TODO: error
-        return -1;
-    }
-
-    //wait for AM to send
-    while(ret == 0){
-        ret = uw->test(req);
-    }
-
-    //wait for remote agent to complete handshake
-    while(!done){ 
-        uw->progress();
-        done = remoteConnMap[remote_agent].connected;
-    }
-    
     return 0;
 }
 
