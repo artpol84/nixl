@@ -1,4 +1,5 @@
 import nixl_bindings as nixl
+import nixl_utils
 
 def test_desc():
 
@@ -64,8 +65,8 @@ def test_agent():
     ucx2 = agent2.createBackend(init2)
 
     size = 256
-    addr1 = nixl.malloc_passthru(size)
-    addr2 = nixl.malloc_passthru(size)
+    addr1 = nixl_utils.malloc_passthru(size)
+    addr2 = nixl_utils.malloc_passthru(size)
 
     buff1 = nixl.nixlBasicDesc(addr1, size, 0)
     buff2 = nixl.nixlBasicDesc(addr2, size, 0)
@@ -73,7 +74,7 @@ def test_agent():
     print(buff1.m_addr)
     print(buff2.m_addr)
 
-    nixl.ba_buf(addr1, size)
+    nixl_utils.ba_buf(addr1, size)
 
     reg_list1 = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
     reg_list1.addDesc(buff1)
@@ -95,10 +96,10 @@ def test_agent():
     print("Agent2 MD: ")
     print(meta2)
 
-    ret = agent1.loadRemoteMD(meta2)
-    assert ret == 0
-    ret = agent2.loadRemoteMD(meta1)
-    assert ret == 0
+    ret_name = agent1.loadRemoteMD(meta2)
+    assert ret_name == name2
+    ret_name = agent2.loadRemoteMD(meta1)
+    assert ret_name == name1
 
     offset = 8
     req_size = 8
@@ -114,7 +115,10 @@ def test_agent():
 
     print("Transfer from " + str(addr1 + offset) + " to " + str(addr2 + offset))
 
-    handle = agent1.createXferReq(src_list, dst_list, name2, "", 0);
+    noti_str = "n\0tification"
+    print(noti_str)
+
+    handle = agent1.createXferReq(src_list, dst_list, name2, noti_str, nixl.NIXL_WR_NOTIF);
     assert handle != None
 
     ret = agent1.postXferReq(handle)
@@ -123,11 +127,21 @@ def test_agent():
     print("Transfer posted")
 
     status = 0
-    while status != nixl.NIXL_XFER_DONE:
-        status = agent1.getXferStatus(handle)
+    notifMap = {}
+
+    while status != nixl.NIXL_XFER_DONE or len(notifMap) == 0:
+        if status != nixl.NIXL_XFER_DONE:
+            status = agent1.getXferStatus(handle)
+
+        if len(notifMap) == 0:
+            notifMap = agent2.getNotifs(notifMap)
+
         assert status != nixl.NIXL_XFER_ERR
     
-    nixl.verify_transfer(addr1 + offset, addr2 + offset, req_size)
+    nixl_utils.verify_transfer(addr1 + offset, addr2 + offset, req_size)
+    assert len(notifMap[name1]) == 1
+    print(notifMap[name1][0])
+    assert notifMap[name1][0] == noti_str
 
     print("Transfer verified")
 
@@ -142,8 +156,8 @@ def test_agent():
     agent1.invalidateRemoteMD(name2)
     agent2.invalidateRemoteMD(name1)
 
-    nixl.free_passthru(addr1)
-    nixl.free_passthru(addr2)
+    nixl_utils.free_passthru(addr1)
+    nixl_utils.free_passthru(addr2)
 
 test_desc()
 test_list()

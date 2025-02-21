@@ -38,11 +38,11 @@ PYBIND11_MODULE(nixl_bindings, m) {
 
     py::enum_<xfer_op_t>(m, "xfer_op")
         .value("NIXL_READ", NIXL_READ)
-        .value("NIXL_READ", NIXL_RD_FLUSH)
-        .value("NIXL_READ", NIXL_RD_NOTIF)
+        .value("NIXL_RD_FLUSH", NIXL_RD_FLUSH)
+        .value("NIXL_RD_NOTIF", NIXL_RD_NOTIF)
         .value("NIXL_WRITE", NIXL_WRITE)
-        .value("NIXL_WRITE", NIXL_WR_FLUSH)
-        .value("NIXL_WRITE", NIXL_WR_NOTIF)
+        .value("NIXL_WR_FLUSH", NIXL_WR_FLUSH)
+        .value("NIXL_WR_NOTIF", NIXL_WR_NOTIF)
         .export_values();
 
 
@@ -121,8 +121,25 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("getXferStatus", [](nixlAgent &agent, uintptr_t reqh) -> xfer_state_t { 
                     return agent.getXferStatus((nixlXferReqH*) reqh);
                 })
-        //TODO: add support for getNotifs/genNotif once we test in C++
-        .def("getNotifs", &nixlAgent::getNotifs)
+        //unlike the C++ API, this returns the notif_map instead of number of new notifs
+        //.def("getNotifs", [](nixlAgent &agent, notif_map_t notif_map) -> notif_map_t {
+        .def("getNotifs", [](nixlAgent &agent, notif_map_t notif_map) -> notif_map_t {
+                    int n_new  = agent.getNotifs(notif_map);
+                    if (n_new == 0) return notif_map;
+
+                    notif_map_t ret_map;
+                    for (const auto& pair : notif_map) {
+                        std::vector<std::string> agent_notifs;
+
+                        for(const auto& str : pair.second)  {
+                            agent_notifs.push_back(py::bytes(str));
+                        }
+
+                        ret_map[pair.first] = agent_notifs;
+                    }
+                    return ret_map;
+                })
+        //TODO: add support for genNotif when implemented
         .def("genNotif", &nixlAgent::genNotif)
         .def("getLocalMD", [](nixlAgent &agent) {
                     //python can only interpret text strings
