@@ -33,6 +33,7 @@ RUN apt-get update -y && apt-get -y install curl \
                                             libprotobuf-dev \
                                             protobuf-compiler-grpc \
                                             pybind11-dev \
+                                            python3-pip \
                                             etcd-server \
                                             net-tools \
                                             pciutils \
@@ -49,6 +50,9 @@ RUN wget ${NSYS_URL}${NSYS_PKG} && dpkg -i $NSYS_PKG && rm $NSYS_PKG
 RUN apt-get install -y linux-tools-common linux-tools-generic ethtool iproute2
 RUN apt-get install -y dkms linux-headers-generic
 RUN apt-get install -y meson ninja-build uuid-dev gdb
+
+RUN pip3 install --upgrade meson
+RUN pip3 install ninja pybind11
 
 RUN cd /usr/local/src && \
     curl -fSsL "https://content.mellanox.com/ofed/MLNX_OFED-${MOFED_VERSION}/MLNX_OFED_LINUX-${MOFED_VERSION}-ubuntu20.04-x86_64.tgz" -o mofed.tgz && \
@@ -122,17 +126,10 @@ ENV PKG_CONFIG_PATH=/usr/local/ompi/lib/pkgconfig:$PKG_CONFIG_PATH
 ARG USERNAME
 ARG PASSWORD
 
-RUN git clone https://${USERNAME}:${PASSWORD}@gitlab-master.nvidia.com/adv-dev-team/nixl.git && cd nixl && git checkout e6fddd95184ea6a5bdc9169429c749b80ec033f7
-RUN cd nixl && mkdir build && meson setup build/ --prefix=/usr/local/nixl && cd build/ && ninja && ninja install && \
+RUN git clone https://${USERNAME}:${PASSWORD}@gitlab-master.nvidia.com/adv-dev-team/nixl.git
+RUN cd nixl && rm -rf .git && mkdir build && meson setup build/ --prefix=/usr/local/nixl && cd build/ && ninja && ninja install && \
      mkdir -p /usr/local/nixl/include/internal && cp ../include/*.h /usr/local/nixl/include && cp ../include/internal/*.h /usr/local/nixl/include/internal && cp ../include/internal/*.h /usr/local/nixl/include/  && cp ../src/utils/serdes/serdes.h /usr/local/nixl/include
 
 RUN ls -l /usr/local/nixl/
 RUN ls -l /usr/local/nixl/include/
 RUN ls -l /usr/local/nixl/include/internal/
-
-RUN git clone https://${USERNAME}:${PASSWORD}@gitlab-master.nvidia.com/adv-dev-team/nixlbench.git
-RUN cd nixlbench && git checkout benchmark_compilation && mkdir build && ls /usr/local/ && meson setup build/ -Dnixl_path='/usr/local/nixl' -Dmpi_inc_path='/usr/local/ompi/include' -Dmpi_lib_path='/usr/local/ompi/lib' && cd build/ && ninja
-
-WORKDIR /workspace
-RUN git clone https://github.com/linux-rdma/perftest.git
-RUN cd perftest && git pull && ./autogen.sh && ./configure CUDA_H_PATH=/usr/local/cuda/include/cuda.h && make -j
