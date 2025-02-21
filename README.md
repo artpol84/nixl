@@ -10,18 +10,18 @@ NIXL is an abstraction library to abstract memory of heterogeneous devices, i.e.
 # Prerequisites
 ### Packages ###
 ```
-Ubuntu: sudo apt install build-essential meson ninja-build cmake uuid-dev pkg-config
-Fedora: sudo dnf install gcc-c++ meson ninja-build cmake uuid-dev pkg-config
+Ubuntu: sudo apt install build-essential cmake pkg-config
+Fedora: sudo dnf install gcc-c++ cmake pkg-config
 ```
 
-### pybind ###
+### Python ###
 ```
-pip3 install pybind11
+pip3 install meson ninja pybind11
 ```
 
 ### UCX install ###
 
-UCX version 1.17.0 was used for nixl backend testing. This is available from the latest
+UCX version 1.18.0 was used for nixl backend testing. This is available from the latest
 tarball download
 
 ```
