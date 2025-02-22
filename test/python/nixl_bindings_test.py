@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import nixl_bindings as nixl
 import nixl_utils
 import pickle
