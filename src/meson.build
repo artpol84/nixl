@@ -17,4 +17,5 @@ nixl_lib_rb = library('nixl',
               dependencies: [ucx_backend_interface, serdes_interface],
               install: true)
 
+subdir('adapter')
 subdir('pybind')
