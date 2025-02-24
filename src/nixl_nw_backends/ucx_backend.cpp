@@ -1,5 +1,6 @@
 #include "ucx_backend.h"
 #include "serdes.h"
+#include <cassert>
 
 /****************************************
  * UCX request management
@@ -692,3 +693,26 @@ int nixlUcxEngine::getNotifs(notif_list_t &notif_list)
     return notif_list.size();
 }
 
+int nixlUcxEngine::genNotif(const std::string &remote_agent, const std::string &msg)
+{
+    xfer_state_t ret;
+    nixlUcxReq req;
+
+    ret = notifSendPriv(remote_agent, msg, req);
+
+    switch(ret) {
+    case NIXL_XFER_PROC:
+        /* do not track the request */
+        uw->reqRelease(req);
+    case NIXL_XFER_DONE:
+        break;
+    case NIXL_XFER_ERR:
+        // TODO output the error cause
+        return -1;
+    default:
+        /* Should not happen */
+        assert(0);
+        return -1;        
+    }
+    return 0;
+}

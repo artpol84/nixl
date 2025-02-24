@@ -207,8 +207,8 @@ int main()
 
     xfer_op_t ops[] = {  NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF };
 
-    for (size_t i = 0; i < sizeof(ops)/sizeof(ops[i]); i++){
-        cout << op2string(ops[i]) << " test (" << iter << ") iterations" <<endl;
+    for (size_t i = 0; i < sizeof(ops)/sizeof(ops[i]); i++) {
+        cout << endl << op2string(ops[i]) << " test (" << iter << ") iterations" <<endl;
         for(int k = 0; k < iter; k++ ) {
             /* Init data */
             memset(addr1, 0xbb, len);
@@ -218,6 +218,32 @@ int main()
             performTransfer(ucx1, ucx2, req_src_descs, req_dst_descs,
                             addr1, addr2, len, ops[i]);
         }
+    }
+
+    cout << endl << "Test genNotif operation" << endl;
+
+    for(int k = 0; k < iter; k++) {
+        std::string test_str("test");
+        std::string tgt_agent("Agent2");
+        notif_list_t target_notifs;
+
+        cout << "\t gnNotif to Agent2" <<endl;
+
+        ucx1->genNotif(tgt_agent, test_str);
+
+        cout << "\t\tChecking notification flow: " << flush;
+        ret2 = 0;
+
+        while(ret2 == 0){
+            ret2 = ucx2->getNotifs(target_notifs);
+        }
+
+        assert(ret2 == 1);
+
+        assert(target_notifs.front().first == "Agent1");
+        assert(target_notifs.front().second == test_str);
+
+        cout << "OK" << endl;
     }
 
     // At the end we deregister the memories, by agent knowing all the registered regions
@@ -234,8 +260,4 @@ int main()
     
     // Test one-sided disconnect (initiator only)
     ucx1->disconnect(agent2);
-
-    // let disconnect process
-    ucx1->progress();
-    ucx2->progress();
 }

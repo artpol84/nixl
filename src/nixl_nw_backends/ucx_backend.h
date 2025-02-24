@@ -199,11 +199,7 @@ class nixlUcxEngine : nixlBackendEngine {
         int progress();
 
         int getNotifs(notif_list_t &notif_list);
-
-        int genNotif(const std::string &remote_agent, const std::string &msg) {
-            // TODO: Implement after progress thread is implemented
-            return -1;
-        }
+        int genNotif(const std::string &remote_agent, const std::string &msg);
 
         //public function for UCX worker to mark connections as connected
         int checkConn(const std::string &remote_agent);
