@@ -14,8 +14,8 @@ class nixlXferReqH {
         std::string                 remoteAgent;
         std::string                 notifMsg;
 
-        xfer_op_t                   backendOp;
-        xfer_state_t                state;
+        nixl_op_t                   backendOp;
+        nixl_state_t                state;
 
         inline nixlXferReqH() {}
         inline ~nixlXferReqH() {

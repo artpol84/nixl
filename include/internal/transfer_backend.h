@@ -4,6 +4,7 @@
 #include <mutex>
 #include <string>
 #include "nixl_descriptors.h"
+#include "nixl_types.h"
 
 // Might be removed to be decided by backend, or changed to high
 // level direction or so.
@@ -18,7 +19,7 @@ class nixlBackendInitParams {
     public:
         std::string localAgent;
 
-        virtual backend_type_t getType() const = 0;
+        virtual nixl_backend_t getType() const = 0;
 
         virtual ~nixlBackendInitParams() = default;
 };
@@ -32,7 +33,7 @@ public:
 // Main goal of BackendMetadata class is to have a common pointer type
 // for different backend metadata
 // Not sure get/set for serializer/deserializer is necessary
-// We can add backend_type and memory_type, but can't see use case
+// We can add nixl_backend and memory_type, but can't see use case
 class nixlBackendMD {
     bool privateMetadata = true;
 
@@ -129,7 +130,7 @@ class nixlStringDesc : public nixlBasicDesc {
 // Base backend engine class for different backend implementaitons
 class nixlBackendEngine {
     private:
-        backend_type_t backendType;
+        nixl_backend_t backendType;
 
     protected:
         std::string    localAgent;
@@ -139,8 +140,7 @@ class nixlBackendEngine {
             this->backendType = init_params->getType();
             this->localAgent  = init_params->localAgent;
         }
-
-        backend_type_t getType () const { return backendType; }
+        nixl_backend_t getType () const { return backendType; }
 
         // Can add checks for being public metadata
         std::string getPublicData (const nixlBackendMD* meta) const {
@@ -155,7 +155,7 @@ class nixlBackendEngine {
 
         // Register and deregister local memory
         virtual int registerMem (const nixlBasicDesc &mem,
-                                 const mem_type_t &mem_type,
+                                 const nixl_mem_t &nixl_mem,
                                  nixlBackendMD* &out) = 0;
         virtual void deregisterMem (nixlBackendMD* meta) = 0;
 
@@ -175,7 +175,7 @@ class nixlBackendEngine {
 
         // Add and remove remtoe metadata
         virtual int loadRemoteMD (const nixlStringDesc &input,
-                                  const mem_type_t &mem_type,
+                                  const nixl_mem_t &nixl_mem,
                                   const std::string &remote_agent,
                                   nixlBackendMD* &output) = 0;
 
@@ -184,22 +184,18 @@ class nixlBackendEngine {
         // Posting a request, which returns populates the async handle.
         // Returns the status of transfer, among NIXL_XFER_PROC/DONE/ERR.
         // Empty notif_msg means no notification, or can be ignored if supportsNotif is false.
-        virtual xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
+        virtual nixl_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
                                        const nixlDescList<nixlMetaDesc> &remote,
-                                       const xfer_op_t &operation,
+                                       const nixl_op_t &operation,
                                        const std::string &remote_agent,
                                        const std::string &notif_msg,
                                        nixlBackendReqH* &handle) = 0;
 
         // Use a handle to progress backend engine and see if a transfer is completed or not
-        virtual xfer_state_t checkXfer(nixlBackendReqH* handle) = 0;
+        virtual nixl_state_t checkXfer(nixlBackendReqH* handle) = 0;
 
         //Backend aborts the transfer if necessary, and destructs the relevant objects
         virtual void releaseReqH(nixlBackendReqH* handle) = 0;
-
-        // Force backend engine worker to progress.
-        // Listening for connections should be handled in this method as well.
-        virtual int progress() { return 0; }
 
         // Populate an empty received notif list. Elements are released within backend then.
         virtual int getNotifs(notif_list_t &notif_list) { return -1; }
@@ -210,7 +206,9 @@ class nixlBackendEngine {
             return -1;
         }
 
-        // TODO: make agent a friend, and all the methods to be protected.
+        // Force backend engine worker to progress.
+        // TODO: remove
+        virtual int progress() { return 0; }
 };
 
 #endif

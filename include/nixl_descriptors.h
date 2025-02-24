@@ -7,16 +7,7 @@
 #include <string>
 #include <algorithm>
 #include "serdes.h"
-
-typedef enum {UCX, GPUDIRECTIO, NVMe, NVMeoF} backend_type_t;
-typedef enum {DRAM_SEG, VRAM_SEG, BLK_SEG, FILE_SEG} mem_type_t;
-
-typedef enum {NIXL_XFER_PRE, NIXL_XFER_INIT, NIXL_XFER_PROC,
-              NIXL_XFER_DONE, NIXL_XFER_ERR} xfer_state_t;
-typedef enum {NIXL_READ,  NIXL_RD_FLUSH, NIXL_RD_NOTIF,
-              NIXL_WRITE, NIXL_WR_FLUSH, NIXL_WR_NOTIF} xfer_op_t;
-
-// TODO: add ERROR names
+#include "nixl_types.h"
 
 // A basic descriptor class, contiguous in memory, with some supporting methods
 class nixlBasicDesc {
@@ -47,19 +38,19 @@ class nixlBasicDesc {
 template<class T>
 class nixlDescList {
     private:
-        mem_type_t     type;
+        nixl_mem_t     type;
         bool           unifiedAddr;
         bool           sorted;
         std::vector<T> descs;
 
     public:
-        nixlDescList(mem_type_t type, bool unifiedAddr=true, bool sorted=false);
+        nixlDescList(nixl_mem_t type, bool unifiedAddr=true, bool sorted=false);
         nixlDescList(nixlSerDes* deserializer);
         nixlDescList(const nixlDescList<T> &d_list) = default;
         nixlDescList& operator=(const nixlDescList<T> &d_list) = default;
         ~nixlDescList () = default;
 
-        inline mem_type_t getType() const { return type; }
+        inline nixl_mem_t getType() const { return type; }
         inline bool isUnifiedAddr() const { return unifiedAddr; }
         inline int descCount() const { return descs.size(); }
         inline bool isEmpty() const { return (descs.size()==0); }

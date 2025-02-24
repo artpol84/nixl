@@ -60,7 +60,7 @@ void nixlUcxEngine::startProgressThread()
 
 void nixlUcxEngine::stopProgressThread()
 {
-    pthr_stop = 0;
+    pthr_stop = 1;
     pthr.join();
 }
 
@@ -95,7 +95,6 @@ nixlUcxEngine::~nixlUcxEngine () {
     delete uw;
     delete uc;
 }
-
 
 /****************************************
  * Connection management
@@ -197,7 +196,7 @@ int nixlUcxEngine::connect(const std::string &remote_agent) {
     struct nixl_ucx_am_hdr hdr;
     nixlUcxConnection conn;
     uint32_t flags = 0;
-    xfer_state_t ret;
+    nixl_state_t ret;
     nixlUcxReq req;
 
     auto search = remoteConnMap.find(remote_agent);
@@ -236,7 +235,7 @@ int nixlUcxEngine::disconnect(const std::string &remote_agent) {
     static struct nixl_ucx_am_hdr hdr;
     nixlUcxConnection conn;
     uint32_t flags = 0;
-    xfer_state_t ret;
+    nixl_state_t ret;
     nixlUcxReq req;
 
     auto search = remoteConnMap.find(remote_agent);
@@ -298,9 +297,8 @@ int nixlUcxEngine::loadRemoteConnInfo (const std::string &remote_agent,
 /****************************************
  * Memory management
 *****************************************/
-
 int nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
-                                const mem_type_t &mem_type,
+                                const nixl_mem_t &nixl_mem,
                                 nixlBackendMD* &out)
 {
     int ret;
@@ -308,7 +306,7 @@ int nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
     uint64_t rkey_addr;
     size_t rkey_size;
 
-    // TODO: Add mem_type check?
+    // TODO: Add nixl_mem check?
     ret = uw->memReg((void*) mem.addr, mem.len, priv->mem);
     if (ret) {
         // TODO: err out
@@ -337,7 +335,7 @@ void nixlUcxEngine::deregisterMem (nixlBackendMD* meta)
 
 // To be cleaned up
 int nixlUcxEngine::loadRemoteMD (const nixlStringDesc &input,
-                                 const mem_type_t &mem_type,
+                                 const nixl_mem_t &nixl_mem,
                                  const std::string &remote_agent,
                                  nixlBackendMD* &output) {
     size_t size = input.metadata.size();
@@ -382,7 +380,7 @@ int nixlUcxEngine::removeRemoteMD (nixlBackendMD* input) {
  * Data movement
 *****************************************/
 
-int nixlUcxEngine::retHelper(xfer_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req)
+int nixlUcxEngine::retHelper(nixl_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req)
 {
     /* if transfer wasn't immediately completed */
     switch(ret) {
@@ -402,9 +400,9 @@ int nixlUcxEngine::retHelper(xfer_state_t ret, nixlUcxBckndReq *head, nixlUcxReq
     return 0;
 }
 
-xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
+nixl_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
                                       const nixlDescList<nixlMetaDesc> &remote,
-                                      const xfer_op_t &op,
+                                      const nixl_op_t &op,
                                       const std::string &remote_agent,
                                       const std::string &notif_msg,
                                       nixlBackendReqH* &handle)
@@ -412,7 +410,7 @@ xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
     size_t lcnt = local.descCount();
     size_t rcnt = remote.descCount();
     size_t i;
-    xfer_state_t ret;
+    nixl_state_t ret;
     nixlUcxBckndReq dummy, *head = new (&dummy) nixlUcxBckndReq;
     nixlUcxPrivateMetadata *lmd;
     nixlUcxPublicMetadata *rmd;
@@ -483,11 +481,11 @@ xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
     return (NULL ==  head->next()) ? NIXL_XFER_DONE : NIXL_XFER_PROC;
 }
 
-xfer_state_t nixlUcxEngine::checkXfer (nixlBackendReqH* handle)
+nixl_state_t nixlUcxEngine::checkXfer (nixlBackendReqH* handle)
 {
     nixlUcxBckndReq *head = (nixlUcxBckndReq *)handle;
     nixlUcxBckndReq *req = head;
-    xfer_state_t out_ret = NIXL_XFER_DONE;
+    nixl_state_t out_ret = NIXL_XFER_DONE;
 
     /* If transfer has returned DONE - no check transfer */
     if (NULL == head) {
@@ -497,7 +495,7 @@ xfer_state_t nixlUcxEngine::checkXfer (nixlBackendReqH* handle)
 
     /* Go over all request updating their status */
     while(req) {
-        xfer_state_t ret;
+        nixl_state_t ret;
         if (!req->is_complete()) {
             ret = uw->test((nixlUcxReq)req);
             switch (ret) {
@@ -571,7 +569,7 @@ int nixlUcxEngine::progress() {
 *****************************************/
 
 //agent will provide cached msg
-xfer_state_t
+nixl_state_t
 nixlUcxEngine::notifSendPriv(const std::string &remote_agent,
                              const std::string &msg, nixlUcxReq &req)
 {
@@ -581,7 +579,7 @@ nixlUcxEngine::notifSendPriv(const std::string &remote_agent,
     // TODO - temp fix, need to have an mpool
     static struct nixl_ucx_am_hdr hdr;
     uint32_t flags = 0;
-    xfer_state_t ret;
+    nixl_state_t ret;
 
     auto search = remoteConnMap.find(remote_agent);
 
@@ -695,7 +693,7 @@ int nixlUcxEngine::getNotifs(notif_list_t &notif_list)
 
 int nixlUcxEngine::genNotif(const std::string &remote_agent, const std::string &msg)
 {
-    xfer_state_t ret;
+    nixl_state_t ret;
     nixlUcxReq req;
 
     ret = notifSendPriv(remote_agent, msg, req);

@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 #include "internal/transfer_backend.h"
+#include "nixl_types.h"
 
 // class nixlSysTopology {
 //     // TBD if needed
@@ -23,7 +24,7 @@ class nixlDeviceMD {
 // For now UCX autodetects devices, later might add hints.
 class nixlUcxInitParams : public nixlBackendInitParams {
     public:
-        inline backend_type_t getType() const { return UCX; }
+        inline nixl_backend_t getType() const { return UCX; }
 };
 
 #endif

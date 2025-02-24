@@ -94,11 +94,11 @@ int main()
     ret1 = A1.createXferReq(req_src_descs, req_dst_descs, agent2, "notification", NIXL_WR_NOTIF, req_handle);
     assert(ret1 == 0);
 
-    xfer_state_t status = A1.postXferReq(req_handle);
+    nixl_state_t status = A1.postXferReq(req_handle);
 
     std::cout << "Transfer was posted\n";
 
-    notif_map_t notif_map;
+    nixl_notifs_t notif_map;
     ret2 = 0;
 
     while(status != NIXL_XFER_DONE || ret2 == 0) {

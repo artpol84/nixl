@@ -40,7 +40,7 @@ static void nixlUcxRequestInit(void *request)
     req->initialized = 1;
 }
 
-void completeRequest(nixlUcxWorker w[2], std::string op, bool is_flush, xfer_state_t ret,  nixlUcxReq &req)
+void completeRequest(nixlUcxWorker w[2], std::string op, bool is_flush, nixl_state_t ret,  nixlUcxReq &req)
 {
     assert( ret == NIXL_XFER_DONE || ret == NIXL_XFER_PROC);
     if (ret == NIXL_XFER_DONE) {
@@ -84,7 +84,7 @@ int main()
     nixlUcxReq req;
     uint8_t *buffer[2];
     uint8_t *chk_buffer;
-    xfer_state_t ret;
+    nixl_state_t ret;
     size_t buf_size = 128 * 1024 * 1024; /* Use large buffer to ensure non-inline transfer */
     size_t i;
 

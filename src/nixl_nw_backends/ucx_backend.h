@@ -153,7 +153,7 @@ class nixlUcxEngine : nixlBackendEngine {
                                       size_t header_length, void *data,
                                       size_t length,
                                       const ucp_am_recv_param_t *param);
-        xfer_state_t notifSendPriv(const std::string &remote_agent,
+        nixl_state_t notifSendPriv(const std::string &remote_agent,
                                    const std::string &msg, nixlUcxReq &req);
         void notifProgress();
         void notifCombineHelper(notif_list_t &src, notif_list_t &tgt);
@@ -161,7 +161,8 @@ class nixlUcxEngine : nixlBackendEngine {
 
 
         // Data transfer (priv)
-        int retHelper(xfer_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req);
+        int retHelper(nixl_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req);
+
     public:
         nixlUcxEngine(const nixlUcxInitParams* init_params);
         ~nixlUcxEngine();
@@ -176,24 +177,24 @@ class nixlUcxEngine : nixlBackendEngine {
         int disconnect(const std::string &remote_agent);
 
         int registerMem (const nixlBasicDesc &mem,
-                         const mem_type_t &mem_type,
+                         const nixl_mem_t &nixl_mem,
                          nixlBackendMD* &out);
         void deregisterMem (nixlBackendMD* meta);
 
         int loadRemoteMD (const nixlStringDesc &input,
-                          const mem_type_t &mem_type,
+                          const nixl_mem_t &nixl_mem,
                           const std::string &remote_agent,
                           nixlBackendMD* &output);
         int removeRemoteMD (nixlBackendMD* input);
 
         // Data transfer
-        xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
+        nixl_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
                                const nixlDescList<nixlMetaDesc> &remote,
-                               const xfer_op_t &op,
+                               const nixl_op_t &op,
                                const std::string &remote_agent,
                                const std::string &notif_msg,
                                nixlBackendReqH* &handle);
-        xfer_state_t checkXfer (nixlBackendReqH* handle);
+        nixl_state_t checkXfer (nixlBackendReqH* handle);
         void releaseReqH(nixlBackendReqH* handle);
 
         int progress();

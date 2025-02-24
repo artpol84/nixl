@@ -5,7 +5,7 @@
 
 using namespace std;
 
-static string op2string(xfer_op_t op)
+static string op2string(nixl_op_t op)
 {
     switch(op) {
         case NIXL_READ:
@@ -29,10 +29,10 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
                      nixlDescList<nixlMetaDesc> &req_src_descs,
                      nixlDescList<nixlMetaDesc> &req_dst_descs,
                      void* addr1, void* addr2, size_t len, 
-                     xfer_op_t op)
+                     nixl_op_t op)
 {
     int ret2;
-    xfer_state_t ret3;
+    nixl_state_t ret3;
     nixlBackendReqH* handle;
 
     std::string test_str("test");
@@ -205,7 +205,7 @@ int main()
         req_dst_descs.addDesc(req_dst);
     }
 
-    xfer_op_t ops[] = {  NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF };
+    nixl_op_t ops[] = {  NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF };
 
     for (size_t i = 0; i < sizeof(ops)/sizeof(ops[i]); i++) {
         cout << endl << op2string(ops[i]) << " test (" << iter << ") iterations" <<endl;

@@ -34,14 +34,14 @@ nixlAgent::~nixlAgent() {
 
 nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
     nixlBackendEngine* backend;
-    backend_type_t backend_type = params->getType();
+    nixl_backend_t nixl_backend = params->getType();
 
     // Registring same type of backend is not supported, unlikey and prob error
-    if (data.nixlBackendEngines.count(backend_type)!=0)
+    if (data.nixlBackendEngines.count(nixl_backend)!=0)
         return nullptr;
 
     params->localAgent = data.name;
-    switch (backend_type) { // For supported backends
+    switch (nixl_backend) { // For supported backends
         case UCX:
             backend = (nixlBackendEngine*) new nixlUcxEngine(
                                                (nixlUcxInitParams*) params);
@@ -51,10 +51,10 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
     }
 
     if (backend!=nullptr) { // Success
-        backend_type = backend->getType(); // For safety, should be redundant
-        data.nixlBackendEngines[backend_type] = backend;
+        nixl_backend = backend->getType(); // For safety, should be redundant
+        data.nixlBackendEngines[nixl_backend] = backend;
         data.memorySection.addBackendHandler(backend);
-        data.connMD[backend_type] = backend->getConnInfo();
+        data.connMD[nixl_backend] = backend->getConnInfo();
     }
     return backend;
 }
@@ -102,7 +102,7 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
                              const nixlDescList<nixlBasicDesc> &remote_descs,
                              const std::string &remote_agent,
                              const std::string &notif_msg,
-                             const xfer_op_t &operation,
+                             const nixl_op_t &operation,
                              nixlXferReqH* &req_handle) {
 
     // Check the correspondence between descriptor lists
@@ -169,7 +169,7 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
 
     req_handle = handle;
 
-    // TODO: Add bookkeeping of xferRequests per target agent
+    // TODO: Add bookkeeping of nixlRequests per target agent
     return 0;
 }
 
@@ -179,7 +179,7 @@ void nixlAgent::invalidateXferReq(nixlXferReqH *req) {
     delete req;
 }
 
-xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
+nixl_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
     if (req==nullptr)
         return NIXL_XFER_ERR;
     // TODO: add NIXL_XFER_PRE handling after metadata server is added
@@ -200,7 +200,7 @@ xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
                                    req->backendHandle));
 }
 
-xfer_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
+nixl_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
     // TODO: add NIXL_XFER_PRE handling after metadata server is added
 
     // If the state is done, no need to recheck.
@@ -227,7 +227,7 @@ int nixlAgent::genNotif(const std::string &remote_agent,
     return -1;
 }
 
-int nixlAgent::getNotifs(notif_map_t &notif_map) {
+int nixlAgent::getNotifs(nixl_notifs_t &notif_map) {
     notif_list_t backend_list;
     int ret, bad_ret=0, tot=0;
     bool any_backend = false;
@@ -267,7 +267,7 @@ int nixlAgent::getNotifs(notif_map_t &notif_map) {
 std::string nixlAgent::getLocalMD () const {
     // data.connMD was populated when the backend was created
     size_t conn_cnt = data.connMD.size();
-    backend_type_t backend_type;
+    nixl_backend_t nixl_backend;
 
     if (conn_cnt == 0) // Error
         return "";
@@ -280,8 +280,8 @@ std::string nixlAgent::getLocalMD () const {
         return "";
 
     for (auto &c : data.connMD) {
-        backend_type = c.first;
-        if (sd.addBuf("t", &backend_type, sizeof(backend_type)))
+        nixl_backend = c.first;
+        if (sd.addBuf("t", &nixl_backend, sizeof(nixl_backend)))
             return "";
         if (sd.addStr("c", c.second)<0)
             return "";
@@ -301,7 +301,7 @@ std::string nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
     nixlSerDes sd;
     size_t conn_cnt;
     std::string conn_info;
-    backend_type_t backend_type;
+    nixl_backend_t nixl_backend;
 
     if (sd.importStr(remote_metadata)<0)
         return "";
@@ -317,27 +317,27 @@ std::string nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
         return "";
 
     for (size_t i=0; i<conn_cnt; ++i) {
-        if (sd.getBuf("t", &backend_type, sizeof(backend_type)))
+        if (sd.getBuf("t", &nixl_backend, sizeof(nixl_backend)))
             return "";
         conn_info = sd.getStr("c");
         if (conn_info.size()==0) // Fine if doing marginal updates
             return "";
 
         // Current agent might not support a remote backend
-        if (data.nixlBackendEngines.count(backend_type)!=0) {
+        if (data.nixlBackendEngines.count(nixl_backend)!=0) {
 
             // No need to reload the same conn info, maybe TODO to improve
             if (data.remoteBackends.count(remote_agent)!=0)
-                if (data.remoteBackends[remote_agent].count(backend_type)!=0) {
+                if (data.remoteBackends[remote_agent].count(nixl_backend)!=0) {
                     count++;
                     continue;
                 }
 
-            if (data.nixlBackendEngines[backend_type]->
+            if (data.nixlBackendEngines[nixl_backend]->
                     loadRemoteConnInfo(remote_agent, conn_info)<0)
                 return ""; // Error in load
             count++;
-            data.remoteBackends[remote_agent].insert(backend_type);
+            data.remoteBackends[remote_agent].insert(nixl_backend);
         }
     }
 

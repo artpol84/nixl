@@ -12,7 +12,7 @@ int nixlAdapter::initialize(const char *role, const char *backend)
     if (std::string(backend) == "UCX")
         ucx = agent->createBackend(&params);
     else
-	    return -1;
+        return -1;
 
     return 0;
 
@@ -22,8 +22,8 @@ uintptr_t nixlAdapter::allocateManagedBuffer(size_t length)
 {
     char* buffer = (char *)calloc(1, length);
     if (!buffer) {
-	std::cerr << "Error allocating buffer\n";
-	return -1;
+        std::cerr << "Error allocating buffer\n";
+        return -1;
     }
 
     buffer_alloc_list.insert(buffer);
@@ -40,27 +40,27 @@ int nixlAdapter::freeManagedBuffer(uintptr_t buffer)
 }
 
 int nixlAdapter::writeBytesToBuffer(uintptr_t dst_address,
-                                        char *src_ptr, size_t length)
+                                    char *src_ptr, size_t length)
 {
     memcpy((void *)dst_address, (void *)src_ptr, length);
     return 0;
 }
 
 pybind11::bytes nixlAdapter::readBytesFromBuffer(uintptr_t src,
-						     size_t length)
+                                                 size_t length)
 {
     return pybind11::bytes(
            static_cast<const char *>(reinterpret_cast<void *>(src)), length);
 }
 
 pybind11::bytes nixlAdapter::registerMemory(uintptr_t buffer_addr,
-						size_t len,
-                                                const char *type_name)
+                                            size_t len,
+                                            const char *type_name)
 {
-    nixlBasicDesc		desc_buf;
-    mem_type_t			type;
-    std::string			str_desc;
-    nixlSerDes			sd_obj;
+    nixlBasicDesc       desc_buf;
+    nixl_mem_t          type;
+    std::string         str_desc;
+    nixlSerDes          sd_obj;
 
     desc_buf.addr  = buffer_addr;
     desc_buf.len   = len;
@@ -94,11 +94,11 @@ int nixlAdapter::deregisterMemory(pybind11::bytes desc_list_blob)
 }
 
 int nixlAdapter::transferAndSync(pybind11::bytes src_desc_bytes,
-                                     pybind11::bytes target_desc_bytes,
-                                     const std::string target_name,
-                                     const std::string op)
+                                 pybind11::bytes target_desc_bytes,
+                                 const std::string target_name,
+                                 const std::string op)
 {
-    xfer_op_t			operation;
+    nixl_op_t                   operation;
     int                         ret = 0;
     nixlSerDes                  src_sd, tgt_sd;
     nixlXferReqH                *treq;
@@ -114,19 +114,19 @@ int nixlAdapter::transferAndSync(pybind11::bytes src_desc_bytes,
     nixlDescList<nixlBasicDesc> target_descs(&tgt_sd);
 
     if (op == "READ")
-	operation = NIXL_READ;
+        operation = NIXL_READ;
     else
         operation = NIXL_WRITE;
 
     ret = agent->createXferReq(src_descs, target_descs, target_name, "",
-			       operation, treq);
+                   operation, treq);
     if (ret != 0) {
         std::cerr << "Error creating transfer request for adapter\n";
     }
     ret = agent->postXferReq(treq);
     if (ret == NIXL_XFER_ERR) {
         std::cerr << "Error Posting request for adapter\n";
-	return NIXL_XFER_ERR;
+    return NIXL_XFER_ERR;
     }
 
     while (status != NIXL_XFER_DONE) {
@@ -147,9 +147,9 @@ int nixlAdapter::loadNixlMD(pybind11::bytes remote_md_bytes)
 {
     std::string remoteMD = static_cast<std::string>(remote_md_bytes);
     if (agent->loadRemoteMD(remoteMD) == "")
-	    return -1;
+        return -1;
     else
-	    return 0;
+        return 0;
 }
 
 int nixlAdapter::remoteProgress()

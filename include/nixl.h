@@ -2,13 +2,12 @@
 #ifndef _NIXL_H
 #define _NIXL_H
 
+#include "nixl_types.h"
 #include "nixl_descriptors.h"
 #include "nixl_params.h"
 #include "internal/transfer_backend.h"
 #include "internal/metadata_handler.h"
 #include "internal/transfer_request.h"
-
-typedef std::map<std::string, std::vector<std::string>> notif_map_t;
 
 // Main transfer object
 class nixlAgent {
@@ -43,14 +42,14 @@ class nixlAgent {
                            const nixlDescList<nixlBasicDesc> &remote_descs,
                            const std::string &remote_agent,
                            const std::string &notif_msg,
-                           const xfer_op_t &operation,
+                           const nixl_op_t &operation,
                            nixlXferReqH* &req_handle);
 
         // Submit a transfer request, which populates the req async handler.
-        xfer_state_t postXferReq (nixlXferReqH* req);
+        nixl_state_t postXferReq (nixlXferReqH* req);
 
         // Check the status of transfer requests
-        xfer_state_t getXferStatus (nixlXferReqH* req);
+        nixl_state_t getXferStatus (nixlXferReqH* req);
 
         // Invalidate transfer request if we no longer need it.
         // Will abort a running transfer.
@@ -62,7 +61,7 @@ class nixlAgent {
         // Add entries to the passed received notifications list (can be
         // non-empty), and return number of added entries, or -1 if there was
         // an error. Elements are released within the Agent after this call.
-        int getNotifs (notif_map_t &notif_map);
+        int getNotifs (nixl_notifs_t &notif_map);
 
         // Generate a notification, not bound to a transfer, e.g., for control.
         // Can be used after the remote metadata is exchanged. Will be received

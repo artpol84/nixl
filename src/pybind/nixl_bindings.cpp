@@ -14,21 +14,21 @@ PYBIND11_MODULE(nixl_bindings, m) {
     m.doc() = "pybind11 NIXL plugin: Implements NIXL desciptors and lists, soon Agent API as well";
 
     //cast types
-    py::enum_<backend_type_t>(m, "backend_type")
+    py::enum_<nixl_backend_t>(m, "nixl_backend_t")
         .value("UCX", UCX)
         .value("GPUDIRECTIO", GPUDIRECTIO)
         .value("NVMe", NVMe)
         .value("NVMeoF", NVMeoF)
         .export_values();
 
-    py::enum_<mem_type_t>(m, "mem_type")
+    py::enum_<nixl_mem_t>(m, "nixl_mem_t")
         .value("DRAM_SEG", DRAM_SEG)
         .value("VRAM_SEG", VRAM_SEG)
         .value("BLK_SEG", BLK_SEG)
         .value("FILE_SEG", FILE_SEG)
         .export_values();
 
-    py::enum_<xfer_state_t>(m, "xfer_state")
+    py::enum_<nixl_state_t>(m, "nixl_state_t")
         .value("NIXL_XFER_PRE", NIXL_XFER_PRE)
         .value("NIXL_XFER_INIT", NIXL_XFER_INIT)
         .value("NIXL_XFER_PROC", NIXL_XFER_PROC)
@@ -36,7 +36,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .value("NIXL_XFER_ERR", NIXL_XFER_ERR)
         .export_values();
 
-    py::enum_<xfer_op_t>(m, "xfer_op")
+    py::enum_<nixl_op_t>(m, "nixl_op_t")
         .value("NIXL_READ", NIXL_READ)
         .value("NIXL_RD_FLUSH", NIXL_RD_FLUSH)
         .value("NIXL_RD_NOTIF", NIXL_RD_NOTIF)
@@ -59,7 +59,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("print", &nixlBasicDesc::print);
 
     py::class_<nixlDescList<nixlBasicDesc>>(m, "nixlDescList")
-        .def(py::init<mem_type_t, bool, bool>())
+        .def(py::init<nixl_mem_t, bool, bool>())
         .def("getType", &nixlDescList<nixlBasicDesc>::getType)
         .def("isUnifiedAddr", &nixlDescList<nixlBasicDesc>::isUnifiedAddr)
         .def("descCount", &nixlDescList<nixlBasicDesc>::descCount)
@@ -121,7 +121,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
                                  const nixlDescList<nixlBasicDesc> &remote_descs,
                                  const std::string &remote_agent,
                                  const std::string &notif_msg, 
-                                 const xfer_op_t &operation) -> uintptr_t {
+                                 const nixl_op_t &operation) -> uintptr_t {
                     nixlXferReqH* handle;
                     int ret = agent.createXferReq(local_descs, remote_descs, remote_agent, notif_msg, operation, handle);
                     if(ret == -1) return (uintptr_t) nullptr;
@@ -130,19 +130,19 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("invalidateXferReq", [](nixlAgent &agent, uintptr_t reqh) -> void {
                     agent.invalidateXferReq((nixlXferReqH*) reqh);
                 })
-        .def("postXferReq", [](nixlAgent &agent, uintptr_t reqh) -> xfer_state_t {
+        .def("postXferReq", [](nixlAgent &agent, uintptr_t reqh) -> nixl_state_t {
                     return agent.postXferReq((nixlXferReqH*) reqh);
                 })
-        .def("getXferStatus", [](nixlAgent &agent, uintptr_t reqh) -> xfer_state_t { 
+        .def("getXferStatus", [](nixlAgent &agent, uintptr_t reqh) -> nixl_state_t {
                     return agent.getXferStatus((nixlXferReqH*) reqh);
                 })
         //unlike the C++ API, this returns the notif_map instead of number of new notifs
         //.def("getNotifs", [](nixlAgent &agent, notif_map_t notif_map) -> notif_map_t {
-        .def("getNotifs", [](nixlAgent &agent, notif_map_t notif_map) -> notif_map_t {
+        .def("getNotifs", [](nixlAgent &agent, nixl_notifs_t notif_map) -> nixl_notifs_t {
                     int n_new  = agent.getNotifs(notif_map);
                     if (n_new == 0) return notif_map;
 
-                    notif_map_t ret_map;
+                    nixl_notifs_t ret_map;
                     for (const auto& pair : notif_map) {
                         std::vector<std::string> agent_notifs;
 
