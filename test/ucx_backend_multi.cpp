@@ -13,7 +13,7 @@ void test_thread(int id)
 {
     nixlUcxInitParams init_params;
     nixlBackendEngine* ucxw;
-    nixl_err_t ret;
+    nixl_status_t ret;
     
     std::string my_name("Agent1");
     std::string other("Agent2");

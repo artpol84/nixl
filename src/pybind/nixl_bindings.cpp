@@ -28,7 +28,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .value("FILE_SEG", FILE_SEG)
         .export_values();
 
-    py::enum_<nixl_state_t>(m, "nixl_state_t")
+    py::enum_<nixl_xfer_state_t>(m, "nixl_xfer_state_t")
         .value("NIXL_XFER_PRE", NIXL_XFER_PRE)
         .value("NIXL_XFER_INIT", NIXL_XFER_INIT)
         .value("NIXL_XFER_PROC", NIXL_XFER_PROC)
@@ -36,7 +36,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .value("NIXL_XFER_ERR", NIXL_XFER_ERR)
         .export_values();
 
-    py::enum_<nixl_op_t>(m, "nixl_op_t")
+    py::enum_<nixl_xfer_op_t>(m, "nixl_xfer_op_t")
         .value("NIXL_READ", NIXL_READ)
         .value("NIXL_RD_FLUSH", NIXL_RD_FLUSH)
         .value("NIXL_RD_NOTIF", NIXL_RD_NOTIF)
@@ -45,7 +45,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .value("NIXL_WR_NOTIF", NIXL_WR_NOTIF)
         .export_values();
 
-    py::enum_<nixl_err_t>(m, "nixl_err_t")
+    py::enum_<nixl_status_t>(m, "nixl_status_t")
         .value("NIXL_SUCCESS", NIXL_SUCCESS)
         .value("NIXL_ERR_INVALID_PARAM", NIXL_ERR_INVALID_PARAM)
         .value("NIXL_ERR_BACKEND", NIXL_ERR_BACKEND)
@@ -82,7 +82,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def(py::pickle(
             [](const nixlDescList<nixlBasicDesc>& self) { // __getstate__
                 nixlSerDes serdes;
-                nixl_err_t ret = self.serialize(&serdes);
+                nixl_status_t ret = self.serialize(&serdes);
                 assert(ret == NIXL_SUCCESS);
                 return py::bytes(serdes.exportStr());
             },
@@ -116,10 +116,10 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("createBackend", [](nixlAgent &agent, nixlUcxInitParams initParams) -> void* {
                     return (void*) agent.createBackend(&initParams);
             })
-        .def("registerMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> nixl_err_t {
+        .def("registerMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> nixl_status_t {
                     return agent.registerMem(descs, (nixlBackendEngine*) backend);
                 })
-        .def("deregisterMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> nixl_err_t {
+        .def("deregisterMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> nixl_status_t {
                     return agent.deregisterMem(descs, (nixlBackendEngine*) backend);
                 })
         .def("makeConnection", &nixlAgent::makeConnection)
@@ -129,19 +129,19 @@ PYBIND11_MODULE(nixl_bindings, m) {
                                  const nixlDescList<nixlBasicDesc> &remote_descs,
                                  const std::string &remote_agent,
                                  const std::string &notif_msg,
-                                 const nixl_op_t &operation) -> uintptr_t {
+                                 const nixl_xfer_op_t &operation) -> uintptr_t {
                     nixlXferReqH* handle;
-                    nixl_err_t ret = agent.createXferReq(local_descs, remote_descs, remote_agent, notif_msg, operation, handle);
+                    nixl_status_t ret = agent.createXferReq(local_descs, remote_descs, remote_agent, notif_msg, operation, handle);
                     if(ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
                     else return (uintptr_t) handle;
                 })
         .def("invalidateXferReq", [](nixlAgent &agent, uintptr_t reqh) -> void {
                     agent.invalidateXferReq((nixlXferReqH*) reqh);
                 })
-        .def("postXferReq", [](nixlAgent &agent, uintptr_t reqh) -> nixl_state_t {
+        .def("postXferReq", [](nixlAgent &agent, uintptr_t reqh) -> nixl_xfer_state_t {
                     return agent.postXferReq((nixlXferReqH*) reqh);
                 })
-        .def("getXferStatus", [](nixlAgent &agent, uintptr_t reqh) -> nixl_state_t {
+        .def("getXferStatus", [](nixlAgent &agent, uintptr_t reqh) -> nixl_xfer_state_t {
                     return agent.getXferStatus((nixlXferReqH*) reqh);
                 })
         //unlike the C++ API, this returns the notif_map instead of number of new notifs

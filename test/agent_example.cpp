@@ -6,7 +6,7 @@
 
 int main()
 {
-    nixl_err_t ret1, ret2;
+    nixl_status_t ret1, ret2;
     std::string ret_s1, ret_s2;
 
     // Example: assuming two agents running on the same machine,
@@ -94,7 +94,7 @@ int main()
     ret1 = A1.createXferReq(req_src_descs, req_dst_descs, agent2, "notification", NIXL_WR_NOTIF, req_handle);
     assert(ret1 == NIXL_SUCCESS);
 
-    nixl_state_t status = A1.postXferReq(req_handle);
+    nixl_xfer_state_t status = A1.postXferReq(req_handle);
 
     std::cout << "Transfer was posted\n";
 

@@ -58,7 +58,7 @@ void sendToInitiator(const char *ip, int port, std::string data) {
 
 int main(int argc, char *argv[]) {
     int                     initiator_port;
-    nixl_err_t              ret = NIXL_SUCCESS;
+    nixl_status_t           ret = NIXL_SUCCESS;
     void                    *addr[NUM_TRANSFERS];
     std::string             role;
     const char              *initiator_ip;

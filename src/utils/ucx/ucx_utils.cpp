@@ -328,10 +328,10 @@ int nixlUcxWorker::regAmCallback(unsigned msg_id, ucp_am_recv_callback_t cb, voi
     return 0;
 }
 
-nixl_state_t nixlUcxWorker::sendAm(nixlUcxEp &ep, unsigned msg_id,
-                                   void* hdr, size_t hdr_len,
-                                   void* buffer, size_t len,
-                                   uint32_t flags, nixlUcxReq &req)
+nixl_xfer_state_t nixlUcxWorker::sendAm(nixlUcxEp &ep, unsigned msg_id,
+                                        void* hdr, size_t hdr_len,
+                                        void* buffer, size_t len,
+                                        uint32_t flags, nixlUcxReq &req)
 {
     ucs_status_ptr_t request;
     ucp_request_param_t param = {0};
@@ -377,10 +377,10 @@ int nixlUcxWorker::progress()
     return ucp_worker_progress(worker);
 }
 
-nixl_state_t nixlUcxWorker::read(nixlUcxEp &ep,
-            uint64_t raddr, nixlUcxRkey &rk,
-            void *laddr, nixlUcxMem &mem,
-            size_t size, nixlUcxReq &req)
+nixl_xfer_state_t nixlUcxWorker::read(nixlUcxEp &ep,
+                                      uint64_t raddr, nixlUcxRkey &rk,
+                                      void *laddr, nixlUcxMem &mem,
+                                      size_t size, nixlUcxReq &req)
 {
     ucs_status_ptr_t request;
 
@@ -402,10 +402,10 @@ nixl_state_t nixlUcxWorker::read(nixlUcxEp &ep,
     return NIXL_XFER_PROC;
 }
 
-nixl_state_t nixlUcxWorker::write(nixlUcxEp &ep,
-        void *laddr, nixlUcxMem &mem,
-        uint64_t raddr, nixlUcxRkey &rk,
-        size_t size, nixlUcxReq &req)
+nixl_xfer_state_t nixlUcxWorker::write(nixlUcxEp &ep,
+                                       void *laddr, nixlUcxMem &mem,
+                                       uint64_t raddr, nixlUcxRkey &rk,
+                                       size_t size, nixlUcxReq &req)
 {
     ucs_status_ptr_t request;
 
@@ -427,7 +427,7 @@ nixl_state_t nixlUcxWorker::write(nixlUcxEp &ep,
     return NIXL_XFER_PROC;
 }
 
-nixl_state_t nixlUcxWorker::test(nixlUcxReq req)
+nixl_xfer_state_t nixlUcxWorker::test(nixlUcxReq req)
 {
     ucs_status_t status;
 
@@ -449,7 +449,7 @@ nixl_state_t nixlUcxWorker::test(nixlUcxReq req)
     }
 }
 
-nixl_state_t nixlUcxWorker::flushEp(nixlUcxEp &ep, nixlUcxReq &req)
+nixl_xfer_state_t nixlUcxWorker::flushEp(nixlUcxEp &ep, nixlUcxReq &req)
 {
     ucp_request_param_t param;
     ucs_status_ptr_t request;

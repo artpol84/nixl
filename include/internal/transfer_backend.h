@@ -154,9 +154,9 @@ class nixlBackendEngine {
         virtual ~nixlBackendEngine () = default;
 
         // Register and deregister local memory
-        virtual nixl_err_t registerMem (const nixlBasicDesc &mem,
-                                 const nixl_mem_t &nixl_mem,
-                                 nixlBackendMD* &out) = 0;
+        virtual nixl_status_t registerMem (const nixlBasicDesc &mem,
+                                           const nixl_mem_t &nixl_mem,
+                                           nixlBackendMD* &out) = 0;
         virtual void deregisterMem (nixlBackendMD* meta) = 0;
 
         // If we use an external connection manager, the next 3 methods might change
@@ -165,45 +165,45 @@ class nixlBackendEngine {
 
         // Deserialize from string the connection info for a remote node
         // The generated data should be deleted in nixlBackendEngine destructor
-        virtual nixl_err_t loadRemoteConnInfo (const std::string &remote_agent,
-                                        const std::string &remote_conn_info) = 0;
+        virtual nixl_status_t loadRemoteConnInfo (const std::string &remote_agent,
+                                                  const std::string &remote_conn_info) = 0;
 
         // Make connection to a remote node identified by the name into loaded conn infos
         // Child might just return 0, if making proactive connections are not necessary.
-        virtual nixl_err_t connect(const std::string &remote_agent) = 0;
-        virtual nixl_err_t disconnect(const std::string &remote_agent) = 0;
+        virtual nixl_status_t connect(const std::string &remote_agent) = 0;
+        virtual nixl_status_t disconnect(const std::string &remote_agent) = 0;
 
         // Add and remove remtoe metadata
-        virtual nixl_err_t loadRemoteMD (const nixlStringDesc &input,
-                                  const nixl_mem_t &nixl_mem,
-                                  const std::string &remote_agent,
-                                  nixlBackendMD* &output) = 0;
+        virtual nixl_status_t loadRemoteMD (const nixlStringDesc &input,
+                                            const nixl_mem_t &nixl_mem,
+                                            const std::string &remote_agent,
+                                            nixlBackendMD* &output) = 0;
 
-        virtual nixl_err_t removeRemoteMD (nixlBackendMD* input) = 0;
+        virtual nixl_status_t removeRemoteMD (nixlBackendMD* input) = 0;
 
         // Posting a request, which returns populates the async handle.
         // Returns the status of transfer, among NIXL_XFER_PROC/DONE/ERR.
         // Empty notif_msg means no notification, or can be ignored if supportsNotif is false.
-        virtual nixl_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
-                                       const nixlDescList<nixlMetaDesc> &remote,
-                                       const nixl_op_t &operation,
-                                       const std::string &remote_agent,
-                                       const std::string &notif_msg,
-                                       nixlBackendReqH* &handle) = 0;
+        virtual nixl_xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
+                                            const nixlDescList<nixlMetaDesc> &remote,
+                                            const nixl_xfer_op_t &operation,
+                                            const std::string &remote_agent,
+                                            const std::string &notif_msg,
+                                            nixlBackendReqH* &handle) = 0;
 
         // Use a handle to progress backend engine and see if a transfer is completed or not
-        virtual nixl_state_t checkXfer(nixlBackendReqH* handle) = 0;
+        virtual nixl_xfer_state_t checkXfer(nixlBackendReqH* handle) = 0;
 
         //Backend aborts the transfer if necessary, and destructs the relevant objects
         virtual void releaseReqH(nixlBackendReqH* handle) = 0;
 
         // Populate an empty received notif list. Elements are released within backend then.
-        virtual int getNotifs(notif_list_t &notif_list) { return -1; }
+        virtual int getNotifs(notif_list_t &notif_list) { return NIXL_ERR_BACKEND; }
 
         // Generates a standalone notification, not bound to a transfer.
         // Used for extra sync or ctrl msgs.
-        virtual nixl_err_t genNotif(const std::string &remote_agent, const std::string &msg) {
-            return NIXL_ERR_NYI;
+        virtual nixl_status_t genNotif(const std::string &remote_agent, const std::string &msg) {
+            return NIXL_ERR_BACKEND;
         }
 
         // Force backend engine worker to progress.

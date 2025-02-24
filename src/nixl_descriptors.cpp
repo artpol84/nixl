@@ -165,7 +165,7 @@ bool descAddrCompare (const nixlBasicDesc &a, const nixlBasicDesc &b,
 // not in an accending order, so vector is used for descs instead of map,
 // and during insertion we guarantee that.
 template <class T>
-nixl_err_t nixlDescList<T>::addDesc (const T &desc) {
+nixl_status_t nixlDescList<T>::addDesc (const T &desc) {
     if (desc.len == 0) // Error indicator
         return NIXL_ERR_INVALID_PARAM;
 
@@ -191,7 +191,7 @@ nixl_err_t nixlDescList<T>::addDesc (const T &desc) {
 }
 
 template <class T>
-nixl_err_t nixlDescList<T>::remDesc (int index){
+nixl_status_t nixlDescList<T>::remDesc (int index){
     if (((size_t) index >= descs.size()) || (index < 0))
         return NIXL_ERR_INVALID_PARAM;
     descs.erase(descs.begin() + index);
@@ -199,7 +199,7 @@ nixl_err_t nixlDescList<T>::remDesc (int index){
 }
 
 template <class T>
-nixl_err_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &query,
+nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &query,
                                nixlDescList<T> &resp) const {
     // Populate only makes sense when there is extra metadata
     if(std::is_same<nixlBasicDesc, T>::value)
@@ -290,9 +290,9 @@ int nixlDescList<T>::getIndex(const nixlBasicDesc &query) const {
 }
 
 template <class T>
-nixl_err_t nixlDescList<T>::serialize(nixlSerDes* serializer) const {
+nixl_status_t nixlDescList<T>::serialize(nixlSerDes* serializer) const {
 
-    nixl_err_t ret;
+    nixl_status_t ret;
     size_t n_desc = descs.size();
 
     // nixlMetaDesc should be internall and not be serialized

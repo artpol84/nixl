@@ -153,15 +153,15 @@ class nixlUcxEngine : nixlBackendEngine {
                                       size_t header_length, void *data,
                                       size_t length,
                                       const ucp_am_recv_param_t *param);
-        nixl_state_t notifSendPriv(const std::string &remote_agent,
-                                   const std::string &msg, nixlUcxReq &req);
+        nixl_xfer_state_t notifSendPriv(const std::string &remote_agent,
+                                        const std::string &msg, nixlUcxReq &req);
         void notifProgress();
         void notifCombineHelper(notif_list_t &src, notif_list_t &tgt);
         void notifProgressCombineHelper(notif_list_t &src, notif_list_t &tgt);
 
 
         // Data transfer (priv)
-        nixl_err_t retHelper(nixl_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req);
+        nixl_status_t retHelper(nixl_xfer_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req);
 
     public:
         nixlUcxEngine(const nixlUcxInitParams* init_params);
@@ -171,40 +171,40 @@ class nixlUcxEngine : nixlBackendEngine {
 
         /* Object management */
         std::string getConnInfo() const;
-        nixl_err_t loadRemoteConnInfo (const std::string &remote_agent,
-                                       const std::string &remote_conn_info);
-        nixl_err_t connect(const std::string &remote_agent);
-        nixl_err_t disconnect(const std::string &remote_agent);
+        nixl_status_t loadRemoteConnInfo (const std::string &remote_agent,
+                                          const std::string &remote_conn_info);
+        nixl_status_t connect(const std::string &remote_agent);
+        nixl_status_t disconnect(const std::string &remote_agent);
 
-        nixl_err_t registerMem (const nixlBasicDesc &mem,
-                                const nixl_mem_t &nixl_mem,
-                                nixlBackendMD* &out);
+        nixl_status_t registerMem (const nixlBasicDesc &mem,
+                                   const nixl_mem_t &nixl_mem,
+                                   nixlBackendMD* &out);
         void deregisterMem (nixlBackendMD* meta);
 
-        nixl_err_t loadRemoteMD (const nixlStringDesc &input,
-                                 const nixl_mem_t &nixl_mem,
-                                 const std::string &remote_agent,
-                                 nixlBackendMD* &output);
-        nixl_err_t removeRemoteMD (nixlBackendMD* input);
+        nixl_status_t loadRemoteMD (const nixlStringDesc &input,
+                                    const nixl_mem_t &nixl_mem,
+                                    const std::string &remote_agent,
+                                    nixlBackendMD* &output);
+        nixl_status_t removeRemoteMD (nixlBackendMD* input);
 
         // Data transfer
-        nixl_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
-                               const nixlDescList<nixlMetaDesc> &remote,
-                               const nixl_op_t &op,
-                               const std::string &remote_agent,
-                               const std::string &notif_msg,
-                               nixlBackendReqH* &handle);
-        nixl_state_t checkXfer (nixlBackendReqH* handle);
+        nixl_xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
+                                    const nixlDescList<nixlMetaDesc> &remote,
+                                    const nixl_xfer_op_t &op,
+                                    const std::string &remote_agent,
+                                    const std::string &notif_msg,
+                                    nixlBackendReqH* &handle);
+        nixl_xfer_state_t checkXfer (nixlBackendReqH* handle);
         void releaseReqH(nixlBackendReqH* handle);
 
         int progress();
 
         int getNotifs(notif_list_t &notif_list);
-        nixl_err_t genNotif(const std::string &remote_agent, const std::string &msg);
+        nixl_status_t genNotif(const std::string &remote_agent, const std::string &msg);
 
         //public function for UCX worker to mark connections as connected
-        nixl_err_t checkConn(const std::string &remote_agent);
-        nixl_err_t endConn(const std::string &remote_agent);
+        nixl_status_t checkConn(const std::string &remote_agent);
+        nixl_status_t endConn(const std::string &remote_agent);
 };
 
 #endif

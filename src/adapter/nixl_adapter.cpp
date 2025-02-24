@@ -98,7 +98,7 @@ int nixlAdapter::transferAndSync(pybind11::bytes src_desc_bytes,
                                  const std::string target_name,
                                  const std::string op)
 {
-    nixl_op_t                   operation;
+    nixl_xfer_op_t              operation;
     int                         ret = 0;
     nixlSerDes                  src_sd, tgt_sd;
     nixlXferReqH                *treq;

@@ -19,17 +19,17 @@ public:
     nixlSerDes();
 
     /* Ser/Des for Strings */
-    nixl_err_t addStr(const std::string &tag, const std::string &str);
+    nixl_status_t addStr(const std::string &tag, const std::string &str);
     std::string getStr(const std::string &tag);
 
     /* Ser/Des for Byte buffers */
-    nixl_err_t addBuf(const std::string &tag, const void* buf, ssize_t len);
+    nixl_status_t addBuf(const std::string &tag, const void* buf, ssize_t len);
     ssize_t getBufLen(const std::string &tag) const;
-    nixl_err_t getBuf(const std::string &tag, void *buf, ssize_t len);
+    nixl_status_t getBuf(const std::string &tag, void *buf, ssize_t len);
 
     /* Ser/Des buffer management */
     std::string exportStr() const;
-    nixl_err_t importStr(const std::string &sdbuf);
+    nixl_status_t importStr(const std::string &sdbuf);
 
     static std::string _bytesToString(const void *buf, ssize_t size);
     static void _stringToBytes(void* fill_buf, const std::string &s, ssize_t size);
