@@ -121,15 +121,21 @@ class nixl_wrapper:
 
 
     def transfer(self, handle):
-        ret = self.agent.postXferReq(handle)
-        return handle
+        status = self.agent.postXferReq(handle)
+        if status==nixl.NIXL_XFER_ERR:
+            return "ERR"
+        elif (status!=status==nixl.NIXL_XFER_DONE):
+            return "PROC"
+        else:
+            return "DONE"
+        return status
 
 
     def check_xfer_state (self, handle):
         status = self.agent.getXferStatus(handle)
         if status==nixl.NIXL_XFER_ERR:
             return "ERR"
-        elif (status!=status==nixl.NIXL_XFER_DONE):
+        elif (status!=nixl.NIXL_XFER_DONE):
             return "PROC"
         else:
             return "DONE"
@@ -155,7 +161,7 @@ class nixl_wrapper:
 
     # Extra notification APIs
     def send_notif(self, remote_agent_name, notif_msg):
-        self.agent.genNotifs(remote_agent_name, notif_msg)
+        self.agent.genNotif(remote_agent_name, notif_msg)
 
 
     def get_notifs(self, agent):

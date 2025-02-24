@@ -36,8 +36,8 @@ if __name__ == "__main__":
         print("Creating transfer failed.")
         exit()
 
-    xfer_handle = nixl_agent2.transfer(xfer_handle)
-    assert (xfer_handle != None)
+    state = nixl_agent2.transfer(xfer_handle)
+    assert state != "ERR"
 
     target_done = False
     init_done = False
@@ -56,12 +56,9 @@ if __name__ == "__main__":
             if nixl_agent1.check_remote_xfer_done("initiator", "UUID"):
                 target_done = True
                 print ("Target done")
-            if nixl_agent2.check_remote_xfer_done("initiator", "UUID"):
-                target_done = True
-                print ("Target done")
 
-    nixl_agent2.remove_remote_agent("target")
     nixl_agent2.abort_xfer(xfer_handle)
+    nixl_agent2.remove_remote_agent("target")
     nixl_agent1.deregister_memory(agent1_descs)
     nixl_agent2.deregister_memory(agent2_descs)
 
