@@ -13,7 +13,7 @@ void test_thread(int id)
 {
     nixlUcxInitParams init_params;
     nixlBackendEngine* ucxw;
-    int ret;
+    nixl_err_t ret;
     
     std::string my_name("Agent1");
     std::string other("Agent2");
@@ -38,13 +38,13 @@ void test_thread(int id)
     while(!ready[!id]);
 
     ret = ucxw->loadRemoteConnInfo(other, conn_info[!id]);
-    assert(ret == 0);
+    assert(ret == NIXL_SUCCESS);
 
     //one-sided connect
     if(!id) 
         ret = ucxw->connect(other);
 
-    assert(ret == 0);
+    assert(ret == NIXL_SUCCESS);
 
     done[id] = true;
     while(!done[!id])

@@ -17,9 +17,13 @@ typedef enum {NIXL_READ,  NIXL_RD_FLUSH, NIXL_RD_NOTIF,
                   NIXL_WRITE, NIXL_WR_FLUSH, NIXL_WR_NOTIF} nixl_op_t;
 
 typedef enum {
+    NIXL_SUCCESS = 0,
     NIXL_ERR_INVALID_PARAM = -1,
     NIXL_ERR_BACKEND = -2,
-    NIXL_ERR_NOT_IMPLEMENTED = -3
+    NIXL_ERR_NOT_FOUND = -3,
+    NIXL_ERR_NYI = -4,
+    NIXL_ERR_MISMATCH = -5,
+    NIXL_ERR_BAD = -6
 } nixl_err_t;
 
 #endif

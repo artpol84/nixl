@@ -5,6 +5,8 @@
 #include <string>
 #include <cstdint>
 
+#include "nixl_types.h"
+
 class nixlSerDes {
 private:
     typedef enum { SERIALIZE, DESERIALIZE } ser_mode_t;
@@ -17,17 +19,17 @@ public:
     nixlSerDes();
 
     /* Ser/Des for Strings */
-    int addStr(const std::string &tag, const std::string &str);
+    nixl_err_t addStr(const std::string &tag, const std::string &str);
     std::string getStr(const std::string &tag);
 
     /* Ser/Des for Byte buffers */
-    int addBuf(const std::string &tag, const void* buf, ssize_t len);
+    nixl_err_t addBuf(const std::string &tag, const void* buf, ssize_t len);
     ssize_t getBufLen(const std::string &tag) const;
-    int getBuf(const std::string &tag, void *buf, ssize_t len);
+    nixl_err_t getBuf(const std::string &tag, void *buf, ssize_t len);
 
     /* Ser/Des buffer management */
     std::string exportStr() const;
-    int importStr(const std::string &sdbuf);
+    nixl_err_t importStr(const std::string &sdbuf);
 
     static std::string _bytesToString(const void *buf, ssize_t size);
     static void _stringToBytes(void* fill_buf, const std::string &s, ssize_t size);

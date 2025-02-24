@@ -58,7 +58,7 @@ void sendToInitiator(const char *ip, int port, std::string data) {
 
 int main(int argc, char *argv[]) {
     int                     initiator_port;
-    int                     ret = 0;
+    nixl_err_t              ret = NIXL_SUCCESS;
     void                    *addr[NUM_TRANSFERS];
     std::string             role;
     const char              *initiator_ip;
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
         dram_for_ucx.print();
 
         /** Serialize for MD transfer */
-        assert(dram_for_ucx.serialize(serdes) == 0);
+        assert(dram_for_ucx.serialize(serdes) == NIXL_SUCCESS);
 
         /** Sending both metadata strings together */
         str_desc                    = serdes->exportStr();
@@ -194,13 +194,13 @@ int main(int argc, char *argv[]) {
 
         ret = agent.createXferReq(dram_for_ucx, dram_target_ucx,
                                   "target", "", NIXL_WRITE, treq);
-        if (ret != 0) {
+        if (ret != NIXL_SUCCESS) {
             std::cerr << "Error creating transfer request\n";
             exit(-1);
         }
 
         std::cout << " Post the request with UCX backend\n ";
-        ret = agent.postXferReq(treq);
+        status = agent.postXferReq(treq);
         std::cout << " Initiator posted Data Path transfer\n";
         std::cout << " Waiting for completion\n";
 

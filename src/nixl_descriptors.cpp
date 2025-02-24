@@ -165,15 +165,15 @@ bool descAddrCompare (const nixlBasicDesc &a, const nixlBasicDesc &b,
 // not in an accending order, so vector is used for descs instead of map,
 // and during insertion we guarantee that.
 template <class T>
-int nixlDescList<T>::addDesc (const T &desc) {
+nixl_err_t nixlDescList<T>::addDesc (const T &desc) {
     if (desc.len == 0) // Error indicator
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
 
     if (!sorted) {
         for (auto & elm : descs) {
             // No overlap is allowed among descs of a list
             if (elm.overlaps(desc))
-                return -1;
+                return NIXL_ERR_INVALID_PARAM;
         }
         descs.push_back(desc);
     } else {
@@ -183,34 +183,34 @@ int nixlDescList<T>::addDesc (const T &desc) {
         if (itr == descs.end())
             descs.push_back(desc);
         else if ((*itr).overlaps(desc))
-            return -1;
+            return NIXL_ERR_INVALID_PARAM;
         else
             descs.insert(itr, desc);
     }
-    return 0;
+    return NIXL_SUCCESS;
 }
 
 template <class T>
-int nixlDescList<T>::remDesc (int index){
+nixl_err_t nixlDescList<T>::remDesc (int index){
     if (((size_t) index >= descs.size()) || (index < 0))
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
     descs.erase(descs.begin() + index);
-    return 0;
+    return NIXL_SUCCESS;
 }
 
 template <class T>
-int nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &query,
+nixl_err_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &query,
                                nixlDescList<T> &resp) const {
     // Populate only makes sense when there is extra metadata
     if(std::is_same<nixlBasicDesc, T>::value)
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
 
     if ((type != query.getType()) || (type != resp.getType()))
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
 
     if ((unifiedAddr != query.isUnifiedAddr()) ||
         (unifiedAddr != resp.isUnifiedAddr()))
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
 
     T new_elm;
     nixlBasicDesc *p = &new_elm;
@@ -229,10 +229,10 @@ int nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &query,
                 }
 
         if (query.descCount()==count) {
-            return 0;
+            return NIXL_SUCCESS;
         } else {
             resp.clear();
-            return -1;
+            return NIXL_ERR_BAD;
         }
     } else {
         for (auto & q : query) {
@@ -263,10 +263,10 @@ int nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &query,
                     last_found = itr - descs.begin();
             } else {
                 resp.clear();
-                return -1;
+                return NIXL_ERR_BAD;
             }
         }
-        return 0;
+        return NIXL_SUCCESS;
     }
 }
 
@@ -290,21 +290,22 @@ int nixlDescList<T>::getIndex(const nixlBasicDesc &query) const {
 }
 
 template <class T>
-int nixlDescList<T>::serialize(nixlSerDes* serializer) const {
+nixl_err_t nixlDescList<T>::serialize(nixlSerDes* serializer) const {
 
-    int ret;
+    nixl_err_t ret;
     size_t n_desc = descs.size();
 
     // nixlMetaDesc should be internall and not be serialized
     if(std::is_same<nixlMetaDesc, T>::value)
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
 
     if (std::is_same<nixlBasicDesc, T>::value)
         ret = serializer->addStr("nixlDList", "nixlBDList");
     else if (std::is_same<nixlStringDesc, T>::value)
         ret = serializer->addStr("nixlDList", "nixlSDList");
     else
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
+
     if (ret) return ret;
 
     ret = serializer->addBuf("t", &type, sizeof(type));
@@ -320,7 +321,7 @@ int nixlDescList<T>::serialize(nixlSerDes* serializer) const {
     if (ret) return ret;
 
     if (n_desc==0)
-        return 0; // Unusual, but supporting it
+        return NIXL_SUCCESS; // Unusual, but supporting it
 
     if (std::is_same<nixlBasicDesc, T>::value) {
         // Contiguous in memory, so no need for per elm serialization
@@ -335,7 +336,7 @@ int nixlDescList<T>::serialize(nixlSerDes* serializer) const {
         }
     }
 
-    return 0;
+    return NIXL_SUCCESS;
 }
 
 template <class T>

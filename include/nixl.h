@@ -25,20 +25,20 @@ class nixlAgent {
         // Instantiate BackendEngine objects, based on corresponding params
         nixlBackendEngine* createBackend (nixlBackendInitParams* params);
         // Register with the backend and populate memory_section
-        int registerMem (const nixlDescList<nixlBasicDesc> &descs,
+        nixl_err_t registerMem (const nixlDescList<nixlBasicDesc> &descs,
                          nixlBackendEngine* backend);
         // Deregister and remove from memory section
-        int deregisterMem (const nixlDescList<nixlBasicDesc> &descs,
+        nixl_err_t deregisterMem (const nixlDescList<nixlBasicDesc> &descs,
                            nixlBackendEngine* backend);
 
         // Make connection proactively, instead of at transfer time
-        int makeConnection (const std::string &remote_agent);
+        nixl_err_t makeConnection (const std::string &remote_agent);
 
 
         /*** Transfer Request Handling ***/
 
         // populates the transfer request. Empty notif_msg means no notification
-        int createXferReq (const nixlDescList<nixlBasicDesc> &local_descs,
+        nixl_err_t createXferReq (const nixlDescList<nixlBasicDesc> &local_descs,
                            const nixlDescList<nixlBasicDesc> &remote_descs,
                            const std::string &remote_agent,
                            const std::string &notif_msg,
@@ -66,7 +66,7 @@ class nixlAgent {
         // Generate a notification, not bound to a transfer, e.g., for control.
         // Can be used after the remote metadata is exchanged. Will be received
         // in notif list. Nixl will choose a backend if null is passed.
-        int genNotif (const std::string &remote_agent,
+        nixl_err_t genNotif (const std::string &remote_agent,
                       const std::string &msg,
                       nixlBackendEngine* backend = nullptr);
 
@@ -77,24 +77,24 @@ class nixlAgent {
         // The std::string used for serialized MD can have \0 values.
         std::string getLocalMD () const;
 
-        // Load other agent's metadata and unpack it internally.
+        // Load other agent's metadata and unpack it nixl_err_ternally.
         // Returns the found agent name in metadata, or "" in case of error.
         std::string loadRemoteMD (const std::string &remote_metadata);
 
         // Invalidate the remote section information cached locally
-        int invalidateRemoteMD (const std::string &remote_agent);
+        nixl_err_t invalidateRemoteMD (const std::string &remote_agent);
 
 
         /*** Metadata handling through central kv service, or for p2p test ***/
 
         // Send the local metadata to kv service to store it
-        int sendLocalMD () const;
+        nixl_err_t sendLocalMD () const;
 
         // Request for a remote Agent's metadata, used for proactive prefetch
-        int fetchRemoteMD (const std::string &remote_agent);
+        nixl_err_t fetchRemoteMD (const std::string &remote_agent);
 
         // Sends messages to kv service to invalidate this Agent's metadata
-        int invalidateLocalMD () const;
+        nixl_err_t invalidateLocalMD () const;
 };
 
 #endif

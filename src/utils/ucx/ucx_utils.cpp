@@ -8,7 +8,7 @@ using namespace std;
 
 
 nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
-                            size_t req_size, 
+                            size_t req_size,
                             nixlUcxContext::req_cb_t init_cb,
                             nixlUcxContext::req_cb_t fini_cb,
                             nixl_ucx_mt_t __mt_type)
@@ -320,11 +320,11 @@ int nixlUcxWorker::regAmCallback(unsigned msg_id, ucp_am_recv_callback_t cb, voi
 
     status = ucp_worker_set_am_recv_handler(worker, &params);
 
-    if(status != UCS_OK) 
+    if(status != UCS_OK)
     {
         //TODO: error handling
         return -1;
-    } 
+    }
     return 0;
 }
 
@@ -356,7 +356,7 @@ nixl_state_t nixlUcxWorker::sendAm(nixlUcxEp &ep, unsigned msg_id,
 int nixlUcxWorker::getRndvData(void* data_desc, void* buffer, size_t len, const ucp_request_param_t *param, nixlUcxReq &req)
 {
     ucs_status_ptr_t status;
-    
+
     status = ucp_am_recv_data_nbx(worker, data_desc, buffer, len, param);
     if(UCS_PTR_IS_ERR(status))
     {
@@ -456,7 +456,7 @@ nixl_state_t nixlUcxWorker::flushEp(nixlUcxEp &ep, nixlUcxReq &req)
 
     param.op_attr_mask = 0;
     request = ucp_ep_flush_nbx(ep.eph, &param);
-    
+
     if (request == NULL ) {
         return NIXL_XFER_DONE;
     } else if (UCS_PTR_IS_ERR(request)) {

@@ -45,6 +45,14 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .value("NIXL_WR_NOTIF", NIXL_WR_NOTIF)
         .export_values();
 
+    py::enum_<nixl_err_t>(m, "nixl_err_t")
+        .value("NIXL_SUCCESS", NIXL_SUCCESS)
+        .value("NIXL_ERR_INVALID_PARAM", NIXL_ERR_INVALID_PARAM)
+        .value("NIXL_ERR_BACKEND", NIXL_ERR_BACKEND)
+        .value("NIXL_ERR_NOT_FOUND", NIXL_ERR_NOT_FOUND)
+        .value("NIXL_ERR_NYI", NIXL_ERR_NYI)
+        .value("NIXL_ERR_BAD", NIXL_ERR_BAD)
+        .export_values();
 
     py::class_<nixlBasicDesc>(m, "nixlBasicDesc")
         .def(py::init<uintptr_t, size_t, uint32_t>())
@@ -74,14 +82,14 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def(py::pickle(
             [](const nixlDescList<nixlBasicDesc>& self) { // __getstate__
                 nixlSerDes serdes;
-                int ret = self.serialize(&serdes);
-                assert(ret == 0);
+                nixl_err_t ret = self.serialize(&serdes);
+                assert(ret == NIXL_SUCCESS);
                 return py::bytes(serdes.exportStr());
             },
             [](py::bytes serdes_str) { // __setstate__
                 nixlSerDes serdes;
                 serdes.importStr(std::string(serdes_str));
-                nixlDescList<nixlBasicDesc> newObj = 
+                nixlDescList<nixlBasicDesc> newObj =
                     nixlDescList<nixlBasicDesc>(&serdes);
                 return newObj;
             }
@@ -105,26 +113,26 @@ PYBIND11_MODULE(nixl_bindings, m) {
 
     py::class_<nixlAgent>(m, "nixlAgent")
         .def(py::init<std::string, nixlDeviceMD>())
-        .def("createBackend", [](nixlAgent &agent, nixlUcxInitParams initParams) -> void* {    
-                    return (void*) agent.createBackend(&initParams); 
+        .def("createBackend", [](nixlAgent &agent, nixlUcxInitParams initParams) -> void* {
+                    return (void*) agent.createBackend(&initParams);
             })
-        .def("registerMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> int {    
-                    return agent.registerMem(descs, (nixlBackendEngine*) backend); 
+        .def("registerMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> nixl_err_t {
+                    return agent.registerMem(descs, (nixlBackendEngine*) backend);
                 })
-        .def("deregisterMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> int {    
-                    return agent.deregisterMem(descs, (nixlBackendEngine*) backend); 
+        .def("deregisterMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> nixl_err_t {
+                    return agent.deregisterMem(descs, (nixlBackendEngine*) backend);
                 })
         .def("makeConnection", &nixlAgent::makeConnection)
         //note: slight API change, python cannot receive values by passing refs, so handle must be returned
-        .def("createXferReq", [](nixlAgent &agent, 
+        .def("createXferReq", [](nixlAgent &agent,
                                  const nixlDescList<nixlBasicDesc> &local_descs,
                                  const nixlDescList<nixlBasicDesc> &remote_descs,
                                  const std::string &remote_agent,
-                                 const std::string &notif_msg, 
+                                 const std::string &notif_msg,
                                  const nixl_op_t &operation) -> uintptr_t {
                     nixlXferReqH* handle;
-                    int ret = agent.createXferReq(local_descs, remote_descs, remote_agent, notif_msg, operation, handle);
-                    if(ret == -1) return (uintptr_t) nullptr;
+                    nixl_err_t ret = agent.createXferReq(local_descs, remote_descs, remote_agent, notif_msg, operation, handle);
+                    if(ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
                     else return (uintptr_t) handle;
                 })
         .def("invalidateXferReq", [](nixlAgent &agent, uintptr_t reqh) -> void {

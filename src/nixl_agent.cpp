@@ -59,12 +59,12 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
     return backend;
 }
 
-int nixlAgent::registerMem(const nixlDescList<nixlBasicDesc> &descs,
+nixl_err_t nixlAgent::registerMem(const nixlDescList<nixlBasicDesc> &descs,
                            nixlBackendEngine* backend) {
     return (data.memorySection.addDescList(descs, backend));
 }
 
-int nixlAgent::deregisterMem(const nixlDescList<nixlBasicDesc> &descs,
+nixl_err_t nixlAgent::deregisterMem(const nixlDescList<nixlBasicDesc> &descs,
                              nixlBackendEngine* backend) {
     // Might not need unified and sorted info
     nixlDescList<nixlMetaDesc> resp(descs.getType(),
@@ -74,13 +74,13 @@ int nixlAgent::deregisterMem(const nixlDescList<nixlBasicDesc> &descs,
     return (data.memorySection.remDescList(resp, backend));
 }
 
-int nixlAgent::makeConnection(const std::string &remote_agent) {
+nixl_err_t nixlAgent::makeConnection(const std::string &remote_agent) {
     nixlBackendEngine* eng;
-    int ret;
+    nixl_err_t ret;
     int count = 0;
 
     if (data.remoteBackends.count(remote_agent)==0)
-        return -1;
+        return NIXL_ERR_NOT_FOUND;
 
     // For now making all the possible connections, later might take hints
     for (auto & r_eng: data.remoteBackends[remote_agent]) {
@@ -94,11 +94,11 @@ int nixlAgent::makeConnection(const std::string &remote_agent) {
     }
 
     if (count == 0) // No common backend
-        return -1;
-    return 0;
+        return NIXL_ERR_BACKEND;
+    return NIXL_SUCCESS;
 }
 
-int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
+nixl_err_t nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
                              const nixlDescList<nixlBasicDesc> &remote_descs,
                              const std::string &remote_agent,
                              const std::string &notif_msg,
@@ -107,18 +107,18 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
 
     // Check the correspondence between descriptor lists
     if (local_descs.descCount() != remote_descs.descCount())
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
     for (int i=0; i<local_descs.descCount(); ++i)
         if (local_descs[i].len != remote_descs[i].len)
-            return -1;
+            return NIXL_ERR_INVALID_PARAM;
 
     if ((notif_msg.size()==0) &&
         ((operation==NIXL_WR_NOTIF) || (operation==NIXL_RD_NOTIF)))
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
 
-    int ret;
+    nixl_err_t ret;
     if (data.remoteSections.count(remote_agent)==0)
-        return -1;
+        return NIXL_ERR_NOT_FOUND;
     // TODO: when central KV is supported, add a call to fetchRemoteMD
 
     // TODO [Perf]: Avoid heap allocation on the datapath, maybe use a mem pool
@@ -139,12 +139,12 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
 
     if (handle->engine==nullptr) {
         delete handle;
-        return -1;
+        return NIXL_ERR_NOT_FOUND;
     }
 
     if ((notif_msg.size()!=0) && (!handle->engine->supportsNotif())) {
         delete handle;
-        return -1;
+        return NIXL_ERR_BACKEND;
     }
 
     handle->targetDescs = new nixlDescList<nixlMetaDesc> (
@@ -170,7 +170,7 @@ int nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
     req_handle = handle;
 
     // TODO: Add bookkeeping of nixlRequests per target agent
-    return 0;
+    return NIXL_SUCCESS;
 }
 
 void nixlAgent::invalidateXferReq(nixlXferReqH *req) {
@@ -210,7 +210,7 @@ nixl_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
     return req->state;
 }
 
-int nixlAgent::genNotif(const std::string &remote_agent,
+nixl_err_t nixlAgent::genNotif(const std::string &remote_agent,
                         const std::string &msg,
                         nixlBackendEngine* backend) {
     if (backend!=nullptr)
@@ -224,7 +224,7 @@ int nixlAgent::genNotif(const std::string &remote_agent,
                 return eng.second->genNotif(remote_agent, msg);
         }
     }
-    return -1;
+    return NIXL_ERR_NOT_FOUND;
 }
 
 int nixlAgent::getNotifs(nixl_notifs_t &notif_map) {
@@ -367,36 +367,36 @@ std::string nixlAgent::loadRemoteMD (const std::string &remote_metadata) {
     return remote_agent;
 }
 
-int nixlAgent::invalidateRemoteMD(const std::string &remote_agent) {
-    int ret = -1;
+nixl_err_t nixlAgent::invalidateRemoteMD(const std::string &remote_agent) {
+    nixl_err_t ret = NIXL_ERR_NOT_FOUND;
     if (data.remoteSections.count(remote_agent)!=0) {
         delete data.remoteSections[remote_agent];
         data.remoteSections.erase(remote_agent);
-        ret = 0;
+        ret = NIXL_SUCCESS;
     }
 
     if (data.remoteBackends.count(remote_agent)!=0) {
         for (auto & elm: data.remoteBackends[remote_agent])
             data.nixlBackendEngines[elm]->disconnect(remote_agent);
         data.remoteBackends.erase(remote_agent);
-        ret = 0;
+        ret = NIXL_SUCCESS;
     }
 
-    // TODO: Put the transfers belonging to this remote into ERR state
+    // TODO: Put the transfers belonging to this remote nixl_err_to ERR state
     return ret;
 }
 
-int nixlAgent::sendLocalMD() const {
+nixl_err_t nixlAgent::sendLocalMD() const {
     // TODO
-    return 0;
+    return NIXL_SUCCESS;
 }
 
-int nixlAgent::fetchRemoteMD (const std::string &remote_agent) {
+nixl_err_t nixlAgent::fetchRemoteMD (const std::string &remote_agent) {
     // TODO
-    return 0;
+    return NIXL_SUCCESS;
 }
 
-int nixlAgent::invalidateLocalMD() const {
+nixl_err_t nixlAgent::invalidateLocalMD() const {
     // TODO
-    return 0;
+    return NIXL_SUCCESS;
 }

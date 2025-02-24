@@ -6,7 +6,7 @@
 
 int main()
 {
-    int ret1, ret2;
+    nixl_err_t ret1, ret2;
     std::string ret_s1, ret_s2;
 
     // Example: assuming two agents running on the same machine,
@@ -28,8 +28,8 @@ int main()
     // ret1 = A1->makeConnection("Agent2", 0);
     // ret2 = A2->makeConnection("Agent1", 1);
 
-    // assert(ret1 == 0);
-    // assert(ret2 == 0);
+    // assert(ret1 == NIXL_SUCCESS);
+    // assert(ret2 == NIXL_SUCCESS);
 
     // User allocates memories, and passes the corresponding address
     // and length to register with the backend
@@ -59,8 +59,8 @@ int main()
     ret1 = A1.registerMem(dlist1, ucx1);
     ret2 = A2.registerMem(dlist2, ucx2);
 
-    assert(ret1 == 0);
-    assert(ret2 == 0);
+    assert(ret1 == NIXL_SUCCESS);
+    assert(ret2 == NIXL_SUCCESS);
 
     std::string meta1 = A1.getLocalMD();
     std::string meta2 = A2.getLocalMD();
@@ -90,22 +90,22 @@ int main()
 
     std::cout << "Transfer request from " << addr1 << " to " << addr2 << "\n";
     nixlXferReqH* req_handle;
-    
+
     ret1 = A1.createXferReq(req_src_descs, req_dst_descs, agent2, "notification", NIXL_WR_NOTIF, req_handle);
-    assert(ret1 == 0);
+    assert(ret1 == NIXL_SUCCESS);
 
     nixl_state_t status = A1.postXferReq(req_handle);
 
     std::cout << "Transfer was posted\n";
 
     nixl_notifs_t notif_map;
-    ret2 = 0;
+    int n_notifs = 0;
 
-    while(status != NIXL_XFER_DONE || ret2 == 0) {
+    while(status != NIXL_XFER_DONE || n_notifs == 0) {
         if(status != NIXL_XFER_DONE) status = A1.getXferStatus(req_handle);
-        if(ret2 == 0) ret2 = A2.getNotifs(notif_map);
+        if(n_notifs == 0) n_notifs = A2.getNotifs(notif_map);
         assert(status != NIXL_XFER_ERR);
-        assert(ret2 >= 0);
+        assert(n_notifs >= 0);
     }
 
     // Do some checks on the data.
@@ -126,4 +126,6 @@ int main()
     //only initiator should call invalidate
     A1.invalidateRemoteMD("Agent2");
     //A2.invalidateRemoteMD("Agent1");
+
+    std::cout << "Test done\n";
 }

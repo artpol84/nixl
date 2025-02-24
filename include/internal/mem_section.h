@@ -22,7 +22,7 @@ class nixlMemSection {
     public:
         nixlMemSection ();
 
-        int populate (const nixlDescList<nixlBasicDesc> &query,
+        nixl_err_t populate (const nixlDescList<nixlBasicDesc> &query,
                       const nixl_backend_t &nixl_backend,
                       nixlDescList<nixlMetaDesc> &resp) const;
 
@@ -35,13 +35,13 @@ class nixlLocalSection : public nixlMemSection {
                                const nixlBackendEngine* backend,
                                const nixlDescList<nixlMetaDesc> &d_list) const;
     public:
-        int addBackendHandler (nixlBackendEngine* backend);
+        nixl_err_t addBackendHandler (nixlBackendEngine* backend);
 
-        int addDescList (const nixlDescList<nixlBasicDesc> &mem_elms,
+        nixl_err_t addDescList (const nixlDescList<nixlBasicDesc> &mem_elms,
                          nixlBackendEngine* backend);
 
         // Each nixlBasicDesc should be same as original registration region
-        int remDescList (const nixlDescList<nixlMetaDesc> &mem_elms,
+        nixl_err_t remDescList (const nixlDescList<nixlMetaDesc> &mem_elms,
                          nixlBackendEngine* backend);
 
         // Find a nixlBasicDesc in the section, if available fills the resp based
@@ -51,7 +51,7 @@ class nixlLocalSection : public nixlMemSection {
                                const backend_set_t remote_backends,
                                nixlDescList<nixlMetaDesc> &resp) const;
 
-        int serialize(nixlSerDes* serializer) const;
+        nixl_err_t serialize(nixlSerDes* serializer) const;
 
         ~nixlLocalSection();
 };
@@ -60,13 +60,13 @@ class nixlRemoteSection : public nixlMemSection {
     private:
         std::string agentName;
 
-        int addDescList (const nixlDescList<nixlStringDesc> &mem_elms,
+        nixl_err_t addDescList (const nixlDescList<nixlStringDesc> &mem_elms,
                          nixlBackendEngine *backend);
     public:
         nixlRemoteSection (const std::string &agent_name,
              const std::map<nixl_backend_t, nixlBackendEngine*> engine_map);
 
-        int loadRemoteData (nixlSerDes* deserializer);
+        nixl_err_t loadRemoteData (nixlSerDes* deserializer);
 
         ~nixlRemoteSection();
 };

@@ -124,8 +124,8 @@ int main()
     ret1 = ucx1->loadRemoteConnInfo (agent2, conn_info2);
     ret2 = ucx2->loadRemoteConnInfo (agent1, conn_info1);
 
-    assert(ret1 == 0);
-    assert(ret2 == 0);
+    assert(ret1 == NIXL_SUCCESS);
+    assert(ret2 == NIXL_SUCCESS);
 
     std::cout << "Synchronous handshake complete\n";
 
@@ -155,8 +155,8 @@ int main()
     buff2.devId = 0;
     ret2 = ucx2->registerMem(buff2, DRAM_SEG, local_meta2);
 
-    assert(ret1 == 0);
-    assert(ret2 == 0);
+    assert(ret1 == NIXL_SUCCESS);
+    assert(ret2 == NIXL_SUCCESS);
 
     // Agent keeps a DescList<MetaDesc> for the local descriptors, not seen by the backend
 
@@ -182,8 +182,8 @@ int main()
     ret1 = ucx1->loadRemoteMD (ucx_dram_info2, DRAM_SEG, agent2, remote_meta1of2);
     ret2 = ucx2->loadRemoteMD (ucx_dram_info1, DRAM_SEG, agent1, remote_meta2of1);
 
-    assert(ret1 == 0);
-    assert(ret2 == 0);
+    assert(ret1 == NIXL_SUCCESS);
+    assert(ret2 == NIXL_SUCCESS);
 
     nixlDescList<nixlMetaDesc> req_src_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
@@ -256,8 +256,11 @@ int main()
     ucx2->removeRemoteMD (remote_meta2of1);
 
     // Agent will remove the local and remote sections that kept these descriptors,
-    // And destructors are called outmatically at the end
     
     // Test one-sided disconnect (initiator only)
     ucx1->disconnect(agent2);
+
+    // Test destructors
+    delete ucx1;
+    delete ucx2;
 }

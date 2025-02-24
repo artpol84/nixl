@@ -18,13 +18,13 @@ class nixlMetadataH {
         ~nixlMetadataH();
 
         /** Sync the local section with the metadata server */
-        int sendLocalMetadata(const std::string &local_md);
+        nixl_err_t sendLocalMetadata(const std::string &local_md);
 
         // Get a remote section from the metadata server
         std::string getRemoteMd(const std::string &remote_agent);
 
         // Invalidating the information in the metadata server
-        int removeLocalMetadata(const std::string &local_agent);
+        nixl_err_t removeLocalMetadata(const std::string &local_agent);
 };
 
 class nixlAgentData {

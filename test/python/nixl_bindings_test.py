@@ -94,10 +94,10 @@ def test_agent():
     reg_list2.addDesc(buff2)
 
     ret = agent1.registerMem(reg_list1, ucx1)
-    assert ret == 0
+    assert ret == nixl.NIXL_SUCCESS
 
     ret = agent2.registerMem(reg_list2, ucx2)
-    assert ret == 0
+    assert ret == nixl.NIXL_SUCCESS
 
     meta1 = agent1.getLocalMD()
     meta2 = agent2.getLocalMD()
@@ -159,10 +159,10 @@ def test_agent():
     agent1.invalidateXferReq(handle)
 
     ret = agent1.deregisterMem(reg_list1, ucx1)
-    assert ret == 0
+    assert ret == nixl.NIXL_SUCCESS
 
     ret = agent2.deregisterMem(reg_list2, ucx2)
-    assert ret == 0
+    assert ret == nixl.NIXL_SUCCESS
 
     #Only initiator should call invalidate
     agent1.invalidateRemoteMD(name2)

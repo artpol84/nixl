@@ -100,32 +100,32 @@ nixlUcxEngine::~nixlUcxEngine () {
  * Connection management
 *****************************************/
 
-int nixlUcxEngine::checkConn(const std::string &remote_agent) {
-    if(remoteConnMap.find(remote_agent) == remoteConnMap.end()) {
-       //not found
-       return -1;
-   }
-   return 0;
+nixl_err_t nixlUcxEngine::checkConn(const std::string &remote_agent) {
+     if(remoteConnMap.find(remote_agent) == remoteConnMap.end()) {
+        return NIXL_ERR_NOT_FOUND;
+    }
+    return NIXL_SUCCESS;
 }
 
-int nixlUcxEngine::endConn(const std::string &remote_agent)
-{
+nixl_err_t nixlUcxEngine::endConn(const std::string &remote_agent) {
+
     nixlUcxConnection conn;
     auto search = remoteConnMap.find(remote_agent);
 
     if(search == remoteConnMap.end()) {
-        //TODO: err: remote connection not found
-        return -1;
+        return NIXL_ERR_NOT_FOUND;
     }
 
     conn = remoteConnMap[remote_agent];
 
-    uw->disconnect_nb(conn.ep);
+    if(uw->disconnect_nb(conn.ep) < 0) {
+        return NIXL_ERR_BACKEND;
+    }
 
     //thread safety?
     remoteConnMap.erase(remote_agent);
 
-    return 0;
+    return NIXL_SUCCESS;
 }
 
 std::string nixlUcxEngine::getConnInfo() const {
@@ -162,7 +162,7 @@ nixlUcxEngine::connectionCheckAmCb(void *arg, const void *header,
     return UCS_OK;
 }
 
-ucs_status_t
+    ucs_status_t
 nixlUcxEngine::connectionTermAmCb (void *arg, const void *header,
                                    size_t header_length, void *data,
                                    size_t length,
@@ -192,7 +192,7 @@ nixlUcxEngine::connectionTermAmCb (void *arg, const void *header,
     return UCS_OK;
 }
 
-int nixlUcxEngine::connect(const std::string &remote_agent) {
+nixl_err_t nixlUcxEngine::connect(const std::string &remote_agent) {
     struct nixl_ucx_am_hdr hdr;
     nixlUcxConnection conn;
     uint32_t flags = 0;
@@ -202,8 +202,7 @@ int nixlUcxEngine::connect(const std::string &remote_agent) {
     auto search = remoteConnMap.find(remote_agent);
 
     if(search == remoteConnMap.end()) {
-        //TODO: err: remote connection not found
-        return -1;
+        return NIXL_ERR_NOT_FOUND;
     }
 
     conn = remoteConnMap[remote_agent];
@@ -212,14 +211,13 @@ int nixlUcxEngine::connect(const std::string &remote_agent) {
     //agent names should never be long enough to need RNDV
     flags |= UCP_AM_SEND_FLAG_EAGER;
 
-    ret = uw->sendAm(conn.ep, CONN_CHECK, 
-                     &hdr, sizeof(struct nixl_ucx_am_hdr), 
+    ret = uw->sendAm(conn.ep, CONN_CHECK,
+                     &hdr, sizeof(struct nixl_ucx_am_hdr),
                      (void*) localAgent.data(), localAgent.size(),
                      flags, req);
-    
+
     if(ret == NIXL_XFER_ERR) {
-        //TODO: ucx error
-        return -1;
+        return NIXL_ERR_BACKEND;
     }
 
     //wait for AM to send
@@ -227,10 +225,10 @@ int nixlUcxEngine::connect(const std::string &remote_agent) {
         ret = uw->test(req);
     }
 
-    return 0;
+    return NIXL_SUCCESS;
 }
 
-int nixlUcxEngine::disconnect(const std::string &remote_agent) {
+nixl_err_t nixlUcxEngine::disconnect(const std::string &remote_agent) {
 
     static struct nixl_ucx_am_hdr hdr;
     nixlUcxConnection conn;
@@ -241,8 +239,7 @@ int nixlUcxEngine::disconnect(const std::string &remote_agent) {
     auto search = remoteConnMap.find(remote_agent);
 
     if(search == remoteConnMap.end()) {
-        //TODO: err: remote connection not found
-        return -1;
+        return NIXL_ERR_NOT_FOUND;
     }
 
     conn = remoteConnMap[remote_agent];
@@ -251,8 +248,8 @@ int nixlUcxEngine::disconnect(const std::string &remote_agent) {
     //agent names should never be long enough to need RNDV
     flags |= UCP_AM_SEND_FLAG_EAGER;
 
-    ret = uw->sendAm(conn.ep, DISCONNECT, 
-                     &hdr, sizeof(struct nixl_ucx_am_hdr), 
+    ret = uw->sendAm(conn.ep, DISCONNECT,
+                     &hdr, sizeof(struct nixl_ucx_am_hdr),
                      (void*) localAgent.data(), localAgent.size(),
                      flags, req);
 
@@ -262,10 +259,10 @@ int nixlUcxEngine::disconnect(const std::string &remote_agent) {
 
     endConn(remote_agent);
 
-    return 0;
+    return NIXL_SUCCESS;
 }
 
-int nixlUcxEngine::loadRemoteConnInfo (const std::string &remote_agent,
+nixl_err_t nixlUcxEngine::loadRemoteConnInfo (const std::string &remote_agent,
                                        const std::string &remote_conn_info)
 {
     size_t size = remote_conn_info.size();
@@ -275,15 +272,13 @@ int nixlUcxEngine::loadRemoteConnInfo (const std::string &remote_agent,
     char* addr = new char[size];
 
     if(remoteConnMap.find(remote_agent) != remoteConnMap.end()) {
-        //already connected?
-        return -1;
+        return NIXL_ERR_INVALID_PARAM;
     }
 
     nixlSerDes::_stringToBytes((void*) addr, remote_conn_info, size);
     ret = uw->connect(addr, size, conn.ep);
     if (ret) {
-        // TODO: print error
-        return -1;
+        return NIXL_ERR_BACKEND;
     }
 
     conn.remoteAgent = remote_agent;
@@ -291,13 +286,13 @@ int nixlUcxEngine::loadRemoteConnInfo (const std::string &remote_agent,
 
     remoteConnMap[remote_agent] = conn;
 
-    return 0;
+    return NIXL_SUCCESS;
 }
 
 /****************************************
  * Memory management
 *****************************************/
-int nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
+nixl_err_t nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
                                 const nixl_mem_t &nixl_mem,
                                 nixlBackendMD* &out)
 {
@@ -309,19 +304,17 @@ int nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
     // TODO: Add nixl_mem check?
     ret = uw->memReg((void*) mem.addr, mem.len, priv->mem);
     if (ret) {
-        // TODO: err out
-        return -1;
+        return NIXL_ERR_BACKEND;
     }
     ret = uw->packRkey(priv->mem, rkey_addr, rkey_size);
     if (ret) {
-        // TODO: err out
-        return -1;
+        return NIXL_ERR_BACKEND;
     }
     priv->rkeyStr = nixlSerDes::_bytesToString((void*) rkey_addr, rkey_size);
 
     out = (nixlBackendMD*) priv; //typecast?
 
-    return 0; // Or errors
+    return NIXL_SUCCESS; // Or errors
 }
 
 void nixlUcxEngine::deregisterMem (nixlBackendMD* meta)
@@ -334,7 +327,7 @@ void nixlUcxEngine::deregisterMem (nixlBackendMD* meta)
 
 
 // To be cleaned up
-int nixlUcxEngine::loadRemoteMD (const nixlStringDesc &input,
+nixl_err_t nixlUcxEngine::loadRemoteMD (const nixlStringDesc &input,
                                  const nixl_mem_t &nixl_mem,
                                  const std::string &remote_agent,
                                  nixlBackendMD* &output) {
@@ -349,7 +342,7 @@ int nixlUcxEngine::loadRemoteMD (const nixlStringDesc &input,
 
     if(search == remoteConnMap.end()) {
         //TODO: err: remote connection not found
-        return -1;
+        return NIXL_ERR_NOT_FOUND;
     }
     conn = (nixlUcxConnection) search->second;
 
@@ -359,28 +352,28 @@ int nixlUcxEngine::loadRemoteMD (const nixlStringDesc &input,
     ret = uw->rkeyImport(conn.ep, addr, size, md->rkey);
     if (ret) {
         // TODO: error out. Should we indicate which desc failed or unroll everything prior
-        return -1;
+        return NIXL_ERR_BACKEND;
     }
     output = (nixlBackendMD*) md;
 
-    return 0;
+    return NIXL_SUCCESS;
 }
 
-int nixlUcxEngine::removeRemoteMD (nixlBackendMD* input) {
+nixl_err_t nixlUcxEngine::removeRemoteMD (nixlBackendMD* input) {
 
     nixlUcxPublicMetadata *md = (nixlUcxPublicMetadata*) input; //typecast?
 
     uw->rkeyDestroy(md->rkey);
     delete md;
 
-    return 0;
+    return NIXL_SUCCESS;
 }
 
 /****************************************
  * Data movement
 *****************************************/
 
-int nixlUcxEngine::retHelper(nixl_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req)
+nixl_err_t nixlUcxEngine::retHelper(nixl_state_t ret, nixlUcxBckndReq *head, nixlUcxReq &req)
 {
     /* if transfer wasn't immediately completed */
     switch(ret) {
@@ -395,9 +388,9 @@ int nixlUcxEngine::retHelper(nixl_state_t ret, nixlUcxBckndReq *head, nixlUcxReq
             if (head->next()) {
                 releaseReqH(head->next());
             }
-            return -1;
+            return NIXL_ERR_BACKEND;
     }
-    return 0;
+    return NIXL_SUCCESS;
 }
 
 nixl_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
@@ -415,7 +408,7 @@ nixl_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
     nixlUcxPrivateMetadata *lmd;
     nixlUcxPublicMetadata *rmd;
     nixlUcxReq req;
-    
+
 
     if (lcnt != rcnt) {
         return NIXL_XFER_ERR;
@@ -687,11 +680,11 @@ int nixlUcxEngine::getNotifs(notif_list_t &notif_list)
 
     notifCombineHelper(notifMainList, notif_list);
     notifProgressCombineHelper(notifPthr, notif_list);
-   
+
     return notif_list.size();
 }
 
-int nixlUcxEngine::genNotif(const std::string &remote_agent, const std::string &msg)
+nixl_err_t nixlUcxEngine::genNotif(const std::string &remote_agent, const std::string &msg)
 {
     nixl_state_t ret;
     nixlUcxReq req;
@@ -706,11 +699,11 @@ int nixlUcxEngine::genNotif(const std::string &remote_agent, const std::string &
         break;
     case NIXL_XFER_ERR:
         // TODO output the error cause
-        return -1;
+        return NIXL_ERR_BACKEND;
     default:
         /* Should not happen */
         assert(0);
-        return -1;        
+        return NIXL_ERR_BAD;
     }
-    return 0;
+    return NIXL_SUCCESS;
 }
