@@ -273,9 +273,9 @@ nixl_status_t nixlAgent::prepXferSide (const nixlDescList<nixlBasicDesc> &descs,
     return NIXL_SUCCESS;
 }
 
-nixl_status_t nixlAgent::makeXferReq (const nixlXferSideH &local_side,
+nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
                                       const std::vector<int> &local_indices,
-                                      const nixlXferSideH &remote_side,
+                                      nixlXferSideH* remote_side,
                                       const std::vector<int> &remote_indices,
                                       const std::string &notif_msg,
                                       const nixl_xfer_op_t &operation,
@@ -283,13 +283,13 @@ nixl_status_t nixlAgent::makeXferReq (const nixlXferSideH &local_side,
                                       const bool no_checks) {
 
     if (!no_checks) {
-        if ((!local_side.isLocal) || (remote_side.isLocal))
+        if ((!local_side->isLocal) || (remote_side->isLocal))
             return NIXL_ERR_INVALID_PARAM;
 
-        if ((local_side.engine == nullptr) || (remote_side.engine == nullptr))
+        if ((local_side->engine == nullptr) || (remote_side->engine == nullptr))
             return NIXL_ERR_INVALID_PARAM;
 
-        if (local_side.engine != remote_side.engine)
+        if (local_side->engine != remote_side->engine)
             return NIXL_ERR_INVALID_PARAM;
 
         if ((local_indices.size()==0) || (remote_indices.size()==0))
@@ -299,15 +299,15 @@ nixl_status_t nixlAgent::makeXferReq (const nixlXferSideH &local_side,
             return NIXL_ERR_INVALID_PARAM;
 
         for (int i=0; i<(int)local_indices.size(); ++i)
-            if ((*local_side.descs )[local_indices [i]].len !=
-                (*remote_side.descs)[remote_indices[i]].len)
+            if ((*local_side->descs )[local_indices [i]].len !=
+                (*remote_side->descs)[remote_indices[i]].len)
                 return NIXL_ERR_INVALID_PARAM;
 
         if ((notif_msg.size()==0) &&
             ((operation==NIXL_WR_NOTIF) || (operation==NIXL_RD_NOTIF)))
             return NIXL_ERR_INVALID_PARAM;
 
-        if ((notif_msg.size()!=0) && (!local_side.engine->supportsNotif())) {
+        if ((notif_msg.size()!=0) && (!local_side->engine->supportsNotif())) {
             return NIXL_ERR_BACKEND;
         }
     }
@@ -315,22 +315,22 @@ nixl_status_t nixlAgent::makeXferReq (const nixlXferSideH &local_side,
     nixlXferReqH *handle = new nixlXferReqH;
     // Might not need unified and sorted info
     handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
-                                      local_side.descs->getType(),
-                                      local_side.descs->isUnifiedAddr(),
-                                      local_side.descs->isSorted());
+                                      local_side->descs->getType(),
+                                      local_side->descs->isUnifiedAddr(),
+                                      local_side->descs->isSorted());
 
     handle->targetDescs = new nixlDescList<nixlMetaDesc> (
-                                      remote_side.descs->getType(),
-                                      remote_side.descs->isUnifiedAddr(),
-                                      remote_side.descs->isSorted());
+                                      remote_side->descs->getType(),
+                                      remote_side->descs->isUnifiedAddr(),
+                                      remote_side->descs->isSorted());
 
     for (int i=0; i<(int)local_indices.size(); ++i) {
         // Copying from another internal desc list, already verified
-        handle->initiatorDescs->addDesc((*local_side.descs)[i]);
-        handle->targetDescs->addDesc((*remote_side.descs)[i]);
+        handle->initiatorDescs->addDesc((*local_side->descs)[i]);
+        handle->targetDescs->addDesc((*remote_side->descs)[i]);
     }
 
-    handle->remoteAgent = remote_side.remoteAgent;
+    handle->remoteAgent = remote_side->remoteAgent;
     handle->notifMsg    = notif_msg;
     handle->backendOp   = operation;
     handle->state       = NIXL_XFER_INIT;

@@ -69,9 +69,9 @@ class nixlAgent {
                                     nixlXferSideH* &side_handle);
 
         // Makes a transfer request from already prepared side transfer handles.
-        nixl_status_t makeXferReq (const nixlXferSideH &local_side,
+        nixl_status_t makeXferReq (nixlXferSideH* local_side,
                                    const std::vector<int> &local_indices,
-                                   const nixlXferSideH &remote_side,
+                                   nixlXferSideH* remote_side,
                                    const std::vector<int> &remote_indices,
                                    const std::string &notif_msg,
                                    const nixl_xfer_op_t &operation,

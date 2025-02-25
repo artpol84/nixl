@@ -135,6 +135,37 @@ PYBIND11_MODULE(nixl_bindings, m) {
                     if(ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
                     else return (uintptr_t) handle;
                 })
+        .def("getXferBackend", [](nixlAgent &agent, void* reqh) -> void* {
+                    return (void*) agent.getXferBackend((nixlXferReqH*) reqh);
+            })
+        .def("prepXferSide", [](nixlAgent &agent,
+                                const nixlDescList<nixlBasicDesc> &descs,
+                                const std::string &remote_agent,
+                                uintptr_t backend) -> uintptr_t {
+                    nixlXferSideH* handle;
+                    nixl_status_t ret = agent.prepXferSide(descs, remote_agent, (nixlBackendEngine*) backend, handle);
+                    if(ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
+                    else return (uintptr_t) handle;
+                })
+        .def("makeXferReq", [](nixlAgent &agent,
+                               nixlXferSideH* local_side,
+                               const std::vector<int> &local_indices,
+                               nixlXferSideH* remote_side,
+                               const std::vector<int> &remote_indices,
+                               const std::string &notif_msg,
+                               const nixl_xfer_op_t &operation,
+                               const bool no_checks) -> uintptr_t {
+                    nixlXferReqH* handle;
+                    nixl_status_t ret = agent.makeXferReq(local_side, local_indices, remote_side, remote_indices, notif_msg, operation, handle, no_checks);
+                    if(ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
+                    else return (uintptr_t) handle;
+                },             py::arg("local_side"),
+                               py::arg("local_indices"),
+                               py::arg("remote_side"),
+                               py::arg("remote_indices"),
+                               py::arg("notif_msg"),
+                               py::arg("operation"),
+                               py::arg("no_checks") = false )
         .def("invalidateXferReq", [](nixlAgent &agent, uintptr_t reqh) -> void {
                     agent.invalidateXferReq((nixlXferReqH*) reqh);
                 })
@@ -144,8 +175,6 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("getXferStatus", [](nixlAgent &agent, uintptr_t reqh) -> nixl_xfer_state_t {
                     return agent.getXferStatus((nixlXferReqH*) reqh);
                 })
-        //unlike the C++ API, this returns the notif_map instead of number of new notifs
-        //.def("getNotifs", [](nixlAgent &agent, notif_map_t notif_map) -> notif_map_t {
         .def("getNotifs", [](nixlAgent &agent, nixl_notifs_t notif_map) -> nixl_notifs_t {
                     int n_new  = agent.getNotifs(notif_map);
                     if (n_new == 0) return notif_map;
@@ -162,7 +191,6 @@ PYBIND11_MODULE(nixl_bindings, m) {
                     }
                     return ret_map;
                 })
-        //TODO: add support for genNotif when implemented
         .def("genNotif", &nixlAgent::genNotif)
         .def("getLocalMD", [](nixlAgent &agent) {
                     //python can only interpret text strings
