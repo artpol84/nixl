@@ -29,7 +29,7 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
                      nixlDescList<nixlMetaDesc> &req_src_descs,
                      nixlDescList<nixlMetaDesc> &req_dst_descs,
                      void* addr1, void* addr2, size_t len, 
-                     nixl_xfer_op_t op)
+                     nixl_xfer_op_t op, bool progress_ucx2)
 {
     int ret2;
     nixl_xfer_state_t ret3;
@@ -52,6 +52,9 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
 
         while(ret3 == NIXL_XFER_PROC) {
             ret3 = ucx1->checkXfer(handle);
+            if(progress_ucx2){
+                ucx2->progress();
+            }
             assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
         }
         ucx1->releaseReqH(handle);
@@ -218,7 +221,7 @@ int main()
         
             /* Test */
             performTransfer(ucx1, ucx2, req_src_descs, req_dst_descs,
-                            addr1, addr2, len, ops[i]);
+                            addr1, addr2, len, ops[i], !init2.threading);
         }
     }
 

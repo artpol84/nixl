@@ -86,6 +86,8 @@ nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
     if (init_params->threading) {
         pthr_on = true;
         startProgressThread();
+    } else {
+        pthr_on = false;
     }
 }
 
