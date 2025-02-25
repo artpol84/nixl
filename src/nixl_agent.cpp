@@ -41,6 +41,9 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
         return nullptr;
 
     params->localAgent = data.name;
+    // Default not to use progress thread
+    params->threading  = false;
+
     switch (nixl_backend) { // For supported backends
         case UCX:
             backend = (nixlBackendEngine*) new nixlUcxEngine(

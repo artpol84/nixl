@@ -85,7 +85,7 @@ class nixlUcxEngine : nixlBackendEngine {
         size_t workerSize;
 
         /* Progress thread data */
-        volatile bool pthr_stop, pthr_active;
+        volatile bool pthr_stop, pthr_active, pthr_on;
         int no_sync_iters;
         std::thread pthr;
 

@@ -71,7 +71,7 @@ void nixlUcxEngine::stopProgressThread()
 nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
 : nixlBackendEngine ((const nixlBackendInitParams*) init_params) {
     std::vector<std::string> devs; /* Empty vector */
-    uint64_t n_addr;
+    uint64_t                 n_addr;
 
     uc = new nixlUcxContext(devs, sizeof(nixlUcxBckndReq),
                            _requestInit, _requestFini, NIXL_UCX_MT_WORKER);
@@ -83,7 +83,10 @@ nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
     uw->regAmCallback(DISCONNECT, connectionTermAmCb, this);
     uw->regAmCallback(NOTIF_STR, notifAmCb, this);
 
-    startProgressThread();
+    if (init_params->threading) {
+        pthr_on = true;
+        startProgressThread();
+    }
 }
 
 // Through parent destructor the unregister will be called.
@@ -91,7 +94,8 @@ nixlUcxEngine::~nixlUcxEngine () {
     // per registered memory deregisters it, which removes the corresponding metadata too
     // parent destructor takes care of the desc list
     // For remote metadata, they should be removed here
-    stopProgressThread();
+    if (pthr_on)
+        stopProgressThread();
     delete uw;
     delete uc;
 }

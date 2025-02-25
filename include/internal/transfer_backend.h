@@ -18,6 +18,7 @@ typedef std::vector<std::pair<std::string, std::string>> notif_list_t;
 class nixlBackendInitParams {
     public:
         std::string localAgent;
+        bool        threading;
 
         virtual nixl_backend_t getType() const = 0;
 
