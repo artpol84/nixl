@@ -136,12 +136,11 @@ class nixlBackendEngine {
     protected:
         std::string    localAgent;
 
-    public:
+    public: // public to be removed
         nixlBackendEngine (const nixlBackendInitParams* init_params) {
             this->backendType = init_params->getType();
             this->localAgent  = init_params->localAgent;
         }
-        nixl_backend_t getType () const { return backendType; }
 
         // Can add checks for being public metadata
         std::string getPublicData (const nixlBackendMD* meta) const {
@@ -210,6 +209,16 @@ class nixlBackendEngine {
         // Force backend engine worker to progress.
         // TODO: remove
         virtual int progress() { return 0; }
+
+    // public:
+        nixl_backend_t getType () const { return backendType; }
+
+    friend class nixlAgent;
+    friend class memSection;
+    friend class nixlXferReqH;
+    friend class nixlAgentData;
+    friend class nixlLocalSection;
+    friend class nixlRemoteSection;
 };
 
 #endif

@@ -13,9 +13,9 @@ class nixl_wrapper:
 
         self.name = agent_name
         self.notifs = {}
-        self.backends = []
+        self.backends = {}
         self.agent = nixl.nixlAgent(agent_name, devices)
-        self.backends.append(("UCX", self.agent.createBackend(init)))
+        self.backends["UCX"] = self.agent.createBackend(init)
         print("Initializied NIXL agent:", agent_name)
 
 
@@ -68,7 +68,7 @@ class nixl_wrapper:
     def register_memory(self, arg):
         # based on backend type and mem_type, figure what registrations are meaningful
         reg_descs = self.get_descs(arg, True)
-        ret = self.agent.registerMem(reg_descs, self.backends[0][1])
+        ret = self.agent.registerMem(reg_descs, self.backends["UCX"])
         if (ret != 0):
             return None
         return reg_descs
@@ -76,7 +76,7 @@ class nixl_wrapper:
 
     def deregister_memory(self, dereg_descs):
         # based on backend type and mem_type, figure what deregistrations are needed
-        self.agent.deregisterMem(dereg_descs, self.backends[0][1])
+        self.agent.deregisterMem(dereg_descs, self.backends["UCX"])
         # No return
 
 

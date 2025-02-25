@@ -122,11 +122,10 @@ nixl_status_t nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_
     nixl_status_t ret;
     if (data.remoteSections.count(remote_agent)==0)
         return NIXL_ERR_NOT_FOUND;
-    // TODO: when central KV is supported, add a call to fetchRemoteMD
 
+    // TODO: when central KV is supported, add a call to fetchRemoteMD
     // TODO [Perf]: Avoid heap allocation on the datapath, maybe use a mem pool
-    // TODO [Perf]: merge descriptors if source and remote device are the same,
-    //              and also back to back in memory (unlikly case).
+    // TODO [Perf]: merge descriptors back to back in memory (unlikly case).
 
     nixlXferReqH *handle = new nixlXferReqH;
     // Might not need unified and sorted info
@@ -192,8 +191,10 @@ nixl_xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
     // We can't repost while a request is in progress
     if (req->state == NIXL_XFER_PROC) {
         req->state = req->engine->checkXfer(req->backendHandle);
-        if (req->state == NIXL_XFER_PROC)
+        if (req->state == NIXL_XFER_PROC) {
+            // TODO: Abort
             return NIXL_XFER_ERR;
+        }
     }
 
     // If state is NIXL_XFER_INIT or NIXL_XFER_DONE we can repost,
@@ -217,9 +218,131 @@ nixl_xfer_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
     return req->state;
 }
 
+
+nixlBackendEngine* nixlAgent::getXferBackend(nixlXferReqH* req) {
+    return req->engine;
+}
+
+nixl_status_t nixlAgent::prepXferSide (const nixlDescList<nixlBasicDesc> &descs,
+                                       const std::string &remote_agent,
+                                       nixlBackendEngine* backend,
+                                       nixlXferSideH* &side_handle) {
+    nixl_status_t ret;
+
+    if (backend==nullptr)
+        return NIXL_ERR_NOT_FOUND;
+
+    if (remote_agent.size()!=0)
+        if (data.remoteSections.count(remote_agent)==0)
+            return NIXL_ERR_NOT_FOUND;
+
+    // TODO: when central KV is supported, add a call to fetchRemoteMD
+    // TODO [Perf]: Avoid heap allocation on the datapath, maybe use a mem pool
+    // TODO [Perf]: merge descriptors back to back in memory (unlikly case).
+
+    nixlXferSideH *handle = new nixlXferSideH;
+
+    handle->engine = backend;
+    // Might not need unified and sorted info
+    handle->descs = new nixlDescList<nixlMetaDesc> (descs.getType(),
+                                                    descs.isUnifiedAddr(),
+                                                    descs.isSorted());
+
+    if (remote_agent.size()==0) { // Local descriptor list
+        handle->isLocal = true;
+        handle->remoteAgent = "";
+        ret = data.memorySection.populate(
+                                  descs, backend->getType(), *handle->descs);
+    } else {
+        handle->isLocal = false;
+        handle->remoteAgent = remote_agent;
+        ret = data.remoteSections[remote_agent]->populate(
+                                  descs, backend->getType(), *handle->descs);
+    }
+
+    if (ret<0) {
+        delete handle;
+        return ret;
+    }
+
+
+    // TODO: when supporting metadata server, we might get to PRE state
+    side_handle = handle;
+
+    // TODO: Add bookkeeping of nixlRequests per target agent
+    return NIXL_SUCCESS;
+}
+
+nixl_status_t nixlAgent::makeXferReq (const nixlXferSideH &local_side,
+                                      const std::vector<int> &local_indices,
+                                      const nixlXferSideH &remote_side,
+                                      const std::vector<int> &remote_indices,
+                                      const std::string &notif_msg,
+                                      const nixl_xfer_op_t &operation,
+                                      nixlXferReqH* &req_handle,
+                                      const bool no_checks) {
+
+    if (!no_checks) {
+        if ((!local_side.isLocal) || (remote_side.isLocal))
+            return NIXL_ERR_INVALID_PARAM;
+
+        if ((local_side.engine == nullptr) || (remote_side.engine == nullptr))
+            return NIXL_ERR_INVALID_PARAM;
+
+        if (local_side.engine != remote_side.engine)
+            return NIXL_ERR_INVALID_PARAM;
+
+        if ((local_indices.size()==0) || (remote_indices.size()==0))
+            return NIXL_ERR_INVALID_PARAM;
+
+        if (local_indices.size() != remote_indices.size())
+            return NIXL_ERR_INVALID_PARAM;
+
+        for (int i=0; i<(int)local_indices.size(); ++i)
+            if ((*local_side.descs )[local_indices [i]].len !=
+                (*remote_side.descs)[remote_indices[i]].len)
+                return NIXL_ERR_INVALID_PARAM;
+
+        if ((notif_msg.size()==0) &&
+            ((operation==NIXL_WR_NOTIF) || (operation==NIXL_RD_NOTIF)))
+            return NIXL_ERR_INVALID_PARAM;
+
+        if ((notif_msg.size()!=0) && (!local_side.engine->supportsNotif())) {
+            return NIXL_ERR_BACKEND;
+        }
+    }
+
+    nixlXferReqH *handle = new nixlXferReqH;
+    // Might not need unified and sorted info
+    handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
+                                      local_side.descs->getType(),
+                                      local_side.descs->isUnifiedAddr(),
+                                      local_side.descs->isSorted());
+
+    handle->targetDescs = new nixlDescList<nixlMetaDesc> (
+                                      remote_side.descs->getType(),
+                                      remote_side.descs->isUnifiedAddr(),
+                                      remote_side.descs->isSorted());
+
+    for (int i=0; i<(int)local_indices.size(); ++i) {
+        // Copying from another internal desc list, already verified
+        handle->initiatorDescs->addDesc((*local_side.descs)[i]);
+        handle->targetDescs->addDesc((*remote_side.descs)[i]);
+    }
+
+    handle->remoteAgent = remote_side.remoteAgent;
+    handle->notifMsg    = notif_msg;
+    handle->backendOp   = operation;
+    handle->state       = NIXL_XFER_INIT;
+    // TODO: when supporting metadata server, we might get to PRE state
+
+    req_handle = handle;
+    return NIXL_SUCCESS;
+}
+
 nixl_status_t nixlAgent::genNotif(const std::string &remote_agent,
-                        const std::string &msg,
-                        nixlBackendEngine* backend) {
+                                  const std::string &msg,
+                                  nixlBackendEngine* backend) {
     if (backend!=nullptr)
         return backend->genNotif(remote_agent, msg);
 
@@ -389,7 +512,7 @@ nixl_status_t nixlAgent::invalidateRemoteMD(const std::string &remote_agent) {
         ret = NIXL_SUCCESS;
     }
 
-    // TODO: Put the transfers belonging to this remote nixl_status_to ERR state
+    // TODO: Put the transfers belonging to this remote into ERR state
     return ret;
 }
 

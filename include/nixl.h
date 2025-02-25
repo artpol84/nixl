@@ -37,7 +37,7 @@ class nixlAgent {
 
         /*** Transfer Request Handling ***/
 
-        // populates the transfer request. Empty notif_msg means no notification
+        // Creates a transfer request.
         nixl_status_t createXferReq (const nixlDescList<nixlBasicDesc> &local_descs,
                                      const nixlDescList<nixlBasicDesc> &remote_descs,
                                      const std::string &remote_agent,
@@ -54,6 +54,29 @@ class nixlAgent {
         // Invalidate transfer request if we no longer need it.
         // Will abort a running transfer.
         void invalidateXferReq (nixlXferReqH* req);
+
+
+        /*** Alternative method to created transfer handle with more control ***/
+
+        // User can ask for backend used in a XferReq to use it for prepXferSide.
+        nixlBackendEngine* getXferBackend(nixlXferReqH* req_handle);
+
+        // Prepares descriptors for one side of a transfer with given backend.
+        // Empty string for remote_agent means it's local side.
+        nixl_status_t prepXferSide (const nixlDescList<nixlBasicDesc> &descs,
+                                    const std::string &remote_agent,
+                                    nixlBackendEngine* backend,
+                                    nixlXferSideH* &side_handle);
+
+        // Makes a transfer request from already prepared side transfer handles.
+        nixl_status_t makeXferReq (const nixlXferSideH &local_side,
+                                   const std::vector<int> &local_indices,
+                                   const nixlXferSideH &remote_side,
+                                   const std::vector<int> &remote_indices,
+                                   const std::string &notif_msg,
+                                   const nixl_xfer_op_t &operation,
+                                   nixlXferReqH* &req_handle,
+                                   const bool no_checks = false);
 
 
         /*** Notification Handling ***/
@@ -77,7 +100,7 @@ class nixlAgent {
         // The std::string used for serialized MD can have \0 values.
         std::string getLocalMD () const;
 
-        // Load other agent's metadata and unpack it nixl_status_ternally.
+        // Load other agent's metadata and unpack it internally.
         // Returns the found agent name in metadata, or "" in case of error.
         std::string loadRemoteMD (const std::string &remote_metadata);
 
