@@ -681,6 +681,8 @@ int nixlUcxEngine::getNotifs(notif_list_t &notif_list)
     if (notif_list.size()!=0)
         return -1;
 
+    if(!pthr_on) while(progress());
+
     notifCombineHelper(notifMainList, notif_list);
     notifProgressCombineHelper(notifPthr, notif_list);
 

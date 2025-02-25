@@ -183,6 +183,8 @@ void nixlAgent::invalidateXferReq(nixlXferReqH *req) {
 }
 
 nixl_xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
+    nixl_xfer_state_t ret;
+
     if (req==nullptr)
         return NIXL_XFER_ERR;
     // TODO: add NIXL_XFER_PRE handling after metadata server is added
@@ -195,12 +197,14 @@ nixl_xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
     }
 
     // If state is NIXL_XFER_INIT or NIXL_XFER_DONE we can repost,
-    return (req->engine->postXfer (*req->initiatorDescs,
+    ret = (req->engine->postXfer (*req->initiatorDescs,
                                    *req->targetDescs,
                                    req->backendOp,
                                    req->remoteAgent,
                                    req->notifMsg,
                                    req->backendHandle));
+    req->state = ret;
+    return ret;
 }
 
 nixl_xfer_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {

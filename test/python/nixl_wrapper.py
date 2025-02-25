@@ -128,7 +128,6 @@ class nixl_wrapper:
             return "PROC"
         else:
             return "DONE"
-        return status
 
 
     def check_xfer_state (self, handle):

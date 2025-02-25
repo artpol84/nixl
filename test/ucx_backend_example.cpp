@@ -103,6 +103,8 @@ int main()
     std::string agent2("Agent2");
 
     nixlUcxInitParams init1, init2;
+    init1.threading=true;
+    init2.threading=true;
     // populate required/desired inits
 
     // User would ask each of the agents to create a ucx  backend, and the
