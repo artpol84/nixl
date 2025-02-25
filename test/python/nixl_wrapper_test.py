@@ -30,13 +30,14 @@ if __name__ == "__main__":
     src_descs_recvd = nixl_agent2.deserialize_descs(ser)
     assert (src_descs_recvd == agent1_descs)
 
-    xfer_handle = nixl_agent2.initialize_xfer(agent2_descs, agent1_descs,
-                                              remote_name, "UUID", "READ")
-    if not xfer_handle:
+    # initialize transfer mode
+    xfer_handle_1 = nixl_agent2.initialize_xfer(agent2_descs, agent1_descs,
+                                              remote_name, "UUID1", "READ")
+    if not xfer_handle_1:
         print("Creating transfer failed.")
         exit()
 
-    state = nixl_agent2.transfer(xfer_handle)
+    state = nixl_agent2.transfer(xfer_handle_1)
     assert state != "ERR"
 
     target_done = False
@@ -44,7 +45,7 @@ if __name__ == "__main__":
 
     while (not init_done) or (not target_done):
         if not init_done:
-            state = nixl_agent2.check_xfer_state(xfer_handle)
+            state = nixl_agent2.check_xfer_state(xfer_handle_1)
             if (state == "ERR"):
                 print("Transfer got to Error state.")
                 exit()
@@ -53,11 +54,50 @@ if __name__ == "__main__":
                 print ("Initiator done")
 
         if not target_done:
-            if nixl_agent1.check_remote_xfer_done("initiator", "UUID"):
+            if nixl_agent1.check_remote_xfer_done("initiator", "UUID1"):
                 target_done = True
                 print ("Target done")
 
-    nixl_agent2.abort_xfer(xfer_handle)
+    # prep transfer mode
+    local_prep_handle  = nixl_agent2.prep_xfer_side(("DRAM",
+                               [(addr3, buf_size, 0), (addr4, buf_size, 0)]))
+    remote_prep_handle = nixl_agent2.prep_xfer_side(agent1_descs, remote_name)
+
+    xfer_handle_2      = nixl_agent2.make_prepped_xfer(local_prep_handle, [0,1],
+                                                       remote_prep_hanlde, [1,0],
+                                                       "UUID2", "WRITE")
+    if not local_prep_handle or not remote_prep_handle:
+        print("Preparing transfer side handles failed.")
+        exit()
+
+    if not xfer_handle_2:
+        print("Make prepped transfer failed.")
+        exit()
+
+    state = nixl_agent2.transfer(xfer_handle_2)
+    assert state != "ERR"
+
+    target_done = False
+    init_done = False
+
+    while (not init_done) or (not target_done):
+        if not init_done:
+            state = nixl_agent2.check_xfer_state(xfer_handle_2)
+            if (state == "ERR"):
+                print("Transfer got to Error state.")
+                exit()
+            elif (state == "DONE"):
+                init_done = True
+                print ("Initiator done")
+
+        if not target_done:
+            if nixl_agent1.check_remote_xfer_done("initiator", "UUID2"):
+                target_done = True
+                print ("Target done")
+
+    nixl_agent2.abort_xfer(xfer_handle_1)
+    nixl_agent2.abort_xfer(xfer_handle_2)
+    # Release side handles
     nixl_agent2.remove_remote_agent("target")
     nixl_agent1.deregister_memory(agent1_descs)
     nixl_agent2.deregister_memory(agent2_descs)

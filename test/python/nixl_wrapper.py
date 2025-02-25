@@ -16,6 +16,12 @@ class nixl_wrapper:
         self.backends = {}
         self.agent = nixl.nixlAgent(agent_name, devices)
         self.backends["UCX"] = self.agent.createBackend(init)
+
+        self.nixl_ops = {"WRITE":       nixl.NIXL_WR_FLUSH,
+                         "READ":        nixl.NIXL_RD_FLUSH,
+                         "WRITE_NOTIF": nixl.NIXL_WR_NOTIF,
+                         "READ_NOTIF":  nixl.NIXL_RD_NOTIF}
+
         print("Initializied NIXL agent:", agent_name)
 
 
@@ -99,26 +105,38 @@ class nixl_wrapper:
 
 
     def initialize_xfer(self, local_descs, remote_descs, remote_agent, notif_msg, operation):
-        # print("Creating transfer in agent", self.name, "to agent", remote_agent,
-        #       "with notification:", notif_msg, "and operation:", operation)
-        # local_descs.print()
-        # remote_descs.print()
-        if len(notif_msg)!=0:
-            if operation== "WRITE":
-                handle = self.agent.createXferReq(local_descs, remote_descs, remote_agent,
-                                                  notif_msg, nixl.NIXL_WR_NOTIF)
-            elif operation == "READ":
-                handle = self.agent.createXferReq(local_descs, remote_descs, remote_agent,
-                                                  notif_msg, nixl.NIXL_RD_NOTIF)
+        op = self.nixl_ops[operation+"_NOTIF" if len(notif_msg)!=0 else operation]
+        if (op):
+            handle = self.agent.createXferReq(local_descs, remote_descs, remote_agent, notif_msg, op)
+            return handle # In case of error it will be None
         else:
-            if operation== "WRITE":
-                handle = self.agent.createXferReq(local_descs, remote_descs, remote_agent,
-                                                  notif_msg, nixl.NIXL_WR_FLUSH)
-            elif operation == "READ":
-                handle = self.agent.createXferReq(local_descs, remote_descs, remote_agent,
-                                                  notif_msg, nixl.NIXL_RD_FLUSH)
-        # In case of error it will be None
-        return handle
+            return None
+
+
+    # "" remote agent means local. example xfer can be used to know the backend
+    def prep_xfer_side(self, args, remote_agent="", xfer_backend=None, example_xfer=None):
+        descs = self.get_descs(args)
+        descs.print()
+        if (xfer_backend):
+            handle = self.agent.prepXferSide(descs, remote_agent, xfer_backend);
+        elif (example_xfer):
+            backend = self.agent.getXferBackend(example_xfer);
+            handle = self.agent.prepXferSide(descs, remote_agent, backend);
+        else:
+            # Or use same logic that we used in register_memory
+            handle = self.agent.prepXferSide(descs, remote_agent, self.backends["UCX"]);
+        return handle # In case of error it will be None
+
+
+    def make_prepped_xfer(self, local_xfer_side, local_indices, remote_xfer_side, \
+                        remote_indices, notif_msg, operation, no_check=False):
+        op = self.nixl_ops[operation+"_NOTIF" if len(notif_msg)!=0 else operation]
+        if (op):
+            handle = self.agent.makeXferReq(local_xfer_side, local_indices, remote_xfer_side, \
+                                            remote_indices, notif_msg, op, no_check)
+            return handle # In case of error it will be None
+        else:
+            return None
 
 
     def transfer(self, handle):
