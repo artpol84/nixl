@@ -19,7 +19,7 @@ class nixl_wrapper:
         print("Initializied NIXL agent:", agent_name)
 
 
-    def get_descs(self, arg):
+    def get_descs(self, arg, overlap_check=True):
         # can add check for DLPack input
         if isinstance(arg, list): # List[torch.Tensor]:
             tensor_type = arg[0].device
@@ -36,7 +36,8 @@ class nixl_wrapper:
                 gpu_id = tensor.get_device()
                 if (gpu_id==-1): # DRAM
                     gpu_id = 0
-                descs.addDesc(nixl.nixlBasicDesc(base_addr, region_len, gpu_id))
+                descs.addDesc(nixl.nixlBasicDesc(base_addr, region_len, gpu_id),
+                                                 overlap_check)
 
         elif isinstance(arg, tuple): # (str, List[(int,int,int)]):
             if arg[0] == "VRAM":
@@ -47,7 +48,7 @@ class nixl_wrapper:
                 return None
 
             for (addr, len, id) in arg[1]:
-                descs.addDesc(nixl.nixlBasicDesc(addr, len, id))
+                descs.addDesc(nixl.nixlBasicDesc(addr, len, id), overlap_check)
 
         elif isinstance(arg, nixl.nixlDescList):
             return arg
@@ -66,7 +67,7 @@ class nixl_wrapper:
     # The returned descriptor object can be used for call to deregister
     def register_memory(self, arg):
         # based on backend type and mem_type, figure what registrations are meaningful
-        reg_descs = self.get_descs(arg)
+        reg_descs = self.get_descs(arg, True)
         ret = self.agent.registerMem(reg_descs, self.backends[0][1])
         if (ret != 0):
             return None

@@ -165,9 +165,14 @@ bool descAddrCompare (const nixlBasicDesc &a, const nixlBasicDesc &b,
 // not in an accending order, so vector is used for descs instead of map,
 // and during insertion we guarantee that.
 template <class T>
-nixl_status_t nixlDescList<T>::addDesc (const T &desc) {
+nixl_status_t nixlDescList<T>::addDesc (const T &desc, const bool overlap_check) {
     if (desc.len == 0) // Error indicator
         return NIXL_ERR_INVALID_PARAM;
+
+    if (!overlap_check) {
+        descs.push_back(desc);
+        return NIXL_SUCCESS;
+    }
 
     if (!sorted) {
         for (auto & elm : descs) {
@@ -200,7 +205,7 @@ nixl_status_t nixlDescList<T>::remDesc (int index){
 
 template <class T>
 nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &query,
-                               nixlDescList<T> &resp) const {
+                                         nixlDescList<T> &resp) const {
     // Populate only makes sense when there is extra metadata
     if(std::is_same<nixlBasicDesc, T>::value)
         return NIXL_ERR_INVALID_PARAM;

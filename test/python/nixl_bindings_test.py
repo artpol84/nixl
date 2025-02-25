@@ -27,13 +27,19 @@ def test_list():
 
     test_desc1 = nixl.nixlBasicDesc(1000, 105, 0)
     test_desc2 = nixl.nixlBasicDesc(2000, 30, 0)
-    test_desc3 = nixl.nixlBasicDesc(3000, 20, 0)
+    test_desc3 = nixl.nixlBasicDesc(1010, 20, 0)
 
     test_list = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
 
     test_list.addDesc(test_desc1)
     test_list.addDesc(test_desc2)
     test_list.addDesc(test_desc3)
+
+    assert test_list.descCount() == 2
+
+    test_list.addDesc(test_desc3, False)
+
+    assert test_list.descCount() == 3
 
     test_list.print()
 

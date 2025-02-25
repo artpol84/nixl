@@ -63,7 +63,7 @@ class nixlDescList {
                                                   const nixlDescList<Y> &rhs);
 
         // addDesc is the only method to add new individual entries, checks for no overlap
-        nixl_status_t addDesc(const T &desc);
+        nixl_status_t addDesc(const T &desc, const bool overlap_check=true);
         nixl_status_t remDesc(int index);
         nixl_status_t populate(const nixlDescList<nixlBasicDesc> &query, nixlDescList<T> &resp) const;
         void clear() { descs.clear(); }

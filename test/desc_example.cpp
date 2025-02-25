@@ -118,6 +118,8 @@ int main()
     nixlDescList<nixlMetaDesc> dlist5 (VRAM_SEG);
     dlist5 = dlist3;
 
+    // TODO: test overlap_check flag
+
     dlist1.print();
     dlist2.print();
     dlist3.print();

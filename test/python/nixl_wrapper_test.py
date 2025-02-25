@@ -11,7 +11,7 @@ if __name__ == "__main__":
     addr1 = nixl_utils.malloc_passthru(buf_size)
     addr2 = nixl_utils.malloc_passthru(buf_size)
     agent1_descs = nixl_agent1.get_descs(("DRAM",
-                               [(addr1, buf_size, 0), (addr2, buf_size, 0)]))
+                               [(addr1, buf_size, 0), (addr2, buf_size, 0)]), False)
     assert (nixl_agent1.register_memory(agent1_descs) != None)
 
     nixl_agent2 = nixl_wrapper("initiator", None)

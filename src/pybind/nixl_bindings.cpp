@@ -75,7 +75,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("isSorted", &nixlDescList<nixlBasicDesc>::isSorted)
         .def("__getitem__", &nixlDescList<nixlBasicDesc>::operator[])
         .def(py::self == py::self)
-        .def("addDesc", &nixlDescList<nixlBasicDesc>::addDesc)
+        .def("addDesc", &nixlDescList<nixlBasicDesc>::addDesc, py::arg("desc"), py::arg("overlap_check") = true)
         .def("remDesc", &nixlDescList<nixlBasicDesc>::remDesc)
         .def("clear", &nixlDescList<nixlBasicDesc>::clear)
         .def("print", &nixlDescList<nixlBasicDesc>::print)

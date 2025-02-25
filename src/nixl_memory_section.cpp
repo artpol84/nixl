@@ -44,7 +44,7 @@ nixlDescList<nixlStringDesc> nixlLocalSection::getStringDesc (
     for (int i=0; i<d_list.descCount(); ++i) {
         *p = (nixlBasicDesc) d_list[i];
         element.metadata = backend->getPublicData(d_list[i].metadata);
-        output_desclist.addDesc(element);
+        output_desclist.addDesc(element, false);
     }
     return output_desclist;
 }
