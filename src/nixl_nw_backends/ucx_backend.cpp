@@ -635,12 +635,12 @@ nixlUcxEngine::notifAmCb(void *arg, const void *header,
     remote_name = ser_des.getStr("name");
     msg = ser_des.getStr("msg");
 
-    notif_list_t &l = engine->notifMainList;
     if (engine->isProgressThread()) {
         /* Append to the private list to allow batching */
-        l = engine->notifPthrPriv;
+        engine->notifPthrPriv.push_back(std::make_pair(remote_name, msg));
+    } else {
+        engine->notifMainList.push_back(std::make_pair(remote_name, msg));
     }
-    l.push_back(std::make_pair(remote_name, msg));
 
     return UCS_OK;
 }
@@ -659,15 +659,12 @@ void nixlUcxEngine::notifCombineHelper(notif_list_t &src, notif_list_t &tgt)
 
 void nixlUcxEngine::notifProgressCombineHelper(notif_list_t &src, notif_list_t &tgt)
 {
-    if (!src.size()) {
-        // Nothing to do. Exit
-        return;
-    }
-
     notifMtx.lock();
 
-    move(src.begin(), src.end(), back_inserter(tgt));
-    src.erase(src.begin(), src.end());
+    if (src.size()) {
+        move(src.begin(), src.end(), back_inserter(tgt));
+        src.erase(src.begin(), src.end());
+    }
 
     notifMtx.unlock();
 }
