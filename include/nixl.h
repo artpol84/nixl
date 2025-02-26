@@ -16,7 +16,7 @@ class nixlAgent {
 
     public:
 
-        /*** Initialization and Regsitering Methods ***/
+        /*** Initialization and Registering Methods ***/
 
         // Populates agent name and device metadata
         nixlAgent (const std::string &name, const nixlDeviceMD &devs);
@@ -77,7 +77,6 @@ class nixlAgent {
                                    const nixl_xfer_op_t &operation,
                                    nixlXferReqH* &req_handle,
                                    const bool no_checks = false);
-
 
         /*** Notification Handling ***/
 

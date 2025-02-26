@@ -326,10 +326,11 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
 
     for (int i=0; i<(int)local_indices.size(); ++i) {
         // Copying from another internal desc list, already verified
-        handle->initiatorDescs->addDesc((*local_side->descs)[i]);
-        handle->targetDescs->addDesc((*remote_side->descs)[i]);
+        handle->initiatorDescs->addDesc((*local_side->descs)[local_indices[i]]);
+        handle->targetDescs->addDesc((*remote_side->descs)[remote_indices[i]]);
     }
 
+    handle->engine      = local_side->engine;
     handle->remoteAgent = remote_side->remoteAgent;
     handle->notifMsg    = notif_msg;
     handle->backendOp   = operation;

@@ -4,6 +4,147 @@
 #include "nixl.h"
 #include "ucx_backend.h"
 
+void check_buf(void* buf, size_t len) {
+
+    // Do some checks on the data.
+    for(size_t i = 0; i<len; i++){
+        assert(((uint8_t*) buf)[i] == 0xbb);
+    }
+}
+
+nixl_status_t sideXferTest(nixlAgent* A1, nixlAgent* A2, nixlXferReqH* src_handle, nixlBackendEngine* dst_backend){
+    std::cout << "Starting sideXferTest\n";
+
+    nixlBackendEngine* src_backend = A1->getXferBackend(src_handle);
+
+    assert(src_backend);
+
+    std::cout << "Got backend\n";
+
+    int n_bufs = 4; //must be even
+    size_t len = 1024;
+    nixl_status_t status;
+    void* src_bufs[n_bufs], *dst_bufs[n_bufs];
+
+    nixlDescList<nixlBasicDesc> src_list(DRAM_SEG), dst_list(DRAM_SEG);
+    nixlBasicDesc src_desc[4], dst_desc[4];
+    for(int i = 0; i<n_bufs; i++) {
+
+        src_bufs[i] = calloc(1, len);
+        std::cout << " src " << i << " " << src_bufs[i] << "\n";
+        dst_bufs[i] = calloc(1, len);
+        std::cout << " dst " << i << " " << dst_bufs[i] << "\n";
+
+        src_desc[i].len = len;
+        src_desc[i].devId = 0;
+        src_desc[i].addr = (uintptr_t) src_bufs[i];
+        dst_desc[i].len = len;
+        dst_desc[i].devId = 0;
+        dst_desc[i].addr = (uintptr_t) dst_bufs[i];
+
+        src_list.addDesc(src_desc[i]);
+        dst_list.addDesc(dst_desc[i]);
+    }
+
+    status = A1->registerMem(src_list, src_backend);
+    assert(status == NIXL_SUCCESS);
+
+    status = A2->registerMem(dst_list, dst_backend);
+    assert(status == NIXL_SUCCESS);
+
+    std::string meta2 = A2->getLocalMD();
+    assert(meta2.size() > 0);
+
+    std::string remote_name = A1->loadRemoteMD(meta2);
+    assert(remote_name == "Agent2");
+
+    std::cout << "Ready to prepare side\n";
+
+    nixlXferSideH *src_side, *dst_side;
+
+    status = A1->prepXferSide(src_list, "", src_backend, src_side);
+    assert(status == NIXL_SUCCESS);
+
+    status = A1->prepXferSide(dst_list, remote_name, src_backend, dst_side);
+    assert(status == NIXL_SUCCESS);
+
+    std::cout << "prep done, starting transfers\n";
+
+    std::vector<int> indices1, indices2;
+
+    for(int i = 0; i<(n_bufs/2); i++) {
+        //initial bufs
+        memset(src_bufs[i], 0xbb, len);
+        indices1.push_back(i);
+    }
+    for(int i = (n_bufs/2); i<n_bufs; i++)
+        indices2.push_back(i);
+
+    nixlXferReqH *req1, *req2, *req3;
+
+    //write first half of src_bufs to dst_bufs
+    status = A1->makeXferReq(src_side, indices1, dst_side, indices1, "", NIXL_WRITE, req1);
+    assert(status == NIXL_SUCCESS);
+
+    nixl_xfer_state_t xfer_status = A1->postXferReq(req1);
+
+    while(xfer_status != NIXL_XFER_DONE) {
+        if(xfer_status != NIXL_XFER_DONE) xfer_status = A1->getXferStatus(req1);
+        assert(xfer_status != NIXL_XFER_ERR);
+    }
+
+    for(int i = 0; i<(n_bufs/2); i++)
+        check_buf(dst_bufs[i], len);
+
+    std::cout << "transfer 1 done\n";
+
+    //read first half of dst_bufs back to second half of src_bufs
+    status = A1->makeXferReq(src_side, indices2, dst_side, indices1, "", NIXL_READ, req2);
+    assert(status == NIXL_SUCCESS);
+
+    xfer_status = A1->postXferReq(req2);
+
+    while(xfer_status != NIXL_XFER_DONE) {
+        if(xfer_status != NIXL_XFER_DONE) xfer_status = A1->getXferStatus(req2);
+        assert(xfer_status != NIXL_XFER_ERR);
+    }
+
+    for(int i = (n_bufs/2); i<n_bufs; i++)
+        check_buf(src_bufs[i], len);
+
+    std::cout << "transfer 2 done\n";
+
+    //write second half of src_bufs to dst_bufs
+    status = A1->makeXferReq(src_side, indices2, dst_side, indices2, "", NIXL_WRITE, req3);
+    assert(status == NIXL_SUCCESS);
+
+    xfer_status = A1->postXferReq(req3);
+
+    while(xfer_status != NIXL_XFER_DONE) {
+        if(xfer_status != NIXL_XFER_DONE) xfer_status = A1->getXferStatus(req3);
+        assert(xfer_status != NIXL_XFER_ERR);
+    }
+
+    for(int i = (n_bufs/2); i<n_bufs; i++)
+        check_buf(dst_bufs[i], len);
+
+    std::cout << "transfer 3 done\n";
+
+    A1->invalidateXferReq(req1);
+    A1->invalidateXferReq(req2);
+    A1->invalidateXferReq(req3);
+
+    status = A1->deregisterMem(src_list, src_backend);
+    assert(status == NIXL_SUCCESS);
+    status = A2->deregisterMem(dst_list, dst_backend);
+    assert(status == NIXL_SUCCESS);
+
+    delete src_side;
+    delete dst_side;
+
+    return NIXL_SUCCESS;
+}
+
 int main()
 {
     nixl_status_t ret1, ret2;
@@ -108,16 +249,15 @@ int main()
         assert(n_notifs >= 0);
     }
 
-    // Do some checks on the data.
-    for(size_t i = dst_offset; i<req_size; i++){
-        assert( ((uint8_t*) addr2)[i] == 0xbb);
-    }
-
     std::vector<std::string> agent1_notifs = notif_map[agent1];
     assert(agent1_notifs.size() == 1);
     assert(agent1_notifs.front() == "notification");
 
     std::cout << "Transfer verified\n";
+
+    std::cout << "performing sideXferTest with backends " << ucx1 << " " << ucx2 << "\n";
+    ret1 = sideXferTest(&A1, &A2, req_handle, ucx2);
+    assert(ret1 == NIXL_SUCCESS);
 
     A1.invalidateXferReq(req_handle);
     ret1 = A1.deregisterMem(dlist1, ucx1);

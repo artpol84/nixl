@@ -113,13 +113,13 @@ PYBIND11_MODULE(nixl_bindings, m) {
 
     py::class_<nixlAgent>(m, "nixlAgent")
         .def(py::init<std::string, nixlDeviceMD>())
-        .def("createBackend", [](nixlAgent &agent, nixlUcxInitParams initParams) -> void* {
-                    return (void*) agent.createBackend(&initParams);
+        .def("createBackend", [](nixlAgent &agent, nixlUcxInitParams initParams) -> uintptr_t {
+                    return (uintptr_t) agent.createBackend(&initParams);
             })
-        .def("registerMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> nixl_status_t {
+        .def("registerMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, uintptr_t backend) -> nixl_status_t {
                     return agent.registerMem(descs, (nixlBackendEngine*) backend);
                 })
-        .def("deregisterMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, void* backend) -> nixl_status_t {
+        .def("deregisterMem", [](nixlAgent &agent, nixlDescList<nixlBasicDesc> descs, uintptr_t backend) -> nixl_status_t {
                     return agent.deregisterMem(descs, (nixlBackendEngine*) backend);
                 })
         .def("makeConnection", &nixlAgent::makeConnection)
