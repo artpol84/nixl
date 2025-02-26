@@ -58,12 +58,12 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
     return backend; // nullptr in case of error
 }
 
-nixl_status_t nixlAgent::registerMem(const nixlDescList<nixlBasicDesc> &descs,
+nixl_status_t nixlAgent::registerMem(const nixl_dlist_t &descs,
                            nixlBackendEngine* backend) {
     return (data.memorySection.addDescList(descs, backend));
 }
 
-nixl_status_t nixlAgent::deregisterMem(const nixlDescList<nixlBasicDesc> &descs,
+nixl_status_t nixlAgent::deregisterMem(const nixl_dlist_t &descs,
                              nixlBackendEngine* backend) {
     // Might not need unified and sorted info
     nixlDescList<nixlMetaDesc> resp(descs.getType(),
@@ -97,8 +97,8 @@ nixl_status_t nixlAgent::makeConnection(const std::string &remote_agent) {
     return NIXL_SUCCESS;
 }
 
-nixl_status_t nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_descs,
-                             const nixlDescList<nixlBasicDesc> &remote_descs,
+nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
+                             const nixl_dlist_t &remote_descs,
                              const std::string &remote_agent,
                              const std::string &notif_msg,
                              const nixl_xfer_op_t &operation,
@@ -214,7 +214,7 @@ nixlBackendEngine* nixlAgent::getXferBackend(nixlXferReqH* req) {
     return req->engine;
 }
 
-nixl_status_t nixlAgent::prepXferSide (const nixlDescList<nixlBasicDesc> &descs,
+nixl_status_t nixlAgent::prepXferSide (const nixl_dlist_t &descs,
                                        const std::string &remote_agent,
                                        nixlBackendEngine* backend,
                                        nixlXferSideH* &side_handle) {

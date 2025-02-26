@@ -17,7 +17,7 @@ nixlMemSection::nixlMemSection () {
 // It's pure virtual, but base also class needs a destructor due to its memebrs.
 nixlMemSection::~nixlMemSection () {}
 
-nixl_status_t nixlMemSection::populate (const nixlDescList<nixlBasicDesc> &query,
+nixl_status_t nixlMemSection::populate (const nixl_dlist_t &query,
                               const nixl_backend_t &nixl_backend,
                               nixlDescList<nixlMetaDesc> &resp) const {
     if (query.getType() != resp.getType())
@@ -58,7 +58,7 @@ nixl_status_t nixlLocalSection::addBackendHandler (nixlBackendEngine* backend) {
 }
 
 // Calls into backend engine to register the memories in the desc list
-nixl_status_t nixlLocalSection::addDescList (const nixlDescList<nixlBasicDesc> &mem_elms,
+nixl_status_t nixlLocalSection::addDescList (const nixl_dlist_t &mem_elms,
                                    nixlBackendEngine* backend) {
 
     if (backend == nullptr)
@@ -132,7 +132,7 @@ nixl_status_t nixlLocalSection::remDescList (const nixlDescList<nixlMetaDesc> &m
 }
 
 nixlBackendEngine* nixlLocalSection::findQuery(
-                       const nixlDescList<nixlBasicDesc> &query,
+                       const nixl_dlist_t &query,
                        const nixl_mem_t remote_nixl_mem,
                        const backend_set_t remote_backends,
                        nixlDescList<nixlMetaDesc> &resp) const {

@@ -71,18 +71,18 @@ int main(int argc, char *argv[]) {
 
     /** NIXL declarations */
     /** Agent and backend creation parameters */
-    nixlAgentConfig             cfg(true);
-    nixlUcxInitParams           params;
-    nixlBasicDesc               buf[NUM_TRANSFERS];
-    nixlBackendEngine           *ucx;
+    nixlAgentConfig   cfg(true);
+    nixlUcxInitParams params;
+    nixlBasicDesc     buf[NUM_TRANSFERS];
+    nixlBackendEngine *ucx;
 
     /** Serialization/Deserialization object to create a blob */
-    nixlSerDes                  *serdes;
-    nixlSerDes                  *remote_serdes;
+    nixlSerDes        *serdes;
+    nixlSerDes        *remote_serdes;
 
     /** Descriptors and Transfer Request */
-    nixlDescList<nixlBasicDesc> dram_for_ucx(DRAM_SEG);
-    nixlXferReqH                *treq;
+    nixl_dlist_t      dram_for_ucx(DRAM_SEG);
+    nixlXferReqH      *treq;
 
     /** Argument Parsing */
     if (argc < 4) {
@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
         std::cout << " Verfiy Deserialized Target's Desc List at Initiator\n";
         remote_serdes = new nixlSerDes();
         remote_serdes->importStr(remote_desc);
-        nixlDescList<nixlBasicDesc> dram_target_ucx(remote_serdes);
+        nixl_dlist_t dram_target_ucx(remote_serdes);
         dram_target_ucx.print();
         agent.loadRemoteMD(tgt_md_init);
 

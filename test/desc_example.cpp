@@ -9,7 +9,7 @@
 void testPerf(){
     int desc_count = 24*64*1024;
     void* buf = malloc(256);
-    nixlDescList<nixlBasicDesc> dlist (DRAM_SEG);
+    nixl_dlist_t dlist (DRAM_SEG);
 
     struct timeval start_time, end_time, diff_time;
 
@@ -186,11 +186,11 @@ int main()
     nixlBasicDesc b5 (305, 30, 4);
     nixlBasicDesc b6 (100, 30, 3);
 
-    nixlDescList<nixlBasicDesc> dlist10 (DRAM_SEG, false, false);
-    nixlDescList<nixlBasicDesc> dlist11 (DRAM_SEG, false, true);
-    nixlDescList<nixlBasicDesc> dlist12 (DRAM_SEG, true,  true);
-    nixlDescList<nixlBasicDesc> dlist13 (DRAM_SEG, true,  true);
-    nixlDescList<nixlBasicDesc> dlist14 (DRAM_SEG, true,  true);
+    nixl_dlist_t dlist10 (DRAM_SEG, false, false);
+    nixl_dlist_t dlist11 (DRAM_SEG, false, true);
+    nixl_dlist_t dlist12 (DRAM_SEG, true,  true);
+    nixl_dlist_t dlist13 (DRAM_SEG, true,  true);
+    nixl_dlist_t dlist14 (DRAM_SEG, true,  true);
 
     nixlDescList<nixlStringDesc> dlist20 (DRAM_SEG, false,  true);
 
@@ -234,7 +234,7 @@ int main()
     nixlSerDes* ser_des2 = new nixlSerDes();
 
     assert(dlist10.serialize(ser_des) == 0);
-    nixlDescList<nixlBasicDesc> importList (ser_des);;
+    nixl_dlist_t importList (ser_des);;
     assert(importList == dlist10);
 
     assert(dlist20.serialize(ser_des2) == 0);

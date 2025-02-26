@@ -25,10 +25,10 @@ class nixlAgent {
         // Instantiate BackendEngine objects, based on corresponding params
         nixlBackendEngine* createBackend (nixlBackendInitParams* params);
         // Register with the backend and populate memory_section
-        nixl_status_t registerMem (const nixlDescList<nixlBasicDesc> &descs,
+        nixl_status_t registerMem (const nixl_dlist_t &descs,
                                    nixlBackendEngine* backend);
         // Deregister and remove from memory section
-        nixl_status_t deregisterMem (const nixlDescList<nixlBasicDesc> &descs,
+        nixl_status_t deregisterMem (const nixl_dlist_t &descs,
                                      nixlBackendEngine* backend);
 
         // Make connection proactively, instead of at transfer time
@@ -38,8 +38,8 @@ class nixlAgent {
         /*** Transfer Request Handling ***/
 
         // Creates a transfer request, with automatic backend selection.
-        nixl_status_t createXferReq (const nixlDescList<nixlBasicDesc> &local_descs,
-                                     const nixlDescList<nixlBasicDesc> &remote_descs,
+        nixl_status_t createXferReq (const nixl_dlist_t &local_descs,
+                                     const nixl_dlist_t &remote_descs,
                                      const std::string &remote_agent,
                                      const std::string &notif_msg,
                                      const nixl_xfer_op_t &operation,
@@ -63,7 +63,7 @@ class nixlAgent {
 
         // Prepares descriptors for one side of a transfer with given backend.
         // Empty string for remote_agent means it's local side.
-        nixl_status_t prepXferSide (const nixlDescList<nixlBasicDesc> &descs,
+        nixl_status_t prepXferSide (const nixl_dlist_t &descs,
                                     const std::string &remote_agent,
                                     nixlBackendEngine* backend,
                                     nixlXferSideH* &side_handle);

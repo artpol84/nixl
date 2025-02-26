@@ -22,7 +22,7 @@ class nixlMemSection {
     public:
         nixlMemSection ();
 
-        nixl_status_t populate (const nixlDescList<nixlBasicDesc> &query,
+        nixl_status_t populate (const nixl_dlist_t &query,
                       const nixl_backend_t &nixl_backend,
                       nixlDescList<nixlMetaDesc> &resp) const;
 
@@ -37,7 +37,7 @@ class nixlLocalSection : public nixlMemSection {
     public:
         nixl_status_t addBackendHandler (nixlBackendEngine* backend);
 
-        nixl_status_t addDescList (const nixlDescList<nixlBasicDesc> &mem_elms,
+        nixl_status_t addDescList (const nixl_dlist_t &mem_elms,
                          nixlBackendEngine* backend);
 
         // Each nixlBasicDesc should be same as original registration region
@@ -46,7 +46,7 @@ class nixlLocalSection : public nixlMemSection {
 
         // Find a nixlBasicDesc in the section, if available fills the resp based
         // on that, and returns the backend pointer that can use the resp
-        nixlBackendEngine* findQuery (const nixlDescList<nixlBasicDesc> &query,
+        nixlBackendEngine* findQuery (const nixl_dlist_t &query,
                                const nixl_mem_t remote_nixl_mem,
                                const backend_set_t remote_backends,
                                nixlDescList<nixlMetaDesc> &resp) const;
