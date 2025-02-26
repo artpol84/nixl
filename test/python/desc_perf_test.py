@@ -10,11 +10,11 @@ if __name__ == "__main__":
     nixl_agent = nixl_wrapper("test", None)
     addr = nixl_utils.malloc_passthru(256)
 
-    start_time = time.perf_counter()
-    descs = nixl.nixlDescList(nixl.DRAM_SEG, True, False, desc_count)
+    addr_list = [(addr, 256, 0)]*desc_count
 
-    for i in range(desc_count):
-        descs[i] = (addr, 256, 0)
+    start_time = time.perf_counter()
+
+    descs = nixl.nixlDescList(nixl.DRAM_SEG, addr_list)
 
     end_time = time.perf_counter()
 

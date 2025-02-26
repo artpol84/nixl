@@ -68,6 +68,12 @@ PYBIND11_MODULE(nixl_bindings, m) {
 
     py::class_<nixl_dlist_t>(m, "nixlDescList")
         .def(py::init<nixl_mem_t, bool, bool, int>(), py::arg("type"), py::arg("unifiedAddr")=true, py::arg("sorted")=false, py::arg("init_size")=0)
+        .def(py::init([](nixl_mem_t mem, std::vector<py::tuple> descs, bool unifiedAddr, bool sorted) {
+                nixl_dlist_t new_list(mem, unifiedAddr, sorted, descs.size());
+                for(long unsigned int i = 0; i<descs.size(); i++)
+                    new_list[i] = nixlBasicDesc(descs[i][0].cast<uintptr_t>(), descs[i][1].cast<size_t>(), descs[i][2].cast<uint32_t>());
+                return new_list;
+            }), py::arg("type"), py::arg("descs"), py::arg("unifiedAddr")=true, py::arg("sorted")=false) 
         .def("getType", &nixl_dlist_t::getType)
         .def("isUnifiedAddr", &nixl_dlist_t::isUnifiedAddr)
         .def("descCount", &nixl_dlist_t::descCount)
