@@ -79,11 +79,13 @@ nixlStringDesc::nixlStringDesc(const std::string &str) {
 // There are no virtual functions, so the object is all data, no pointers.
 
 template <class T>
-nixlDescList<T>::nixlDescList (nixl_mem_t type, bool unified_addr, bool sorted) {
+nixlDescList<T>::nixlDescList (nixl_mem_t type, bool unified_addr,
+                               bool sorted, int init_size) {
     static_assert(std::is_base_of<nixlBasicDesc, T>::value);
     this->type        = type;
     this->unifiedAddr = unified_addr;
     this->sorted      = sorted;
+    this->descs.resize(init_size);
 }
 
 template <class T>

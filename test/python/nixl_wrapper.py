@@ -16,6 +16,10 @@ class nixl_wrapper:
         self.agent = nixl.nixlAgent(agent_name, devices)
         self.backends["UCX"] = self.agent.createBackend(init)
 
+        self.nixl_mems = {"DRAM":       nixl.DRAM_SEG,
+                          "VRAM":       nixl.VRAM_SEG,
+                          "cpu":        nixl.DRAM_SEG,
+                          "cuda":       nixl.VRAM_SEG}
         self.nixl_ops = {"WRITE":       nixl.NIXL_WR_FLUSH,
                          "READ":        nixl.NIXL_RD_FLUSH,
                          "WRITE_NOTIF": nixl.NIXL_WR_NOTIF,
@@ -24,36 +28,27 @@ class nixl_wrapper:
         print("Initializied NIXL agent:", agent_name)
 
 
-    def get_descs(self, arg, overlap_check=True):
+    def get_descs(self, arg):
         # can add check for DLPack input
         if isinstance(arg, list): # List[torch.Tensor]:
             tensor_type = arg[0].device
-            if (tensor_type=="cuda"):
-                descs = nixl.nixlDescList(nixl.VRAM_SEG, True, False)
-            else:
-                descs = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
+            descs = nixl.nixlDescList(self.nixl_mems[tensor_type], True, False, len(arg))
 
-            for tensor in arg:
-                if tensor.device != tensor_type:
+            for i in range(len(arg)):
+                if tensors[i].device != tensor_type:
                     return None
-                base_addr = tensor.data_ptr()
-                region_len = tensor.numel() * tensor.element_size()
-                gpu_id = tensor.get_device()
+                base_addr = tensors[i].data_ptr()
+                region_len = tensor[i].numel() * tensors[i].element_size()
+                gpu_id = tensors[i].get_device()
                 if (gpu_id==-1): # DRAM
                     gpu_id = 0
-                descs.addDesc(nixl.nixlBasicDesc(base_addr, region_len, gpu_id),
-                                                 overlap_check)
+                descs[i] = nixl.nixlBasicDesc(base_addr, region_len, gpu_id)
 
         elif isinstance(arg, tuple): # (str, List[(int,int,int)]):
-            if arg[0] == "VRAM":
-                descs = nixl.nixlDescList(nixl.VRAM_SEG, True, False)
-            elif arg[0] == "DRAM":
-                descs = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
-            else:
-                return None
+            descs = nixl.nixlDescList(self.nixl_mems[arg[0]], True, False, len(arg[1]))
 
-            for (addr, len, id) in arg[1]:
-                descs.addDesc(nixl.nixlBasicDesc(addr, len, id), overlap_check)
+            for i in range(len(arg[1])):
+                descs[i] = nixl.nixlBasicDesc(*arg[1][i])
 
         elif isinstance(arg, nixl.nixlDescList):
             return arg
@@ -72,7 +67,7 @@ class nixl_wrapper:
     # The returned descriptor object can be used for call to deregister
     def register_memory(self, arg):
         # based on backend type and mem_type, figure what registrations are meaningful
-        reg_descs = self.get_descs(arg, True)
+        reg_descs = self.get_descs(arg)
         ret = self.agent.registerMem(reg_descs, self.backends["UCX"])
         if (ret != 0):
             return None

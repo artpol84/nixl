@@ -66,13 +66,14 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("print", &nixlBasicDesc::print);
 
     py::class_<nixlDescList<nixlBasicDesc>>(m, "nixlDescList")
-        .def(py::init<nixl_mem_t, bool, bool>())
+        .def(py::init<nixl_mem_t, bool, bool, int>(), py::arg("type"), py::arg("unifiedAddr")=true, py::arg("sorted")=false, py::arg("init_size")=0)
         .def("getType", &nixlDescList<nixlBasicDesc>::getType)
         .def("isUnifiedAddr", &nixlDescList<nixlBasicDesc>::isUnifiedAddr)
         .def("descCount", &nixlDescList<nixlBasicDesc>::descCount)
         .def("isEmpty", &nixlDescList<nixlBasicDesc>::isEmpty)
         .def("isSorted", &nixlDescList<nixlBasicDesc>::isSorted)
-        .def("__getitem__", &nixlDescList<nixlBasicDesc>::operator[])
+        .def("__getitem__", static_cast<nixlBasicDesc& (nixlDescList<nixlBasicDesc>::*)(int)>(&nixlDescList<nixlBasicDesc>::operator[]))
+        .def("__setitem__", [](nixlDescList<nixlBasicDesc> &list, int i, const nixlBasicDesc desc) { list[i] = desc; })
         .def(py::self == py::self)
         .def("addDesc", &nixlDescList<nixlBasicDesc>::addDesc, py::arg("desc"), py::arg("overlap_check") = true)
         .def("remDesc", &nixlDescList<nixlBasicDesc>::remDesc)

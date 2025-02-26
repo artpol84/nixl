@@ -44,7 +44,8 @@ class nixlDescList {
         std::vector<T> descs;
 
     public:
-        nixlDescList(nixl_mem_t type, bool unifiedAddr=true, bool sorted=false);
+        nixlDescList(nixl_mem_t type, bool unifiedAddr=true,
+                     bool sorted=false, int init_size=0);
         nixlDescList(nixlSerDes* deserializer);
         nixlDescList(const nixlDescList<T> &d_list) = default;
         nixlDescList& operator=(const nixlDescList<T> &d_list) = default;
@@ -57,12 +58,14 @@ class nixlDescList {
         inline bool isSorted() const { return sorted; }
 
         inline const T& operator[](int index) const { return descs[index]; }
+        inline T& operator[](int index) { return descs[index]; }
         inline typename std::vector<T>::const_iterator begin() const { return descs.begin(); }
         inline typename std::vector<T>::const_iterator end() const { return descs.end(); }
+        inline typename std::vector<T>::iterator begin() { return descs.begin(); }
+        inline typename std::vector<T>::iterator end() { return descs.end(); }
         template <class Y> friend bool operator==(const nixlDescList<Y> &lhs,
                                                   const nixlDescList<Y> &rhs);
 
-        // addDesc is the only method to add new individual entries, checks for no overlap
         nixl_status_t addDesc(const T &desc, const bool overlap_check=true);
         nixl_status_t remDesc(int index);
         nixl_status_t populate(const nixlDescList<nixlBasicDesc> &query, nixlDescList<T> &resp) const;
