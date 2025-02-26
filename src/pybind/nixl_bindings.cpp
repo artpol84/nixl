@@ -29,7 +29,6 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .export_values();
 
     py::enum_<nixl_xfer_state_t>(m, "nixl_xfer_state_t")
-        .value("NIXL_XFER_PRE", NIXL_XFER_PRE)
         .value("NIXL_XFER_INIT", NIXL_XFER_INIT)
         .value("NIXL_XFER_PROC", NIXL_XFER_PROC)
         .value("NIXL_XFER_DONE", NIXL_XFER_DONE)
@@ -132,11 +131,11 @@ PYBIND11_MODULE(nixl_bindings, m) {
                                  const nixl_xfer_op_t &operation) -> uintptr_t {
                     nixlXferReqH* handle;
                     nixl_status_t ret = agent.createXferReq(local_descs, remote_descs, remote_agent, notif_msg, operation, handle);
-                    if(ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
+                    if (ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
                     else return (uintptr_t) handle;
                 })
-        .def("getXferBackend", [](nixlAgent &agent, void* reqh) -> void* {
-                    return (void*) agent.getXferBackend((nixlXferReqH*) reqh);
+        .def("getXferBackend", [](nixlAgent &agent, uintptr_t reqh) -> uintptr_t {
+                    return (uintptr_t) agent.getXferBackend((nixlXferReqH*) reqh);
             })
         .def("prepXferSide", [](nixlAgent &agent,
                                 const nixlDescList<nixlBasicDesc> &descs,
@@ -144,20 +143,22 @@ PYBIND11_MODULE(nixl_bindings, m) {
                                 uintptr_t backend) -> uintptr_t {
                     nixlXferSideH* handle;
                     nixl_status_t ret = agent.prepXferSide(descs, remote_agent, (nixlBackendEngine*) backend, handle);
-                    if(ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
+                    if (ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
                     else return (uintptr_t) handle;
                 })
         .def("makeXferReq", [](nixlAgent &agent,
-                               nixlXferSideH* local_side,
+                               uintptr_t local_side,
                                const std::vector<int> &local_indices,
-                               nixlXferSideH* remote_side,
+                               uintptr_t remote_side,
                                const std::vector<int> &remote_indices,
                                const std::string &notif_msg,
                                const nixl_xfer_op_t &operation,
                                const bool no_checks) -> uintptr_t {
                     nixlXferReqH* handle;
-                    nixl_status_t ret = agent.makeXferReq(local_side, local_indices, remote_side, remote_indices, notif_msg, operation, handle, no_checks);
-                    if(ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
+                    nixl_status_t ret = agent.makeXferReq((nixlXferSideH*) local_side, local_indices,
+                                                          (nixlXferSideH*) remote_side, remote_indices,
+                                                          notif_msg, operation, handle, no_checks);
+                    if (ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
                     else return (uintptr_t) handle;
                 },             py::arg("local_side"),
                                py::arg("local_indices"),
@@ -168,6 +169,9 @@ PYBIND11_MODULE(nixl_bindings, m) {
                                py::arg("no_checks") = false )
         .def("invalidateXferReq", [](nixlAgent &agent, uintptr_t reqh) -> void {
                     agent.invalidateXferReq((nixlXferReqH*) reqh);
+                })
+        .def("invalidateXferSide", [](nixlAgent &agent, uintptr_t handle) -> void {
+                    agent.invalidateXferSide((nixlXferSideH*) handle);
                 })
         .def("postXferReq", [](nixlAgent &agent, uintptr_t reqh) -> nixl_xfer_state_t {
                     return agent.postXferReq((nixlXferReqH*) reqh);
@@ -197,8 +201,5 @@ PYBIND11_MODULE(nixl_bindings, m) {
                     return py::bytes(agent.getLocalMD());
                 })
         .def("loadRemoteMD", &nixlAgent::loadRemoteMD)
-        .def("invalidateRemoteMD", &nixlAgent::invalidateRemoteMD)
-        .def("sendLocalMD", &nixlAgent::sendLocalMD)
-        .def("fetchRemoteMD", &nixlAgent::fetchRemoteMD)
-        .def("invalidateLocalMD", &nixlAgent::invalidateLocalMD);
+        .def("invalidateRemoteMD", &nixlAgent::invalidateRemoteMD);
 }

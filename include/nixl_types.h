@@ -10,7 +10,7 @@ typedef enum {UCX, GPUDIRECTIO, NVMe, NVMeoF} nixl_backend_t;
 
 typedef enum {DRAM_SEG, VRAM_SEG, BLK_SEG, FILE_SEG} nixl_mem_t;
 
-typedef enum {NIXL_XFER_PRE, NIXL_XFER_INIT, NIXL_XFER_PROC,
+typedef enum {NIXL_XFER_INIT, NIXL_XFER_PROC,
               NIXL_XFER_DONE, NIXL_XFER_ERR} nixl_xfer_state_t;
 
 typedef enum {NIXL_READ,  NIXL_RD_FLUSH, NIXL_RD_NOTIF,

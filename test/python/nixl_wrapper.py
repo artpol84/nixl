@@ -116,7 +116,6 @@ class nixl_wrapper:
     # "" remote agent means local. example xfer can be used to know the backend
     def prep_xfer_side(self, args, remote_agent="", xfer_backend=None, example_xfer=None):
         descs = self.get_descs(args)
-        descs.print()
         if (xfer_backend):
             handle = self.agent.prepXferSide(descs, remote_agent, xfer_backend);
         elif (example_xfer):
@@ -139,11 +138,16 @@ class nixl_wrapper:
             return None
 
 
+    def delete_xfer_side (self, handle):
+        # frees the handle too
+        self.agent.invalidateXferSide(handle)
+
+
     def transfer(self, handle):
         status = self.agent.postXferReq(handle)
         if status==nixl.NIXL_XFER_ERR:
             return "ERR"
-        elif (status!=status==nixl.NIXL_XFER_DONE):
+        elif (status!=nixl.NIXL_XFER_DONE):
             return "PROC"
         else:
             return "DONE"
@@ -182,6 +186,6 @@ class nixl_wrapper:
         self.agent.genNotif(remote_agent_name, notif_msg)
 
 
-    def get_notifs(self, agent):
+    def get_notifs(self):
         self.agent.getNotifs(self.notifs) # Adds new notifs
         return self.notifs

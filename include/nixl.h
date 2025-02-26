@@ -37,7 +37,7 @@ class nixlAgent {
 
         /*** Transfer Request Handling ***/
 
-        // Creates a transfer request.
+        // Creates a transfer request, with automatic backend selection.
         nixl_status_t createXferReq (const nixlDescList<nixlBasicDesc> &local_descs,
                                      const nixlDescList<nixlBasicDesc> &remote_descs,
                                      const std::string &remote_agent,
@@ -52,13 +52,13 @@ class nixlAgent {
         nixl_xfer_state_t getXferStatus (nixlXferReqH* req);
 
         // Invalidate transfer request if we no longer need it.
-        // Will abort a running transfer.
+        // Will also abort a running transfer.
         void invalidateXferReq (nixlXferReqH* req);
 
 
-        /*** Alternative method to created transfer handle with more control ***/
+        /*** Alternative method to create transfer handle manually ***/
 
-        // User can ask for backend used in a XferReq to use it for prepXferSide.
+        // User can ask for backend chosen for a XferReq to use it for prepXferSide.
         nixlBackendEngine* getXferBackend(nixlXferReqH* req_handle);
 
         // Prepares descriptors for one side of a transfer with given backend.
@@ -77,6 +77,8 @@ class nixlAgent {
                                    const nixl_xfer_op_t &operation,
                                    nixlXferReqH* &req_handle,
                                    const bool no_checks = false);
+
+        void invalidateXferSide (nixlXferSideH* side_handle);
 
         /*** Notification Handling ***/
 
@@ -105,18 +107,6 @@ class nixlAgent {
 
         // Invalidate the remote section information cached locally
         nixl_status_t invalidateRemoteMD (const std::string &remote_agent);
-
-
-        /*** Metadata handling through central kv service, or for p2p test ***/
-
-        // Send the local metadata to kv service to store it
-        nixl_status_t sendLocalMD () const;
-
-        // Request for a remote Agent's metadata, used for proactive prefetch
-        nixl_status_t fetchRemoteMD (const std::string &remote_agent);
-
-        // Sends messages to kv service to invalidate this Agent's metadata
-        nixl_status_t invalidateLocalMD () const;
 };
 
 #endif

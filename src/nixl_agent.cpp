@@ -167,8 +167,6 @@ nixl_status_t nixlAgent::createXferReq(const nixlDescList<nixlBasicDesc> &local_
     handle->backendOp   = operation;
     handle->state       = NIXL_XFER_INIT;
 
-    // TODO: when supporting metadata server, we might get to PRE state
-
     req_handle = handle;
 
     // TODO: Add bookkeeping of nixlRequests per target agent
@@ -186,7 +184,6 @@ nixl_xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
 
     if (req==nullptr)
         return NIXL_XFER_ERR;
-    // TODO: add NIXL_XFER_PRE handling after metadata server is added
 
     // We can't repost while a request is in progress
     if (req->state == NIXL_XFER_PROC) {
@@ -209,8 +206,6 @@ nixl_xfer_state_t nixlAgent::postXferReq(nixlXferReqH *req) {
 }
 
 nixl_xfer_state_t nixlAgent::getXferStatus (nixlXferReqH *req) {
-    // TODO: add NIXL_XFER_PRE handling after metadata server is added
-
     // If the state is done, no need to recheck.
     if (req->state != NIXL_XFER_DONE)
         req->state = req->engine->checkXfer(req->backendHandle);
@@ -266,7 +261,6 @@ nixl_status_t nixlAgent::prepXferSide (const nixlDescList<nixlBasicDesc> &descs,
     }
 
 
-    // TODO: when supporting metadata server, we might get to PRE state
     side_handle = handle;
 
     // TODO: Add bookkeeping of nixlRequests per target agent
@@ -286,22 +280,23 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
         if ((!local_side->isLocal) || (remote_side->isLocal))
             return NIXL_ERR_INVALID_PARAM;
 
-        if ((local_side->engine == nullptr) || (remote_side->engine == nullptr))
+        if ((local_side->engine == nullptr) || (remote_side->engine == nullptr) ||
+            (local_side->engine != remote_side->engine))
             return NIXL_ERR_INVALID_PARAM;
 
-        if (local_side->engine != remote_side->engine)
+        if ((local_indices.size()==0) || (remote_indices.size()==0) ||
+            (local_indices.size() != remote_indices.size()))
             return NIXL_ERR_INVALID_PARAM;
 
-        if ((local_indices.size()==0) || (remote_indices.size()==0))
-            return NIXL_ERR_INVALID_PARAM;
-
-        if (local_indices.size() != remote_indices.size())
-            return NIXL_ERR_INVALID_PARAM;
-
-        for (int i=0; i<(int)local_indices.size(); ++i)
+        for (int i=0; i<(int)local_indices.size(); ++i) {
+            if ((local_indices[i] >= local_side->descs->descCount()) || (local_indices[i]<0))
+                return NIXL_ERR_INVALID_PARAM;
+            if ((remote_indices[i] >= remote_side->descs->descCount()) || (remote_indices[i]<0))
+                return NIXL_ERR_INVALID_PARAM;
             if ((*local_side->descs )[local_indices [i]].len !=
                 (*remote_side->descs)[remote_indices[i]].len)
                 return NIXL_ERR_INVALID_PARAM;
+        }
 
         if ((notif_msg.size()==0) &&
             ((operation==NIXL_WR_NOTIF) || (operation==NIXL_RD_NOTIF)))
@@ -335,10 +330,13 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
     handle->notifMsg    = notif_msg;
     handle->backendOp   = operation;
     handle->state       = NIXL_XFER_INIT;
-    // TODO: when supporting metadata server, we might get to PRE state
 
     req_handle = handle;
     return NIXL_SUCCESS;
+}
+
+void nixlAgent::invalidateXferSide(nixlXferSideH* side_handle) {
+    delete side_handle;
 }
 
 nixl_status_t nixlAgent::genNotif(const std::string &remote_agent,
@@ -515,19 +513,4 @@ nixl_status_t nixlAgent::invalidateRemoteMD(const std::string &remote_agent) {
 
     // TODO: Put the transfers belonging to this remote into ERR state
     return ret;
-}
-
-nixl_status_t nixlAgent::sendLocalMD() const {
-    // TODO
-    return NIXL_SUCCESS;
-}
-
-nixl_status_t nixlAgent::fetchRemoteMD (const std::string &remote_agent) {
-    // TODO
-    return NIXL_SUCCESS;
-}
-
-nixl_status_t nixlAgent::invalidateLocalMD() const {
-    // TODO
-    return NIXL_SUCCESS;
 }

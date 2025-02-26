@@ -64,7 +64,7 @@ if __name__ == "__main__":
     remote_prep_handle = nixl_agent2.prep_xfer_side(agent1_descs, remote_name)
 
     xfer_handle_2      = nixl_agent2.make_prepped_xfer(local_prep_handle, [0,1],
-                                                       remote_prep_hanlde, [1,0],
+                                                       remote_prep_handle, [1,0],
                                                        "UUID2", "WRITE")
     if not local_prep_handle or not remote_prep_handle:
         print("Preparing transfer side handles failed.")
@@ -97,7 +97,8 @@ if __name__ == "__main__":
 
     nixl_agent2.abort_xfer(xfer_handle_1)
     nixl_agent2.abort_xfer(xfer_handle_2)
-    # Release side handles
+    nixl_agent2.delete_xfer_side(local_prep_handle)
+    nixl_agent2.delete_xfer_side(remote_prep_handle)
     nixl_agent2.remove_remote_agent("target")
     nixl_agent1.deregister_memory(agent1_descs)
     nixl_agent2.deregister_memory(agent2_descs)
