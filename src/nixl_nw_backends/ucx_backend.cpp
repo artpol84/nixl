@@ -191,7 +191,7 @@ nixlUcxEngine::connectionTermAmCb (void *arg, const void *header,
         return UCS_ERR_INVALID_PARAM;
     }
 
-    if(!engine->endConn(remote_agent)) {
+    if(NIXL_SUCCESS != engine->endConn(remote_agent)) {
         //TODO: received connect AM from agent we don't recognize
         return UCS_ERR_INVALID_PARAM;
     }
