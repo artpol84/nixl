@@ -115,14 +115,13 @@ nixl_status_t nixlUcxEngine::checkConn(const std::string &remote_agent) {
 
 nixl_status_t nixlUcxEngine::endConn(const std::string &remote_agent) {
 
-    nixlUcxConnection conn;
     auto search = remoteConnMap.find(remote_agent);
 
     if(search == remoteConnMap.end()) {
         return NIXL_ERR_NOT_FOUND;
     }
 
-    conn = remoteConnMap[remote_agent];
+    nixlUcxConnection &conn = remoteConnMap[remote_agent];
 
     if(uw->disconnect_nb(conn.ep) < 0) {
         return NIXL_ERR_BACKEND;
@@ -200,7 +199,6 @@ nixlUcxEngine::connectionTermAmCb (void *arg, const void *header,
 
 nixl_status_t nixlUcxEngine::connect(const std::string &remote_agent) {
     struct nixl_ucx_am_hdr hdr;
-    nixlUcxConnection conn;
     uint32_t flags = 0;
     nixl_xfer_state_t ret;
     nixlUcxReq req;
@@ -211,7 +209,7 @@ nixl_status_t nixlUcxEngine::connect(const std::string &remote_agent) {
         return NIXL_ERR_NOT_FOUND;
     }
 
-    conn = remoteConnMap[remote_agent];
+    nixlUcxConnection &conn = remoteConnMap[remote_agent];
 
     hdr.op = CONN_CHECK;
     //agent names should never be long enough to need RNDV
@@ -237,7 +235,6 @@ nixl_status_t nixlUcxEngine::connect(const std::string &remote_agent) {
 nixl_status_t nixlUcxEngine::disconnect(const std::string &remote_agent) {
 
     static struct nixl_ucx_am_hdr hdr;
-    nixlUcxConnection conn;
     uint32_t flags = 0;
     nixl_xfer_state_t ret;
     nixlUcxReq req;
@@ -248,7 +245,7 @@ nixl_status_t nixlUcxEngine::disconnect(const std::string &remote_agent) {
         return NIXL_ERR_NOT_FOUND;
     }
 
-    conn = remoteConnMap[remote_agent];
+    nixlUcxConnection &conn = remoteConnMap[remote_agent];
 
     hdr.op = DISCONNECT;
     //agent names should never be long enough to need RNDV

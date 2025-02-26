@@ -18,13 +18,6 @@ struct nixl_ucx_am_hdr {
     ucx_cb_op_t op;
 };
 
-class nixlUcxTransferHandle : public nixlBackendReqH {
-    private:
-        nixlUcxReq req;
-
-    friend class nixlUcxEngine;
-};
-
 class nixlUcxConnection : public nixlBackendConnMD {
     private:
         std::string remoteAgent;
