@@ -7,7 +7,8 @@ nixlAdapter::~nixlAdapter() {}
 
 int nixlAdapter::initialize(const char *role, const char *backend)
 {
-    agent           = new nixlAgent(role, devices);
+    nixlAgentConfig config(true);
+    agent = new nixlAgent(role, config);
 
     if (std::string(backend) == "UCX")
         ucx = agent->createBackend(&params);
@@ -15,7 +16,6 @@ int nixlAdapter::initialize(const char *role, const char *backend)
         return -1;
 
     return 0;
-
 }
 
 uintptr_t nixlAdapter::allocateManagedBuffer(size_t length)

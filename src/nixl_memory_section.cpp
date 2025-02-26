@@ -2,7 +2,7 @@
 #include "nixl.h"
 #include "nixl_descriptors.h"
 #include "internal/mem_section.h"
-#include "internal/transfer_backend.h"
+#include "internal/backend_engine.h"
 
 /*** Class nixlMemSection implementation ***/
 

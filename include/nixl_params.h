@@ -3,21 +3,24 @@
 
 #include <string>
 #include <cstdint>
-#include "internal/transfer_backend.h"
+#include "internal/backend_engine.h"
 #include "nixl_types.h"
 
-// class nixlSysTopology {
-//     // TBD if needed
-// };
+// Per Agent configuration information, such as if progress thread should be used.
+// Other configs such as assigned IP/port or device access can be added.
+class nixlAgentConfig {
+    private:
+        bool useProgThread;
 
-// Per Agent device metadata information. Also assigned IP for the
-// main process, or additional information required for central KV
-// service if used.
-class nixlDeviceMD {
     public:
-        // nixlSysTopology topology;
-        std::string     srcIpAddress;
-        uint16_t        srcPort;
+        // Important configs such as useProgThread must be given and can't be changed.
+        nixlAgentConfig(const bool useProgThread) {
+            this->useProgThread = useProgThread;
+        }
+        nixlAgentConfig(const nixlAgentConfig &cfg) = default;
+        ~nixlAgentConfig() = default;
+
+    friend class nixlAgent;
 };
 
 // Example backend initialization data for UCX.

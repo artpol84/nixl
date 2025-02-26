@@ -5,9 +5,9 @@
 #include "nixl_types.h"
 #include "nixl_descriptors.h"
 #include "nixl_params.h"
-#include "internal/transfer_backend.h"
-#include "internal/metadata_handler.h"
+#include "internal/backend_engine.h"
 #include "internal/transfer_request.h"
+#include "internal/agent_data.h"
 
 // Main transfer object
 class nixlAgent {
@@ -19,7 +19,7 @@ class nixlAgent {
         /*** Initialization and Registering Methods ***/
 
         // Populates agent name and device metadata
-        nixlAgent (const std::string &name, const nixlDeviceMD &devs);
+        nixlAgent (const std::string &name, const nixlAgentConfig &cfg);
         ~nixlAgent ();
 
         // Instantiate BackendEngine objects, based on corresponding params

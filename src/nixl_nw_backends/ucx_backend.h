@@ -162,6 +162,8 @@ class nixlUcxEngine : nixlBackendEngine {
 
         bool supportsNotif () const { return true; }
 
+        bool supportsProgTh () const { return pthr_on; }
+
         /* Object management */
         std::string getConnInfo() const;
         nixl_status_t loadRemoteConnInfo (const std::string &remote_agent,

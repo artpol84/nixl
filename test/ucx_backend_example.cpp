@@ -106,12 +106,12 @@ int main()
     std::string agent2("Agent2");
 
     nixlUcxInitParams init1, init2;
-    init1.threading=true;
-    init2.threading=true;
+    init1.enableProgTh=true;
+    init2.enableProgTh=true;
     // populate required/desired inits
 
     // User would ask each of the agents to create a ucx  backend, and the
-    // agent returns to them these pointers in the form of transfer_backend *
+    // agent returns to them these pointers in the form of backendEngine *
     nixlBackendEngine *ucx1, *ucx2;
 
     init1.localAgent = agent1;
@@ -221,7 +221,7 @@ int main()
         
             /* Test */
             performTransfer(ucx1, ucx2, req_src_descs, req_dst_descs,
-                            addr1, addr2, len, ops[i], !init2.threading);
+                            addr1, addr2, len, ops[i], !init2.enableProgTh);
         }
     }
 

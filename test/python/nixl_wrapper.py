@@ -5,10 +5,9 @@ import pickle
 class nixl_wrapper:
 
     def __init__(self, agent_name, nixl_config):
-        # read available backends and device info from nixl_config
-        # If central metadata server is supported by NIXL, that information
-        # will be in the nixl_config as well.
-        devices = nixl.nixlDeviceMD()
+        # Read available backends and device info from nixl_config
+        # For now setting the multithreading to enabled.
+        devices = nixl.nixlAgentConfig(True)
         init = nixl.nixlUcxInitParams()
 
         self.name = agent_name

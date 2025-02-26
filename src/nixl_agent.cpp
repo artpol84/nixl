@@ -2,6 +2,10 @@
 #include "ucx_backend.h"
 #include "serdes.h"
 
+nixlAgentData::nixlAgentData(const std::string &name,
+                             const nixlAgentConfig &cfg) :
+                             name(name), config(cfg) {}
+
 nixlAgentData::~nixlAgentData() {
     for (auto & elm: remoteSections)
         delete elm.second;
@@ -13,21 +17,9 @@ nixlAgentData::~nixlAgentData() {
     // TODO: Delete the transfer requests
 }
 
-nixlMetadataH::nixlMetadataH(const std::string& ip_address, uint16_t port){
-    this->ipAddress = ip_address;
-    this->port      = port;
-}
-
-nixlMetadataH::~nixlMetadataH(){
-}
-
 nixlAgent::nixlAgent(const std::string &name,
-                     const nixlDeviceMD &devs){
-   data.name                    = name;
-   data.deviceMeta.srcIpAddress = devs.srcIpAddress;
-   data.deviceMeta.srcPort      = devs.srcPort;
-   // data.deviceMeta.topology      = devs.topology;
-}
+                     const nixlAgentConfig &cfg)
+                     : data(name, cfg) {}
 
 nixlAgent::~nixlAgent() {
 }
@@ -40,9 +32,8 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
     if (data.nixlBackendEngines.count(nixl_backend)!=0)
         return nullptr;
 
-    params->localAgent = data.name;
-    // Default to use progress thread
-    params->threading  = true;
+    params->localAgent   = data.name;
+    params->enableProgTh = data.config.useProgThread;
 
     switch (nixl_backend) { // For supported backends
         case UCX:
@@ -53,13 +44,18 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
         default: {} // backend stays nullptr
     }
 
-    if (backend!=nullptr) { // Success
+    if (backend!=nullptr) {
+        if (backend->initErr) {
+            delete backend;
+            return nullptr;
+        }
         nixl_backend = backend->getType(); // For safety, should be redundant
         data.nixlBackendEngines[nixl_backend] = backend;
         data.memorySection.addBackendHandler(backend);
         data.connMD[nixl_backend] = backend->getConnInfo();
+        // TODO: Check if backend supports ProgThread when threading is in agent
     }
-    return backend;
+    return backend; // nullptr in case of error
 }
 
 nixl_status_t nixlAgent::registerMem(const nixlDescList<nixlBasicDesc> &descs,

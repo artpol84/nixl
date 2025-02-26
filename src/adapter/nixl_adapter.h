@@ -38,7 +38,7 @@ class nixlAdapter {
 
     private:
         std::unordered_set<char *>      buffer_alloc_list;
-        nixlDeviceMD                    devices;
+        // nixlAgentConfig                 config;
         nixlUcxInitParams               params;
         nixlBackendEngine               *ucx;
         nixlAgent                       *agent;

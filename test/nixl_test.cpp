@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 
     /** NIXL declarations */
     /** Agent and backend creation parameters */
-    nixlDeviceMD                devices;
+    nixlAgentConfig             cfg(true);
     nixlUcxInitParams           params;
     nixlBasicDesc               buf[NUM_TRANSFERS];
     nixlBackendEngine           *ucx;
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
 
     /** Common to both Initiator and Target */
     std::cout << "Starting Agent for "<< role << "\n";
-    nixlAgent     agent(role, devices);
+    nixlAgent     agent(role, cfg);
     ucx         = agent.createBackend(&params);
     serdes      = new nixlSerDes();
 

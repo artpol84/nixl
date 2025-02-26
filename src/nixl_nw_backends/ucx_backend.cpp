@@ -83,12 +83,14 @@ nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
     uw->regAmCallback(DISCONNECT, connectionTermAmCb, this);
     uw->regAmCallback(NOTIF_STR, notifAmCb, this);
 
-    if (init_params->threading) {
+    if (init_params->enableProgTh) {
         pthr_on = true;
         startProgressThread();
     } else {
         pthr_on = false;
     }
+    // TODO: check if UCX does not support threading but it was asked to set initErr.
+    //       and destruct any allocated resources, or use the flag in destructor.
 }
 
 // Through parent destructor the unregister will be called.

@@ -101,17 +101,15 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("getType()", &nixlUcxInitParams::getType);
     //inherited nixlUcxInitParams class does not need parent to be bound
 
-    py::class_<nixlDeviceMD>(m, "nixlDeviceMD")
+    py::class_<nixlAgentConfig>(m, "nixlAgentConfig")
         //implicit constructor
-        .def(py::init<>())
-        .def_readwrite("m_srcIpAddress", &nixlDeviceMD::srcIpAddress)
-        .def_readwrite("m_srcPort", &nixlDeviceMD::srcPort);
+        .def(py::init<bool>());
 
     //note: pybind will automatically convert notif_map to python types:
     //so, a Dictionary of string: List<string>
 
     py::class_<nixlAgent>(m, "nixlAgent")
-        .def(py::init<std::string, nixlDeviceMD>())
+        .def(py::init<std::string, nixlAgentConfig>())
         .def("createBackend", [](nixlAgent &agent, nixlUcxInitParams initParams) -> uintptr_t {
                     return (uintptr_t) agent.createBackend(&initParams);
             })

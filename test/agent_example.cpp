@@ -155,12 +155,12 @@ int main()
     std::string agent1("Agent1");
     std::string agent2("Agent2");
 
-    nixlDeviceMD devices;
+    nixlAgentConfig cfg(true);
     nixlUcxInitParams init1, init2;
     // populate required/desired inits
 
-    nixlAgent A1("Agent1", devices);
-    nixlAgent A2("Agent2", devices);
+    nixlAgent A1("Agent1", cfg);
+    nixlAgent A2("Agent2", cfg);
 
     nixlBackendEngine* ucx1 = A1.createBackend(&init1);
     nixlBackendEngine* ucx2 = A2.createBackend(&init2);

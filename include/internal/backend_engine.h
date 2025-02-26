@@ -18,7 +18,7 @@ typedef std::vector<std::pair<std::string, std::string>> notif_list_t;
 class nixlBackendInitParams {
     public:
         std::string localAgent;
-        bool        threading;
+        bool        enableProgTh;
 
         virtual nixl_backend_t getType() const = 0;
 
@@ -135,11 +135,13 @@ class nixlBackendEngine {
 
     protected:
         std::string    localAgent;
+        bool           initErr;
 
     public: // public to be removed
         nixlBackendEngine (const nixlBackendInitParams* init_params) {
             this->backendType = init_params->getType();
             this->localAgent  = init_params->localAgent;
+            this->initErr     = false;
         }
 
         // Can add checks for being public metadata
@@ -150,6 +152,9 @@ class nixlBackendEngine {
         // Determines if a backend supports sending notifications. Related methods are not
         // pure virtual, and return errors, as parent shouldn't call if supportsNotif is false.
         virtual bool supportsNotif () const = 0;
+
+        // Determines if a backend supports progress thread.
+        virtual bool supportsProgTh () const = 0;
 
         virtual ~nixlBackendEngine () = default;
 
