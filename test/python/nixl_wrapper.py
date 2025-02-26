@@ -32,7 +32,7 @@ class nixl_wrapper:
         # can add check for DLPack input
         if isinstance(arg, list): # List[torch.Tensor]:
             tensor_type = arg[0].device
-            descs = nixl.nixlDescList(self.nixl_mems[tensor_type], True, False, len(arg))
+            dlist = [ (0,0,0) ] * len(arg)
 
             for i in range(len(arg)):
                 if tensors[i].device != tensor_type:
@@ -42,13 +42,12 @@ class nixl_wrapper:
                 gpu_id = tensors[i].get_device()
                 if (gpu_id==-1): # DRAM
                     gpu_id = 0
-                descs[i] = (base_addr, region_len, gpu_id)
+                dlist[i] = (base_addr, region_len, gpu_id)
+            descs = nixl.nixlDescList(self.nixl_mems[tensor_type], dlist, True, False)
+
 
         elif isinstance(arg, tuple): # (str, List[(int,int,int)]):
-            descs = nixl.nixlDescList(self.nixl_mems[arg[0]], True, False, len(arg[1]))
-
-            for i in range(len(arg[1])):
-                descs[i] = arg[1][i]
+            descs = nixl.nixlDescList(self.nixl_mems[arg[0]], arg[1], True, False)
 
         elif isinstance(arg, nixl.nixlDescList):
             return arg

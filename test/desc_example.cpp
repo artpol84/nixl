@@ -14,7 +14,7 @@ void testPerf(){
     struct timeval start_time, end_time, diff_time;
 
     gettimeofday(&start_time, NULL);
-    
+
     for(int i = 0; i<desc_count; i++) {
         nixlBasicDesc new_desc = nixlBasicDesc((uintptr_t) buf, 256, 0);
 
@@ -25,12 +25,32 @@ void testPerf(){
 
     assert(dlist.descCount() == 24*64*1024);
     timersub(&end_time, &start_time, &diff_time);
-    std::cout << "total time for " << 24*64*1024 << " descs: " << diff_time.tv_sec << "s " << diff_time.tv_usec << "us \n";
+    std::cout << "add desc mode, total time for " << 24*64*1024 << " descs: "
+              << diff_time.tv_sec << "s " << diff_time.tv_usec << "us \n";
 
     float time_per_desc = ((diff_time.tv_sec * 1000000) + diff_time.tv_usec);
     time_per_desc /=  (24*64*1024) ;
     std::cout << "time per desc " << time_per_desc << "us\n";
-}
+
+
+    nixl_dlist_t dlist2 (DRAM_SEG, false, false, desc_count);
+
+    gettimeofday(&start_time, NULL);
+
+    for(int i = 0; i<desc_count; i++)
+        dlist2[i] = nixlBasicDesc((uintptr_t) buf, 256, 0);
+
+    gettimeofday(&end_time, NULL);
+
+    assert(dlist.descCount() == 24*64*1024);
+    timersub(&end_time, &start_time, &diff_time);
+    std::cout << "Operator [] mode, total time for " << 24*64*1024 << " descs: "
+              << diff_time.tv_sec << "s " << diff_time.tv_usec << "us \n";
+
+    time_per_desc = ((diff_time.tv_sec * 1000000) + diff_time.tv_usec);
+    time_per_desc /=  (24*64*1024) ;
+    std::cout << "time per desc " << time_per_desc << "us\n";
+ }
 
 int main()
 {
@@ -271,6 +291,6 @@ int main()
     dlist25.print();
 
     testPerf();
-    
+
     return 0;
 }

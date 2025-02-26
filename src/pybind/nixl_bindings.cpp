@@ -54,18 +54,6 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .value("NIXL_ERR_BAD", NIXL_ERR_BAD)
         .export_values();
 
-    //py::class_<nixlBasicDesc>(m, "nixlBasicDesc")
-    //    .def(py::init<uintptr_t, size_t, uint32_t>())
-    //    .def_readwrite("m_addr", &nixlBasicDesc::addr)
-     //   .def_readwrite("m_len", &nixlBasicDesc::len)
-     //   .def_readwrite("m_devId", &nixlBasicDesc::devId)
-        //this is how operators are bound in pybind11/operators.h:
-     //   .def(py::self == py::self)
-     //   .def(py::self != py::self)
-     //   .def("covers", &nixlBasicDesc::covers)
-     //   .def("overlaps", &nixlBasicDesc::overlaps)
-     //   .def("print", &nixlBasicDesc::print);
-
     py::class_<nixl_dlist_t>(m, "nixlDescList")
         .def(py::init<nixl_mem_t, bool, bool, int>(), py::arg("type"), py::arg("unifiedAddr")=true, py::arg("sorted")=false, py::arg("init_size")=0)
         .def(py::init([](nixl_mem_t mem, std::vector<py::tuple> descs, bool unifiedAddr, bool sorted) {

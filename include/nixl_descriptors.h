@@ -57,10 +57,11 @@ class nixlDescList {
         inline bool isEmpty() const { return (descs.size()==0); }
         inline bool isSorted() const { return sorted; }
 
-        inline const T& operator[](int index) const
-            { return descs[index]; }
-        inline T& operator[](int index)
-            { return descs[index]; }
+        inline const T& operator[](int index) const { return descs[index]; }
+        inline T& operator[](int index) {
+            sorted = false;
+            return descs[index];
+        }
 
         inline typename std::vector<T>::const_iterator begin() const
             { return descs.begin(); }
