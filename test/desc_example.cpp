@@ -27,8 +27,9 @@ void testPerf(){
     timersub(&end_time, &start_time, &diff_time);
     std::cout << "total time for " << 24*64*1024 << " descs: " << diff_time.tv_sec << "s " << diff_time.tv_usec << "us \n";
 
-    float time_per_desc = ((diff_time.tv_sec * 1000000) + diff_time.tv_usec) / (24*64*1024) ;
-    std::cout << "time per desc " << time_per_desc;
+    float time_per_desc = ((diff_time.tv_sec * 1000000) + diff_time.tv_usec);
+    time_per_desc /=  (24*64*1024) ;
+    std::cout << "time per desc " << time_per_desc << "us\n";
 }
 
 int main()

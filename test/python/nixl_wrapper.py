@@ -42,13 +42,13 @@ class nixl_wrapper:
                 gpu_id = tensors[i].get_device()
                 if (gpu_id==-1): # DRAM
                     gpu_id = 0
-                descs[i] = nixl.nixlBasicDesc(base_addr, region_len, gpu_id)
+                descs[i] = (base_addr, region_len, gpu_id)
 
         elif isinstance(arg, tuple): # (str, List[(int,int,int)]):
             descs = nixl.nixlDescList(self.nixl_mems[arg[0]], True, False, len(arg[1]))
 
             for i in range(len(arg[1])):
-                descs[i] = nixl.nixlBasicDesc(*arg[1][i])
+                descs[i] = arg[1][i]
 
         elif isinstance(arg, nixl.nixlDescList):
             return arg
