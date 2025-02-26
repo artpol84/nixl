@@ -3,6 +3,34 @@
 #include <cassert>
 #include "nixl.h"
 
+#include <sys/time.h>
+
+
+void testPerf(){
+    int desc_count = 24*64*1024;
+    void* buf = malloc(256);
+    nixlDescList<nixlBasicDesc> dlist (DRAM_SEG);
+
+    struct timeval start_time, end_time, diff_time;
+
+    gettimeofday(&start_time, NULL);
+    
+    for(int i = 0; i<desc_count; i++) {
+        nixlBasicDesc new_desc = nixlBasicDesc((uintptr_t) buf, 256, 0);
+
+        assert(dlist.addDesc(new_desc, false)==0);
+    }
+
+    gettimeofday(&end_time, NULL);
+
+    assert(dlist.descCount() == 24*64*1024);
+    timersub(&end_time, &start_time, &diff_time);
+    std::cout << "total time for " << 24*64*1024 << " descs: " << diff_time.tv_sec << "s " << diff_time.tv_usec << "us \n";
+
+    float time_per_desc = ((diff_time.tv_sec * 1000000) + diff_time.tv_usec) / (24*64*1024) ;
+    std::cout << "time per desc " << time_per_desc;
+}
+
 int main()
 {
     // nixlBasicDesc functionality
@@ -241,5 +269,7 @@ int main()
     dlist24.print();
     dlist25.print();
 
+    testPerf();
+    
     return 0;
 }
