@@ -198,6 +198,9 @@ PYBIND11_MODULE(nixl_bindings, m) {
                     //python can only interpret text strings
                     return py::bytes(agent.getLocalMD());
                 })
-        .def("loadRemoteMD", &nixlAgent::loadRemoteMD)
+        .def("loadRemoteMD", [](nixlAgent &agent, const std::string &remote_metadata) {
+                    //python can only interpret text strings
+                    return py::bytes(agent.loadRemoteMD(remote_metadata));
+                })
         .def("invalidateRemoteMD", &nixlAgent::invalidateRemoteMD);
 }

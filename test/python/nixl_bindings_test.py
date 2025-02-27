@@ -114,9 +114,9 @@ def test_agent():
     print(meta2)
 
     ret_name = agent1.loadRemoteMD(meta2)
-    assert ret_name == name2
+    assert ret_name.decode(encoding='UTF-8') == name2
     ret_name = agent2.loadRemoteMD(meta1)
-    assert ret_name == name1
+    assert ret_name.decode(encoding='UTF-8') == name1
 
     offset = 8
     req_size = 8
