@@ -553,6 +553,9 @@ void nixlUcxEngine::releaseReqH(nixlBackendReqH* handle)
     nixlUcxBckndReq *head = (nixlUcxBckndReq *)handle;
     nixlUcxBckndReq *req = head;
 
+    //this case should not happen
+    //if (head == NULL) return;
+
     if (head->next() || !head->is_complete()) {
         // TODO: Error log: uncompleted requests found! Cancelling ...
         while(head) {

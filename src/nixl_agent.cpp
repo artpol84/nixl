@@ -170,8 +170,7 @@ nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
 }
 
 void nixlAgent::invalidateXferReq(nixlXferReqH *req) {
-    if (req->state != NIXL_XFER_DONE)
-        req->engine->releaseReqH(req->backendHandle);
+    //destructor will call release to abort transfer if necessary
     delete req;
 }
 
@@ -316,12 +315,44 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
                                   remote_side->descs->isUnifiedAddr(),
                                   false, desc_count);
 
-    for (int i=0; i<desc_count; ++i) {
-        (*handle->initiatorDescs)[i] =
-                                 (*local_side->descs)[local_indices[i]];
-        (*handle->targetDescs)[i] =
-                                 (*remote_side->descs)[remote_indices[i]];
+    int i = 0, j = 0; //final list size
+    while(i<(desc_count)) {
+        nixlMetaDesc local_desc1 = (*local_side->descs)[local_indices[i]];
+        nixlMetaDesc remote_desc1 = (*remote_side->descs)[remote_indices[i]];
+    
+        if(i != (desc_count-1) ) {   
+            nixlMetaDesc local_desc2 = (*local_side->descs)[local_indices[i+1]];
+            nixlMetaDesc remote_desc2 = (*remote_side->descs)[remote_indices[i+1]];
+        
+          while(((local_desc1.addr + local_desc1.len) == local_desc2.addr)
+             && ((remote_desc1.addr + remote_desc1.len) == remote_desc2.addr)
+             && (local_desc1.metadata == local_desc2.metadata)
+             && (remote_desc1.metadata == remote_desc2.metadata)
+             && (local_desc1.devId == local_desc2.devId)
+             && (remote_desc1.devId == remote_desc2.devId))
+            {
+                local_desc1.len += local_desc2.len;
+                remote_desc1.len += remote_desc2.len;
+            
+                i++;
+                if(i == (desc_count-1)) break;
+
+                local_desc2 = (*local_side->descs)[local_indices[i+1]];
+                remote_desc2 = (*remote_side->descs)[remote_indices[i+1]];
+            }
+        }
+
+        (*handle->initiatorDescs)[j] = local_desc1;
+        (*handle->targetDescs)[j] = remote_desc1;
+        j++;
+        i++;
     }
+
+    handle->initiatorDescs->resize(j);
+    handle->targetDescs->resize(j);
+
+    //print just for verification, no public way to check this
+    //std::cout << "reqH descList size down to " << j << "\n";
 
     handle->engine      = local_side->engine;
     handle->remoteAgent = remote_side->remoteAgent;

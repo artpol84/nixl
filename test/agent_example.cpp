@@ -19,7 +19,7 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
 
     int n_mems = 32;
     int descs_per_mem = 64*1024;
-    int n_iters = 10;
+    int n_iters = 1;
     nixlDescList<nixlBasicDesc> mem_list1(DRAM_SEG), mem_list2(DRAM_SEG);
     nixlDescList<nixlBasicDesc> src_list(DRAM_SEG), dst_list(DRAM_SEG);
     nixl_status_t status;
@@ -89,6 +89,29 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
     time_per_iter /=  (n_iters) ;
     std::cout << "time per 2 preps " << time_per_iter << "us\n";
 
+    //test makeXfer optimization
+
+    std::vector<int> indices;
+    nixlXferReqH* reqh1, *reqh2;
+
+    for(int i = 0; i<(n_mems*descs_per_mem); i++)
+        indices.push_back(i);
+
+    //should print n_mems number of final descriptors
+    status = A1->makeXferReq(src_side[0], indices, dst_side[0], indices, "test", NIXL_WRITE, reqh1);
+    assert(status == NIXL_SUCCESS);
+
+    indices.clear();
+    for(int i = 0; i<(n_mems*descs_per_mem); i+=2)
+        indices.push_back(i);
+
+    //should print (n_mems*descs_per_mem/2) number of final descriptors
+    status = A1->makeXferReq(src_side[0], indices, dst_side[0], indices, "test", NIXL_WRITE, reqh2);
+    assert(status == NIXL_SUCCESS);
+
+    A1->invalidateXferReq(reqh1);
+    A1->invalidateXferReq(reqh2);
+   
     status = A1->deregisterMem(mem_list1, backend);
     assert(status == NIXL_SUCCESS);
     status = A2->deregisterMem(mem_list2, backend2);

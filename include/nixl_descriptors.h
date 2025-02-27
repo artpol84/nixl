@@ -72,6 +72,7 @@ class nixlDescList {
         template <class Y> friend bool operator==(const nixlDescList<Y> &lhs,
                                                   const nixlDescList<Y> &rhs);
 
+        void resize (size_t count) { descs.resize(count); }
         void clear() { descs.clear(); }
         void addDesc(const T &desc); // If sorted, keeps it sorted
         nixl_status_t remDesc(int index);

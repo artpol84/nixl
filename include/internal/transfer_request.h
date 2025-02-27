@@ -22,7 +22,7 @@ class nixlXferReqH {
         inline ~nixlXferReqH() {
             delete initiatorDescs;
             delete targetDescs;
-            engine->releaseReqH(backendHandle);
+            if(backendHandle != NULL) engine->releaseReqH(backendHandle);
         }
 
     friend class nixlAgent;
