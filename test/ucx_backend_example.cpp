@@ -99,6 +99,7 @@ int main()
 {
     int ret1, ret2;
     int iter = 10;
+    std::vector<std::string> devs;
 
     // Example: assuming two agents running on the same machine,
     // with separate memory regions in DRAM
@@ -107,7 +108,9 @@ int main()
 
     nixlUcxInitParams init1, init2;
     init1.enableProgTh=true;
+    init1.pthrDelay = 100;
     init2.enableProgTh=true;
+    init2.pthrDelay = 100;
     // populate required/desired inits
 
     // User would ask each of the agents to create a ucx  backend, and the
@@ -127,7 +130,6 @@ int main()
         std::cout << "Failed to initialize worker2" << std::endl;
         return 0;
     }
-
 
     // We get the required connection info from UCX to be put on the central
     // location and ask for it for a remote node

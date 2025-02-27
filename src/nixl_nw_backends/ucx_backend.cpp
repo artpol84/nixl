@@ -26,41 +26,45 @@ void nixlUcxEngine::_requestFini(void *request)
 
 void nixlUcxEngine::progressFunc()
 {
-    pthr_active = 1;
+    using namespace nixlTime;
+    pthrActive = 1;
 
-    while (!pthr_stop) {
+    while (!pthrStop) {
         int i;
-        for(i = 0; i < no_sync_iters; i++) {
-            if( !uw->progress() ){
-                /* break if no progress was made*/
-                break;
-            }
+        for(i = 0; i < noSyncIters; i++) {
+            uw->progress();
         }
         notifProgress();
         // TODO: once NIXL thread infrastructure is available - move it there!!!
-        std::this_thread::yield();
-    }
 
+        /* Wait for predefined number of */
+        us_t start = getUs();
+        while( (start + pthrDelay) > getUs()) {
+            std::this_thread::yield();
+        }
+    }
 }
 
-void nixlUcxEngine::startProgressThread()
+void nixlUcxEngine::startProgressThread(nixlTime::us_t delay)
 {
-    pthr_stop = pthr_active = 0;
-    no_sync_iters = 32;
+    pthrStop = pthrActive = 0;
+    noSyncIters = 32;
+
+    pthrDelay = delay;
 
     // Start the thread
     // TODO [Relaxed mem] mem barrier to ensure pthr_x updates are complete
     new (&pthr) std::thread(&nixlUcxEngine::progressFunc, this);
 
     // Wait for the thread to be started
-    while(!pthr_active){
+    while(!pthrActive){
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
 void nixlUcxEngine::stopProgressThread()
 {
-    pthr_stop = 1;
+    pthrStop = 1;
     pthr.join();
 }
 
@@ -80,7 +84,7 @@ nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
         }
     }
 
-    uc = new nixlUcxContext(devs, sizeof(nixlUcxBckndReq),
+    uc = new nixlUcxContext(init_params->devices, sizeof(nixlUcxBckndReq),
                            _requestInit, _requestFini, NIXL_UCX_MT_WORKER);
     uw = new nixlUcxWorker(uc);
     uw->epAddr(n_addr, workerSize);
@@ -91,10 +95,10 @@ nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
     uw->regAmCallback(NOTIF_STR, notifAmCb, this);
 
     if (init_params->enableProgTh) {
-        pthr_on = true;
-        startProgressThread();
+        pthrOn = true;
+        startProgressThread(init_params->pthrDelay);
     } else {
-        pthr_on = false;
+        pthrOn = false;
     }
     // TODO: check if UCX does not support threading but it was asked to set initErr.
     //       and destruct any allocated resources, or use the flag in destructor.
@@ -110,7 +114,7 @@ nixlUcxEngine::~nixlUcxEngine () {
         return;
     }
 
-    if (pthr_on)
+    if (pthrOn)
         stopProgressThread();
     delete uw;
     delete uc;
@@ -691,7 +695,7 @@ int nixlUcxEngine::getNotifs(notif_list_t &notif_list)
     if (notif_list.size()!=0)
         return -1;
 
-    if(!pthr_on) while(progress());
+    if(!pthrOn) while(progress());
 
     notifCombineHelper(notifMainList, notif_list);
     notifProgressCombineHelper(notifPthr, notif_list);

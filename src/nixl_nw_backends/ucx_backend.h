@@ -9,8 +9,10 @@
 
 #include "nixl.h"
 
-#include "utils/ucx/ucx_utils.h"
-#include "utils/data_structures/list_elem.h"
+// Local includes
+#include <nixl_time.h>
+#include <ucx_utils.h>
+#include <list_elem.h>
 
 typedef enum {CONN_CHECK, NOTIF_STR, DISCONNECT} ucx_cb_op_t;
 
@@ -78,9 +80,10 @@ class nixlUcxEngine : nixlBackendEngine {
         size_t workerSize;
 
         /* Progress thread data */
-        volatile bool pthr_stop, pthr_active, pthr_on;
-        int no_sync_iters;
+        volatile bool pthrStop, pthrActive, pthrOn;
+        int noSyncIters;
         std::thread pthr;
+        nixlTime::us_t pthrDelay;
 
         /* Notifications */
         notif_list_t notifMainList;
@@ -115,7 +118,7 @@ class nixlUcxEngine : nixlBackendEngine {
         // Threading infrastructure
         //   TODO: move the thread management one outside of NIXL common infra
         void progressFunc();
-        void startProgressThread();
+        void startProgressThread(nixlTime::us_t delay);
         void stopProgressThread();
         bool isProgressThread(){
             return (std::this_thread::get_id() == pthr.get_id());
@@ -162,7 +165,7 @@ class nixlUcxEngine : nixlBackendEngine {
 
         bool supportsNotif () const { return true; }
 
-        bool supportsProgTh () const { return pthr_on; }
+        bool supportsProgTh () const { return pthrOn; }
 
         /* Object management */
         std::string getConnInfo() const;
