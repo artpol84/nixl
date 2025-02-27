@@ -144,6 +144,8 @@ class nixlBackendEngine {
             this->initErr     = false;
         }
 
+        bool getInitErr() { return initErr; }
+
         // Can add checks for being public metadata
         std::string getPublicData (const nixlBackendMD* meta) const {
             return meta->get();

@@ -1,11 +1,31 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <cassert>
 
 #include "ucx_utils.h"
 
 using namespace std;
 
+
+bool nixlUcxContext::mtLevelIsSupproted(nixl_ucx_mt_t mt_type)
+{
+    ucp_lib_attr_t attr;
+    attr.field_mask = UCP_LIB_ATTR_FIELD_MAX_THREAD_LEVEL;
+    ucp_lib_query(&attr);
+
+    switch(mt_type) {
+    case NIXL_UCX_MT_SINGLE:
+        return (attr.max_thread_level >= UCS_THREAD_MODE_SERIALIZED);
+    case NIXL_UCX_MT_CTX:
+    case NIXL_UCX_MT_WORKER:
+        return (attr.max_thread_level >= UCS_THREAD_MODE_MULTI);
+    default:
+        assert(mt_type < NIXL_UCX_MT_MAX);
+        abort();
+    }
+    return false;
+}
 
 nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
                             size_t req_size,
@@ -23,13 +43,16 @@ nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
                             UCP_PARAM_FIELD_ESTIMATED_NUM_EPS;
     ucp_params.features = UCP_FEATURE_RMA | UCP_FEATURE_AMO32 | UCP_FEATURE_AMO64 | UCP_FEATURE_AM;
     switch(mt_type) {
-        case NIXL_UCX_MT_SINGLE:
-        case NIXL_UCX_MT_WORKER:
-            ucp_params.mt_workers_shared = 0;
-            break;
-        case NIXL_UCX_MT_CTX:
-            ucp_params.mt_workers_shared = 1;
-            break;
+    case NIXL_UCX_MT_SINGLE:
+    case NIXL_UCX_MT_WORKER:
+        ucp_params.mt_workers_shared = 0;
+        break;
+    case NIXL_UCX_MT_CTX:
+        ucp_params.mt_workers_shared = 1;
+        break;
+    default:
+        assert(mt_type < NIXL_UCX_MT_MAX);
+        abort();
     }
     ucp_params.estimated_num_eps = 3;
 
@@ -88,15 +111,18 @@ nixlUcxWorker::nixlUcxWorker(nixlUcxContext *_ctx)
     worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
 
     switch (ctx->mt_type) {
-        case NIXL_UCX_MT_CTX:
-            worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
-            break;
-        case NIXL_UCX_MT_SINGLE:
-            worker_params.thread_mode = UCS_THREAD_MODE_SERIALIZED;
-            break;
-        case NIXL_UCX_MT_WORKER:
-            worker_params.thread_mode = UCS_THREAD_MODE_MULTI;
-            break;
+    case NIXL_UCX_MT_CTX:
+        worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
+        break;
+    case NIXL_UCX_MT_SINGLE:
+        worker_params.thread_mode = UCS_THREAD_MODE_SERIALIZED;
+        break;
+    case NIXL_UCX_MT_WORKER:
+        worker_params.thread_mode = UCS_THREAD_MODE_MULTI;
+        break;
+    default:
+        assert(ctx->mt_type < NIXL_UCX_MT_MAX);
+        abort();
     }
 
     status = ucp_worker_create(ctx->ctx, &worker_params, &worker);

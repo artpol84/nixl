@@ -73,6 +73,13 @@ nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
     std::vector<std::string> devs; /* Empty vector */
     uint64_t                 n_addr;
 
+    if (init_params->enableProgTh) {
+        if (!nixlUcxContext::mtLevelIsSupproted(NIXL_UCX_MT_WORKER)) {
+            this->initErr = true;
+            return;
+        }
+    }
+
     uc = new nixlUcxContext(devs, sizeof(nixlUcxBckndReq),
                            _requestInit, _requestFini, NIXL_UCX_MT_WORKER);
     uw = new nixlUcxWorker(uc);
@@ -98,6 +105,11 @@ nixlUcxEngine::~nixlUcxEngine () {
     // per registered memory deregisters it, which removes the corresponding metadata too
     // parent destructor takes care of the desc list
     // For remote metadata, they should be removed here
+    if (this->initErr) {
+        // Nothing to do
+        return;
+    }
+
     if (pthr_on)
         stopProgressThread();
     delete uw;

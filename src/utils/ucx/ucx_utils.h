@@ -11,7 +11,8 @@ extern "C"
 typedef enum {
     NIXL_UCX_MT_SINGLE,
     NIXL_UCX_MT_CTX,
-    NIXL_UCX_MT_WORKER
+    NIXL_UCX_MT_WORKER,
+    NIXL_UCX_MT_MAX
 } nixl_ucx_mt_t;
 class nixlUcxEp {
 private:
@@ -53,6 +54,8 @@ public:
                     size_t req_size, req_cb_t init_cb, req_cb_t fini_cb,
                     nixl_ucx_mt_t mt_type);
     ~nixlUcxContext();
+
+    static bool mtLevelIsSupproted(nixl_ucx_mt_t mt_type);
 
     friend class nixlUcxWorker;
 };

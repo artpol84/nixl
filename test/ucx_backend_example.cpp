@@ -118,7 +118,16 @@ int main()
     init2.localAgent = agent2;
 
     ucx1 = (nixlBackendEngine*) new nixlUcxEngine (&init1);
+    if (ucx1->getInitErr()) {
+        std::cout << "Failed to initialize worker1" << std::endl;
+        return 0;
+    }
     ucx2 = (nixlBackendEngine*) new nixlUcxEngine (&init2);
+    if (ucx2->getInitErr()) {
+        std::cout << "Failed to initialize worker2" << std::endl;
+        return 0;
+    }
+
 
     // We get the required connection info from UCX to be put on the central
     // location and ask for it for a remote node
