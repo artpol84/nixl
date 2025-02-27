@@ -61,20 +61,20 @@ PYBIND11_MODULE(nixl_bindings, m) {
                 for(long unsigned int i = 0; i<descs.size(); i++)
                     new_list[i] = nixlBasicDesc(descs[i][0].cast<uintptr_t>(), descs[i][1].cast<size_t>(), descs[i][2].cast<uint32_t>());
                 return new_list;
-            }), py::arg("type"), py::arg("descs"), py::arg("unifiedAddr")=true, py::arg("sorted")=false) 
+            }), py::arg("type"), py::arg("descs"), py::arg("unifiedAddr")=true, py::arg("sorted")=false)
         .def("getType", &nixl_dlist_t::getType)
         .def("isUnifiedAddr", &nixl_dlist_t::isUnifiedAddr)
         .def("descCount", &nixl_dlist_t::descCount)
         .def("isEmpty", &nixl_dlist_t::isEmpty)
         .def("isSorted", &nixl_dlist_t::isSorted)
         .def(py::self == py::self)
-        .def("__getitem__", static_cast<nixlBasicDesc& (nixl_dlist_t::*)(int)>(&nixl_dlist_t::operator[]))
-        .def("__setitem__", [](nixl_dlist_t &list, int i, const py::tuple &desc) { 
-                list[i] = nixlBasicDesc(desc[0].cast<uintptr_t>(), desc[1].cast<size_t>(), desc[2].cast<uint32_t>()); 
+        .def("__getitem__", static_cast<nixlBasicDesc& (nixl_dlist_t::*)(unsigned int)>(&nixl_dlist_t::operator[]))
+        .def("__setitem__", [](nixl_dlist_t &list, unsigned int i, const py::tuple &desc) {
+                list[i] = nixlBasicDesc(desc[0].cast<uintptr_t>(), desc[1].cast<size_t>(), desc[2].cast<uint32_t>());
             })
-        .def("addDesc", [](nixl_dlist_t &list, const py::tuple &desc, bool overlap_check) {
-                assert(list.addDesc(nixlBasicDesc(desc[0].cast<uintptr_t>(), desc[1].cast<size_t>(), desc[2].cast<uint32_t>()), overlap_check) == NIXL_SUCCESS);
-            }, py::arg("desc"), py::arg("overlap_check") = true)
+        .def("addDesc", [](nixl_dlist_t &list, const py::tuple &desc) {
+                list.addDesc(nixlBasicDesc(desc[0].cast<uintptr_t>(), desc[1].cast<size_t>(), desc[2].cast<uint32_t>()));
+            })
         .def("remDesc", &nixl_dlist_t::remDesc)
         .def("clear", &nixl_dlist_t::clear)
         .def("print", &nixl_dlist_t::print)
@@ -150,21 +150,14 @@ PYBIND11_MODULE(nixl_bindings, m) {
                                uintptr_t remote_side,
                                const std::vector<int> &remote_indices,
                                const std::string &notif_msg,
-                               const nixl_xfer_op_t &operation,
-                               const bool no_checks) -> uintptr_t {
+                               const nixl_xfer_op_t &operation) -> uintptr_t {
                     nixlXferReqH* handle;
                     nixl_status_t ret = agent.makeXferReq((nixlXferSideH*) local_side, local_indices,
                                                           (nixlXferSideH*) remote_side, remote_indices,
-                                                          notif_msg, operation, handle, no_checks);
+                                                          notif_msg, operation, handle);
                     if (ret != NIXL_SUCCESS) return (uintptr_t) nullptr;
                     else return (uintptr_t) handle;
-                },             py::arg("local_side"),
-                               py::arg("local_indices"),
-                               py::arg("remote_side"),
-                               py::arg("remote_indices"),
-                               py::arg("notif_msg"),
-                               py::arg("operation"),
-                               py::arg("no_checks") = false )
+                })
         .def("invalidateXferReq", [](nixlAgent &agent, uintptr_t reqh) -> void {
                     agent.invalidateXferReq((nixlXferReqH*) reqh);
                 })

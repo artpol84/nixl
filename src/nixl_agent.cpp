@@ -69,6 +69,7 @@ nixl_status_t nixlAgent::deregisterMem(const nixl_dlist_t &descs,
     nixlDescList<nixlMetaDesc> resp(descs.getType(),
                                     descs.isUnifiedAddr(),
                                     descs.isSorted());
+    // TODO: check status of populate, and if the entry match with getIndex
     data.memorySection.populate(descs, backend->getType(), resp);
     return (data.memorySection.remDescList(resp, backend));
 }
@@ -103,6 +104,8 @@ nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
                              const std::string &notif_msg,
                              const nixl_xfer_op_t &operation,
                              nixlXferReqH* &req_handle) {
+    nixl_status_t ret;
+    req_handle = nullptr;
 
     // Check the correspondence between descriptor lists
     if (local_descs.descCount() != remote_descs.descCount())
@@ -115,7 +118,6 @@ nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
         ((operation==NIXL_WR_NOTIF) || (operation==NIXL_RD_NOTIF)))
         return NIXL_ERR_INVALID_PARAM;
 
-    nixl_status_t ret;
     if (data.remoteSections.count(remote_agent)==0)
         return NIXL_ERR_NOT_FOUND;
 
@@ -126,9 +128,8 @@ nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
     nixlXferReqH *handle = new nixlXferReqH;
     // Might not need unified and sorted info
     handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
-                                      local_descs.getType(),
-                                      local_descs.isUnifiedAddr(),
-                                      local_descs.isSorted());
+                                     local_descs.getType(),
+                                     local_descs.isUnifiedAddr(), false);
 
     handle->engine = data.memorySection.findQuery(local_descs,
                           remote_descs.getType(),
@@ -146,14 +147,13 @@ nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
     }
 
     handle->targetDescs = new nixlDescList<nixlMetaDesc> (
-                                   remote_descs.getType(),
-                                   remote_descs.isUnifiedAddr(),
-                                   remote_descs.isSorted());
+                                  remote_descs.getType(),
+                                  remote_descs.isUnifiedAddr(), false);
 
     // Based on the decided local backend, we check the remote counterpart
     ret = data.remoteSections[remote_agent]->populate(remote_descs,
                handle->engine->getType(), *handle->targetDescs);
-    if (ret<0) {
+    if (ret!=NIXL_SUCCESS) {
         delete handle;
         return ret;
     }
@@ -243,12 +243,12 @@ nixl_status_t nixlAgent::prepXferSide (const nixl_dlist_t &descs,
         handle->isLocal = true;
         handle->remoteAgent = "";
         ret = data.memorySection.populate(
-                                  descs, backend->getType(), *handle->descs);
+                   descs, backend->getType(), *handle->descs);
     } else {
         handle->isLocal = false;
         handle->remoteAgent = remote_agent;
         ret = data.remoteSections[remote_agent]->populate(
-                                  descs, backend->getType(), *handle->descs);
+                   descs, backend->getType(), *handle->descs);
     }
 
     if (ret<0) {
@@ -269,56 +269,53 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
                                       const std::vector<int> &remote_indices,
                                       const std::string &notif_msg,
                                       const nixl_xfer_op_t &operation,
-                                      nixlXferReqH* &req_handle,
-                                      const bool no_checks) {
+                                      nixlXferReqH* &req_handle) {
+    req_handle = nullptr;
 
-    if (!no_checks) {
-        if ((!local_side->isLocal) || (remote_side->isLocal))
+    if ((!local_side->isLocal) || (remote_side->isLocal))
+        return NIXL_ERR_INVALID_PARAM;
+
+    if ((local_side->engine == nullptr) || (remote_side->engine == nullptr) ||
+        (local_side->engine != remote_side->engine))
+        return NIXL_ERR_INVALID_PARAM;
+
+    if ((local_indices.size()==0) || (remote_indices.size()==0) ||
+        (local_indices.size() != remote_indices.size()))
+        return NIXL_ERR_INVALID_PARAM;
+
+    for (int i=0; i<(int)local_indices.size(); ++i) {
+        if ((local_indices[i] >= local_side->descs->descCount()) || (local_indices[i]<0))
             return NIXL_ERR_INVALID_PARAM;
-
-        if ((local_side->engine == nullptr) || (remote_side->engine == nullptr) ||
-            (local_side->engine != remote_side->engine))
+        if ((remote_indices[i] >= remote_side->descs->descCount()) || (remote_indices[i]<0))
             return NIXL_ERR_INVALID_PARAM;
-
-        if ((local_indices.size()==0) || (remote_indices.size()==0) ||
-            (local_indices.size() != remote_indices.size()))
+        if ((*local_side->descs )[local_indices [i]].len !=
+            (*remote_side->descs)[remote_indices[i]].len)
             return NIXL_ERR_INVALID_PARAM;
+    }
 
-        for (int i=0; i<(int)local_indices.size(); ++i) {
-            if ((local_indices[i] >= local_side->descs->descCount()) || (local_indices[i]<0))
-                return NIXL_ERR_INVALID_PARAM;
-            if ((remote_indices[i] >= remote_side->descs->descCount()) || (remote_indices[i]<0))
-                return NIXL_ERR_INVALID_PARAM;
-            if ((*local_side->descs )[local_indices [i]].len !=
-                (*remote_side->descs)[remote_indices[i]].len)
-                return NIXL_ERR_INVALID_PARAM;
-        }
+    if ((notif_msg.size()==0) &&
+        ((operation==NIXL_WR_NOTIF) || (operation==NIXL_RD_NOTIF)))
+        return NIXL_ERR_INVALID_PARAM;
 
-        if ((notif_msg.size()==0) &&
-            ((operation==NIXL_WR_NOTIF) || (operation==NIXL_RD_NOTIF)))
-            return NIXL_ERR_INVALID_PARAM;
-
-        if ((notif_msg.size()!=0) && (!local_side->engine->supportsNotif())) {
-            return NIXL_ERR_BACKEND;
-        }
+    if ((notif_msg.size()!=0) && (!local_side->engine->supportsNotif())) {
+        return NIXL_ERR_BACKEND;
     }
 
     nixlXferReqH *handle = new nixlXferReqH;
     // Might not need unified and sorted info
     handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
-                                      local_side->descs->getType(),
-                                      local_side->descs->isUnifiedAddr(),
-                                      local_side->descs->isSorted());
+                                     local_side->descs->getType(),
+                                     local_side->descs->isUnifiedAddr(), false);
 
     handle->targetDescs = new nixlDescList<nixlMetaDesc> (
-                                      remote_side->descs->getType(),
-                                      remote_side->descs->isUnifiedAddr(),
-                                      remote_side->descs->isSorted());
+                                  remote_side->descs->getType(),
+                                  remote_side->descs->isUnifiedAddr(), false);
 
     for (int i=0; i<(int)local_indices.size(); ++i) {
-        // Copying from another internal desc list, already verified
-        handle->initiatorDescs->addDesc((*local_side->descs)[local_indices[i]], !no_checks);
-        handle->targetDescs->addDesc((*remote_side->descs)[remote_indices[i]], !no_checks);
+        handle->initiatorDescs->addDesc(
+                (*local_side->descs)[local_indices[i]]);
+        handle->targetDescs->addDesc(
+                (*remote_side->descs)[remote_indices[i]]);
     }
 
     handle->engine      = local_side->engine;

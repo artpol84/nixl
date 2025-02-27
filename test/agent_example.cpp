@@ -35,8 +35,8 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
         nixlBasicDesc src_desc((uintptr_t) src_buf, descs_per_mem*8, 0);
         nixlBasicDesc dst_desc((uintptr_t) dst_buf, descs_per_mem*8, 0);
 
-        mem_list1.addDesc(src_desc, false);
-        mem_list2.addDesc(dst_desc, false);
+        mem_list1.addDesc(src_desc);
+        mem_list2.addDesc(dst_desc);
 
         //std::cout << "mem region " << i << " working \n";
 
@@ -44,8 +44,8 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
             nixlBasicDesc src_desc2((uintptr_t) src_buf + 8*j, 8, 0);
             nixlBasicDesc dst_desc2((uintptr_t) dst_buf + 8*j, 8, 0);
 
-            src_list.addDesc(src_desc2, false);
-            dst_list.addDesc(dst_desc2, false);
+            src_list.addDesc(src_desc2);
+            dst_list.addDesc(dst_desc2);
         }
     }
 

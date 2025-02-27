@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iostream>
 #include <functional>
+#include <stdexcept>
 #include "nixl.h"
 #include "nixl_descriptors.h"
 #include "internal/backend_engine.h"
@@ -148,6 +149,23 @@ nixlDescList<T>::nixlDescList(nixlSerDes* deserializer) {
     }
 }
 
+// Getter
+template <class T>
+inline const T& nixlDescList<T>::operator[](unsigned int index) const {
+    if (index >= descs.size())
+        throw std::out_of_range("Index is out of range");
+    return descs[index];
+}
+
+// Setter
+template <class T>
+inline T& nixlDescList<T>::operator[](unsigned int index) {
+    if (index >= descs.size())
+        throw std::out_of_range("Index is out of range");
+    sorted = false;
+    return descs[index];
+}
+
 // Internal function used for sorting the Vector and logarithmic search
 bool descAddrCompare (const nixlBasicDesc &a, const nixlBasicDesc &b,
                       bool unifiedAddr) {
@@ -163,26 +181,9 @@ bool descAddrCompare (const nixlBasicDesc &a, const nixlBasicDesc &b,
 #define desc_comparator_f [&](const nixlBasicDesc &a, const nixlBasicDesc &b) {\
                               return descAddrCompare(a, b, unifiedAddr); }
 
-// User might want to create a transfer where the descriptors are
-// not in an accending order, so vector is used for descs instead of map,
-// and during insertion we guarantee that.
 template <class T>
-nixl_status_t nixlDescList<T>::addDesc (const T &desc, const bool overlap_check) {
-    if (desc.len == 0) // Error indicator
-        return NIXL_ERR_INVALID_PARAM;
-
-    if (!overlap_check) {
-        sorted = false;
-        descs.push_back(desc);
-        return NIXL_SUCCESS;
-    }
-
+void nixlDescList<T>::addDesc (const T &desc) {
     if (!sorted) {
-        for (auto & elm : descs) {
-            // No overlap is allowed among descs of a list
-            if (elm.overlaps(desc))
-                return NIXL_ERR_INVALID_PARAM;
-        }
         descs.push_back(desc);
     } else {
         // Since vector is kept soted, we can use upper_bound
@@ -190,12 +191,54 @@ nixl_status_t nixlDescList<T>::addDesc (const T &desc, const bool overlap_check)
                                     desc, desc_comparator_f);
         if (itr == descs.end())
             descs.push_back(desc);
-        else if ((*itr).overlaps(desc))
-            return NIXL_ERR_INVALID_PARAM;
         else
             descs.insert(itr, desc);
     }
-    return NIXL_SUCCESS;
+}
+
+template <class T>
+bool nixlDescList<T>::overlaps (const T &desc, int &index) const {
+    if (!sorted) {
+        for (size_t i=0; i<descs.size(); ++i) {
+            if (descs[i].overlaps(desc)) {
+                index = i;
+                return true;
+            }
+        }
+        index = descs.size();
+        return false;
+    } else {
+        // Since desc vector is kept sorted, we can use upper_bound
+        auto itr = std::upper_bound(descs.begin(), descs.end(),
+                                    desc, desc_comparator_f);
+        if (itr == descs.end()) {
+            index = descs.size();
+            return false;
+        } else {
+            index = itr - descs.begin();
+            // If between 2 descriptors, index can be used for insertion
+            return ((*itr).overlaps(desc));
+        }
+    }
+}
+
+template <class T>
+bool nixlDescList<T>::hasOverlaps () const {
+    if ((descs.size()==0) || (descs.size()==1))
+        return false;
+
+    if (!sorted) {
+        for (size_t i=0; i<descs.size()-1; ++i)
+            for (size_t j=i+1; j<descs.size(); ++j)
+                if (descs[i].overlaps(descs[j]))
+                    return true;
+    } else {
+        for (size_t i=0; i<descs.size()-1; ++i)
+            if (descs[i].overlaps(descs[i+1]))
+                return true;
+    }
+
+    return false;
 }
 
 template <class T>
@@ -220,6 +263,10 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
         (unifiedAddr != resp.isUnifiedAddr()))
         return NIXL_ERR_INVALID_PARAM;
 
+    // 1-to-1 mapping cannot hold
+    if (query.isSorted() != resp.isSorted())
+        return NIXL_ERR_INVALID_PARAM;
+
     T new_elm;
     nixlBasicDesc *p = &new_elm;
     int count = 0, last_found = 0;
@@ -231,7 +278,7 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
                 if (elm.covers(q)){
                     *p = q;
                     new_elm.copyMeta(elm);
-                    resp.addDesc(new_elm, false);
+                    resp.addDesc(new_elm);
                     count++;
                     break;
                 }
@@ -266,7 +313,7 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
             if (found) {
                 *p = q;
                 new_elm.copyMeta(*itr);
-                resp.addDesc(new_elm, false);
+                resp.addDesc(new_elm);
                 if (q_sorted) // only check rest of the list
                     last_found = itr - descs.begin();
             } else {

@@ -7,7 +7,7 @@ class nixl_wrapper:
     def __init__(self, agent_name, nixl_config):
         # Read available backends and device info from nixl_config
         # For now setting the multithreading to enabled.
-        devices = nixl.nixlAgentConfig(True)
+        devices = nixl.nixlAgentConfig(False)
         init = nixl.nixlUcxInitParams()
 
         self.name = agent_name
@@ -121,11 +121,11 @@ class nixl_wrapper:
 
 
     def make_prepped_xfer(self, local_xfer_side, local_indices, remote_xfer_side, \
-                        remote_indices, notif_msg, operation, no_check=False):
+                        remote_indices, notif_msg, operation):
         op = self.nixl_ops[operation+"_NOTIF" if len(notif_msg)!=0 else operation]
         if (op):
             handle = self.agent.makeXferReq(local_xfer_side, local_indices, remote_xfer_side, \
-                                            remote_indices, notif_msg, op, no_check)
+                                            remote_indices, notif_msg, op)
             return handle # In case of error it will be None
         else:
             return None

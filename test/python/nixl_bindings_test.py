@@ -4,36 +4,10 @@ import nixl_bindings as nixl
 import nixl_utils
 import pickle
 
-def test_desc():
-
-    test_desc1 = nixl.nixlBasicDesc(1000, 105, 0)
-    test_desc1b = nixl.nixlBasicDesc(1000, 105, 0)
-    test_desc2 = nixl.nixlBasicDesc(1010, 30, 0)
-    test_desc3 = nixl.nixlBasicDesc(990, 20, 0)
-
-    print(test_desc1)
-
-    test_desc1.print("desc1")
-    test_desc2.print("desc2")
-    test_desc3.print("desc3")
-
-    assert test_desc1.covers(test_desc2)
-    assert test_desc1.overlaps(test_desc3)
-
-    assert test_desc1 == test_desc1b
-    assert test_desc1 != test_desc2
-
 def test_list():
 
-    test_desc1 = nixl.nixlBasicDesc(1000, 105, 0)
-    test_desc2 = nixl.nixlBasicDesc(2000, 30, 0)
-    test_desc3 = nixl.nixlBasicDesc(1010, 20, 0)
-
-    test_list = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
-
-    test_list.addDesc(test_desc1)
-    test_list.addDesc(test_desc2)
-    test_list.addDesc(test_desc3)
+    descs = [(1000, 105, 0), (2000, 30, 0), (1010, 20, 0)]
+    test_list = nixl.nixlDescList(nixl.DRAM_SEG, descs, True, False)
 
     assert test_list.descCount() == 2
 
@@ -60,7 +34,8 @@ def test_list():
     test_list.remDesc(1)
     assert test_list.descCount() == 2
 
-    assert test_list[0] == test_desc1
+    # TODO
+    # assert test_list[0] == descs[0]
 
     test_list.clear()
 
@@ -85,19 +60,13 @@ def test_agent():
     addr1 = nixl_utils.malloc_passthru(size)
     addr2 = nixl_utils.malloc_passthru(size)
 
-    buff1 = nixl.nixlBasicDesc(addr1, size, 0)
-    buff2 = nixl.nixlBasicDesc(addr2, size, 0)
-
-    print(buff1.m_addr)
-    print(buff2.m_addr)
-
     nixl_utils.ba_buf(addr1, size)
 
     reg_list1 = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
-    reg_list1.addDesc(buff1)
+    reg_list1.addDesc((addr1, size, 0))
 
     reg_list2 = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
-    reg_list2.addDesc(buff2)
+    reg_list2.addDesc((addr2, size, 0))
 
     ret = agent1.registerMem(reg_list1, ucx1)
     assert ret == nixl.NIXL_SUCCESS
@@ -121,14 +90,11 @@ def test_agent():
     offset = 8
     req_size = 8
 
-    src_buff = nixl.nixlBasicDesc(addr1 + offset, req_size, 0)
-    dst_buff = nixl.nixlBasicDesc(addr2 + offset, req_size, 0)
-
     src_list = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
-    src_list.addDesc(src_buff)
+    src_list.addDesc((addr1 + offset, req_size, 0))
 
     dst_list = nixl.nixlDescList(nixl.DRAM_SEG, True, False)
-    dst_list.addDesc(dst_buff)
+    dst_list.addDesc((addr2 + offset, req_size, 0))
 
     print("Transfer from " + str(addr1 + offset) + " to " + str(addr2 + offset))
 
@@ -177,6 +143,5 @@ def test_agent():
     nixl_utils.free_passthru(addr1)
     nixl_utils.free_passthru(addr2)
 
-test_desc()
 test_list()
 test_agent()

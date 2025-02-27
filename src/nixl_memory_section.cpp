@@ -18,8 +18,9 @@ nixlMemSection::nixlMemSection () {
 nixlMemSection::~nixlMemSection () {}
 
 nixl_status_t nixlMemSection::populate (const nixl_dlist_t &query,
-                              const nixl_backend_t &nixl_backend,
-                              nixlDescList<nixlMetaDesc> &resp) const {
+                                        const nixl_backend_t &nixl_backend,
+                                        nixlDescList<nixlMetaDesc> &resp) const {
+
     if (query.getType() != resp.getType())
         return NIXL_ERR_INVALID_PARAM;
     section_key_t sec_key = std::make_pair(query.getType(), nixl_backend);
@@ -44,7 +45,7 @@ nixlDescList<nixlStringDesc> nixlLocalSection::getStringDesc (
     for (int i=0; i<d_list.descCount(); ++i) {
         *p = (nixlBasicDesc) d_list[i];
         element.metadata = backend->getPublicData(d_list[i].metadata);
-        output_desclist.addDesc(element, false);
+        output_desclist.addDesc(element);
     }
     return output_desclist;
 }
@@ -59,7 +60,7 @@ nixl_status_t nixlLocalSection::addBackendHandler (nixlBackendEngine* backend) {
 
 // Calls into backend engine to register the memories in the desc list
 nixl_status_t nixlLocalSection::addDescList (const nixl_dlist_t &mem_elms,
-                                   nixlBackendEngine* backend) {
+                                             nixlBackendEngine* backend) {
 
     if (backend == nullptr)
         return NIXL_ERR_INVALID_PARAM;
@@ -83,6 +84,7 @@ nixl_status_t nixlLocalSection::addDescList (const nixl_dlist_t &mem_elms,
     for (int i=0; i<mem_elms.descCount(); ++i) {
         // TODO: check if fully covered, continue. If partially covered
         //       split and get new metadata for the new part
+        //       can also do hasOverlaps check
         ret = backend->registerMem(mem_elms[i], nixl_mem, out.metadata);
         if (ret<0) {
             for (int j=0; j<i; ++j) {
@@ -99,7 +101,7 @@ nixl_status_t nixlLocalSection::addDescList (const nixl_dlist_t &mem_elms,
 
 // Per each nixlBasicDesc, the full region that got registered should be deregistered
 nixl_status_t nixlLocalSection::remDescList (const nixlDescList<nixlMetaDesc> &mem_elms,
-                                   nixlBackendEngine *backend) {
+                                             nixlBackendEngine *backend) {
     if (backend == nullptr)
         return NIXL_ERR_INVALID_PARAM;
     nixl_mem_t     nixl_mem     = mem_elms.getType();
@@ -149,7 +151,7 @@ nixlBackendEngine* nixlLocalSection::findQuery(
 
     for (auto & elm : it->second) {
         // If populate fails, it clears the resp before return
-        if (populate(query, elm, resp) == 0)
+        if (populate(query, elm, resp) == NIXL_SUCCESS)
             return backendToEngineMap.at(elm);
     }
     return nullptr;
@@ -184,14 +186,16 @@ nixlLocalSection::~nixlLocalSection() {
 
 /*** Class nixlRemoteSection implementation ***/
 
-nixlRemoteSection::nixlRemoteSection (const std::string &agent_name,
-                const std::map<nixl_backend_t, nixlBackendEngine*> engine_map) {
+nixlRemoteSection::nixlRemoteSection (
+                   const std::string &agent_name,
+                   const std::map<nixl_backend_t, nixlBackendEngine*> &engine_map) {
     this->agentName    = agent_name;
     backendToEngineMap = engine_map;
 }
 
-nixl_status_t nixlRemoteSection::addDescList (const nixlDescList<nixlStringDesc>& mem_elms,
-                                    nixlBackendEngine* backend) {
+nixl_status_t nixlRemoteSection::addDescList (
+                                 const nixlDescList<nixlStringDesc>& mem_elms,
+                                 nixlBackendEngine* backend) {
     // Less checks than LocalSection, as it's private and called by loadRemoteData
     // In RemoteSection, if we support updates, value for a key gets overwritten
     // Without it, its corrupt data, we keep the last option without raising an error
@@ -203,6 +207,8 @@ nixl_status_t nixlRemoteSection::addDescList (const nixlDescList<nixlStringDesc>
                                   nixl_mem, mem_elms.isUnifiedAddr(), true);
     memToBackendMap[nixl_mem].insert(nixl_backend); // Fine to overwrite, it's a set
     nixlDescList<nixlMetaDesc> *target = sectionMap[sec_key];
+
+    // TODO: decied to add overlap check or not
 
     // Add entries to the target list
     nixlMetaDesc out;

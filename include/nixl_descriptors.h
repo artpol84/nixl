@@ -56,13 +56,10 @@ class nixlDescList {
         inline int descCount() const { return descs.size(); }
         inline bool isEmpty() const { return (descs.size()==0); }
         inline bool isSorted() const { return sorted; }
+        bool hasOverlaps() const;
 
-        inline const T& operator[](int index) const { return descs[index]; }
-        inline T& operator[](int index) {
-            sorted = false;
-            return descs[index];
-        }
-
+        const T& operator[](unsigned int index) const;
+        T& operator[](unsigned int index);
         inline typename std::vector<T>::const_iterator begin() const
             { return descs.begin(); }
         inline typename std::vector<T>::const_iterator end() const
@@ -75,12 +72,13 @@ class nixlDescList {
         template <class Y> friend bool operator==(const nixlDescList<Y> &lhs,
                                                   const nixlDescList<Y> &rhs);
 
-        nixl_status_t addDesc(const T &desc, const bool overlap_check=true);
+        void clear() { descs.clear(); }
+        void addDesc(const T &desc); // If sorted, keeps it sorted
         nixl_status_t remDesc(int index);
         nixl_status_t populate(const nixlDescList<nixlBasicDesc> &query,
                                nixlDescList<T> &resp) const;
-        void clear() { descs.clear(); }
 
+        bool overlaps (const T &desc, int &index) const;
         int getIndex(const nixlBasicDesc &query) const;
         nixl_status_t serialize(nixlSerDes* serializer) const;
         void print() const;

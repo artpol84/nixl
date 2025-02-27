@@ -15,11 +15,8 @@ void testPerf(){
 
     gettimeofday(&start_time, NULL);
 
-    for(int i = 0; i<desc_count; i++) {
-        nixlBasicDesc new_desc = nixlBasicDesc((uintptr_t) buf, 256, 0);
-
-        assert(dlist.addDesc(new_desc, false)==0);
-    }
+    for(int i = 0; i<desc_count; i++)
+        dlist.addDesc(nixlBasicDesc((uintptr_t) buf, 256, 0));
 
     gettimeofday(&end_time, NULL);
 
@@ -147,21 +144,22 @@ int main()
     nixlMetaDesc meta4 (10070, 42, 0);
     meta3.metadata = nullptr;
     meta4.metadata = nullptr;
+    int dummy;
 
     nixlDescList<nixlMetaDesc> dlist1 (DRAM_SEG);
     dlist1.addDesc(meta1);
-    assert (dlist1.addDesc(meta2)==-1);
+    assert (dlist1.overlaps(meta2, dummy));
     dlist1.addDesc(meta3);
 
     nixlDescList<nixlMetaDesc> dlist2 (VRAM_SEG, false, false);
     dlist2.addDesc(meta3);
     dlist2.addDesc(meta2);
-    assert (dlist2.addDesc(meta1)==-1);
+    assert (dlist2.overlaps(meta1, dummy));
 
     nixlDescList<nixlMetaDesc> dlist3 (VRAM_SEG, false, true);
     dlist3.addDesc(meta3);
     dlist3.addDesc(meta2);
-    assert (dlist3.addDesc(meta1)==-1);
+    assert (dlist3.overlaps(meta1, dummy));
 
     nixlDescList<nixlMetaDesc> dlist4 (dlist1);
     nixlDescList<nixlMetaDesc> dlist5 (VRAM_SEG);

@@ -75,8 +75,7 @@ class nixlAgent {
                                    const std::vector<int> &remote_indices,
                                    const std::string &notif_msg,
                                    const nixl_xfer_op_t &operation,
-                                   nixlXferReqH* &req_handle,
-                                   const bool no_checks = false);
+                                   nixlXferReqH* &req_handle);
 
         void invalidateXferSide (nixlXferSideH* side_handle);
 
