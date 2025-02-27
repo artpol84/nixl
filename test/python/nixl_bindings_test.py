@@ -9,10 +9,6 @@ def test_list():
     descs = [(1000, 105, 0), (2000, 30, 0), (1010, 20, 0)]
     test_list = nixl.nixlDescList(nixl.DRAM_SEG, descs, True, False)
 
-    assert test_list.descCount() == 2
-
-    test_list.addDesc(test_desc3, False)
-
     assert test_list.descCount() == 3
 
     test_list.print()
@@ -34,8 +30,7 @@ def test_list():
     test_list.remDesc(1)
     assert test_list.descCount() == 2
 
-    # TODO
-    # assert test_list[0] == descs[0]
+    assert test_list[0] == descs[0]
 
     test_list.clear()
 
@@ -46,7 +41,7 @@ def test_agent():
     name1 = "Agent1"
     name2 = "Agent2"
 
-    devices = nixl.nixlDeviceMD()
+    devices = nixl.nixlAgentConfig(False)
     init1 = nixl.nixlUcxInitParams()
     init2 = nixl.nixlUcxInitParams()
 

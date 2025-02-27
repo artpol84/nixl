@@ -68,7 +68,15 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("isEmpty", &nixl_dlist_t::isEmpty)
         .def("isSorted", &nixl_dlist_t::isSorted)
         .def(py::self == py::self)
-        .def("__getitem__", static_cast<nixlBasicDesc& (nixl_dlist_t::*)(unsigned int)>(&nixl_dlist_t::operator[]))
+        .def("__getitem__", [](nixl_dlist_t &list, unsigned int i) ->
+              std::tuple<uintptr_t, size_t, uint32_t> {
+                    std::tuple<uintptr_t, size_t, uint32_t> ret;
+                    nixlBasicDesc desc = list[i];
+                    std::get<0>(ret) = desc.addr;
+                    std::get<1>(ret) = desc.len;
+                    std::get<2>(ret) = desc.devId;
+                    return ret;
+              })
         .def("__setitem__", [](nixl_dlist_t &list, unsigned int i, const py::tuple &desc) {
                 list[i] = nixlBasicDesc(desc[0].cast<uintptr_t>(), desc[1].cast<size_t>(), desc[2].cast<uint32_t>());
             })

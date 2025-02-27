@@ -270,7 +270,8 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
                                       const std::string &notif_msg,
                                       const nixl_xfer_op_t &operation,
                                       nixlXferReqH* &req_handle) {
-    req_handle = nullptr;
+    req_handle     = nullptr;
+    int desc_count = (int) local_indices.size();
 
     if ((!local_side->isLocal) || (remote_side->isLocal))
         return NIXL_ERR_INVALID_PARAM;
@@ -279,14 +280,16 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
         (local_side->engine != remote_side->engine))
         return NIXL_ERR_INVALID_PARAM;
 
-    if ((local_indices.size()==0) || (remote_indices.size()==0) ||
-        (local_indices.size() != remote_indices.size()))
+    if ((desc_count==0) || (remote_indices.size()==0) ||
+        (desc_count != (int) remote_indices.size()))
         return NIXL_ERR_INVALID_PARAM;
 
-    for (int i=0; i<(int)local_indices.size(); ++i) {
-        if ((local_indices[i] >= local_side->descs->descCount()) || (local_indices[i]<0))
+    for (int i=0; i<desc_count; ++i) {
+        if ((local_indices[i] >= local_side->descs->descCount())
+               || (local_indices[i]<0))
             return NIXL_ERR_INVALID_PARAM;
-        if ((remote_indices[i] >= remote_side->descs->descCount()) || (remote_indices[i]<0))
+        if ((remote_indices[i] >= remote_side->descs->descCount())
+               || (remote_indices[i]<0))
             return NIXL_ERR_INVALID_PARAM;
         if ((*local_side->descs )[local_indices [i]].len !=
             (*remote_side->descs)[remote_indices[i]].len)
@@ -305,17 +308,19 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
     // Might not need unified and sorted info
     handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
                                      local_side->descs->getType(),
-                                     local_side->descs->isUnifiedAddr(), false);
+                                     local_side->descs->isUnifiedAddr(),
+                                     false, desc_count);
 
     handle->targetDescs = new nixlDescList<nixlMetaDesc> (
                                   remote_side->descs->getType(),
-                                  remote_side->descs->isUnifiedAddr(), false);
+                                  remote_side->descs->isUnifiedAddr(),
+                                  false, desc_count);
 
-    for (int i=0; i<(int)local_indices.size(); ++i) {
-        handle->initiatorDescs->addDesc(
-                (*local_side->descs)[local_indices[i]]);
-        handle->targetDescs->addDesc(
-                (*remote_side->descs)[remote_indices[i]]);
+    for (int i=0; i<desc_count; ++i) {
+        (*handle->initiatorDescs)[i] =
+                                 (*local_side->descs)[local_indices[i]];
+        (*handle->targetDescs)[i] =
+                                 (*remote_side->descs)[remote_indices[i]];
     }
 
     handle->engine      = local_side->engine;

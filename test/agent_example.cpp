@@ -230,7 +230,7 @@ nixl_status_t sideXferTest(nixlAgent* A1, nixlAgent* A2, nixlXferReqH* src_handl
     assert(status == NIXL_SUCCESS);
 
     A1->invalidateXferSide(src_side);
-    A2->invalidateXferSide(dst_side);
+    A1->invalidateXferSide(dst_side);
 
     return NIXL_SUCCESS;
 }
