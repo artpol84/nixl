@@ -265,7 +265,7 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
             if (found) {
                 *p = q;
                 new_elm.copyMeta(*itr);
-                resp.addDesc(new_elm);
+                resp.addDesc(new_elm, false);
                 if (q_sorted) // only check rest of the list
                     last_found = itr - descs.begin();
             } else {

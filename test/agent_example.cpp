@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cassert>
 
+#include <sys/time.h>
+
 #include "nixl.h"
 #include "ucx_backend.h"
 
@@ -12,6 +14,92 @@ void check_buf(void* buf, size_t len) {
     }
 }
 
+void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, nixlBackendEngine* backend2){
+
+
+    int n_mems = 32;
+    int descs_per_mem = 375;
+    int n_iters = 1024;
+    nixlDescList<nixlBasicDesc> mem_list1(DRAM_SEG), mem_list2(DRAM_SEG);
+    nixlDescList<nixlBasicDesc> src_list(DRAM_SEG), dst_list(DRAM_SEG);
+    nixl_status_t status;
+
+    struct timeval start_time, end_time, diff_time;
+
+    nixlXferSideH *src_side[n_iters];
+    nixlXferSideH *dst_side[n_iters];
+
+    for(int i = 0; i<n_mems; i++) {
+        void* src_buf = malloc(descs_per_mem*8);
+        void* dst_buf = malloc(descs_per_mem*8);
+        nixlBasicDesc src_desc((uintptr_t) src_buf, descs_per_mem*8, 0);
+        nixlBasicDesc dst_desc((uintptr_t) dst_buf, descs_per_mem*8, 0);
+
+        mem_list1.addDesc(src_desc);
+        mem_list2.addDesc(dst_desc);
+
+        //std::cout << "mem region " << i << " working \n";
+
+        for(int j = 0; j<descs_per_mem; j++){
+            nixlBasicDesc src_desc2((uintptr_t) src_buf + 8*j, 8, 0);
+            nixlBasicDesc dst_desc2((uintptr_t) dst_buf + 8*j, 8, 0);
+
+            src_list.addDesc(src_desc2);
+            dst_list.addDesc(dst_desc2);
+        }
+    }
+
+    assert(mem_list1.descCount() == n_mems);
+    assert(mem_list2.descCount() == n_mems);
+
+    assert(src_list.descCount() == n_mems*descs_per_mem);
+    assert(dst_list.descCount() == n_mems*descs_per_mem);
+
+    status = A1->registerMem(mem_list1, backend);
+    assert(status == NIXL_SUCCESS);
+
+    status = A2->registerMem(mem_list2, backend2);
+    assert(status == NIXL_SUCCESS);
+
+    std::string meta2 = A2->getLocalMD();
+    assert(meta2.size() > 0);
+
+    std::string remote_name = A1->loadRemoteMD(meta2);
+    assert(remote_name == "Agent2");
+
+    std::cout << "perf setup done\n";
+
+    gettimeofday(&start_time, NULL);
+
+    for(int i = 0; i<n_iters; i++) {
+        status = A1->prepXferSide(dst_list, "Agent2", backend, dst_side[i]);
+        assert(status == NIXL_SUCCESS);
+
+        status = A1->prepXferSide(src_list, "", backend, src_side[i]);
+        assert(status == NIXL_SUCCESS);
+    }
+
+    gettimeofday(&end_time, NULL);
+
+    timersub(&end_time, &start_time, &diff_time);
+    std::cout << "prepXferSide, total time for " << n_iters << " iters: "
+              << diff_time.tv_sec << "s " << diff_time.tv_usec << "us \n";
+
+    float time_per_iter = ((diff_time.tv_sec * 1000000) + diff_time.tv_usec);
+    time_per_iter /=  (n_iters) ;
+    std::cout << "time per 2 preps " << time_per_iter << "us\n";
+
+    status = A1->deregisterMem(mem_list1, backend);
+    assert(status == NIXL_SUCCESS);
+    status = A2->deregisterMem(mem_list2, backend2);
+    assert(status == NIXL_SUCCESS);
+
+    for(int i = 0; i<n_iters; i++){
+        A1->invalidateXferSide(src_side[i]);
+        A1->invalidateXferSide(dst_side[i]);
+    }
+}
+
 nixl_status_t sideXferTest(nixlAgent* A1, nixlAgent* A2, nixlXferReqH* src_handle, nixlBackendEngine* dst_backend){
     std::cout << "Starting sideXferTest\n";
 
@@ -20,6 +108,8 @@ nixl_status_t sideXferTest(nixlAgent* A1, nixlAgent* A2, nixlXferReqH* src_handl
     assert(src_backend);
 
     std::cout << "Got backend\n";
+
+    test_side_perf(A1, A2, src_backend, dst_backend);
 
     int n_bufs = 4; //must be even
     size_t len = 1024;
@@ -139,8 +229,8 @@ nixl_status_t sideXferTest(nixlAgent* A1, nixlAgent* A2, nixlXferReqH* src_handl
     status = A2->deregisterMem(dst_list, dst_backend);
     assert(status == NIXL_SUCCESS);
 
-    delete src_side;
-    delete dst_side;
+    A1->invalidateXferSide(src_side);
+    A2->invalidateXferSide(dst_side);
 
     return NIXL_SUCCESS;
 }
