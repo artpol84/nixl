@@ -164,7 +164,7 @@ class nixlUcxEngine : nixlBackendEngine {
         ~nixlUcxEngine();
 
         bool supportsNotif () const { return true; }
-
+        bool supportsLocal () const { return true; }
         bool supportsProgTh () const { return pthrOn; }
 
         /* Object management */
@@ -178,6 +178,9 @@ class nixlUcxEngine : nixlBackendEngine {
                                    const nixl_mem_t &nixl_mem,
                                    nixlBackendMD* &out);
         void deregisterMem (nixlBackendMD* meta);
+
+        nixl_status_t loadLocalMD (nixlBackendMD* input, 
+                                   nixlBackendMD* &output);
 
         nixl_status_t loadRemoteMD (const nixlStringDesc &input,
                                     const nixl_mem_t &nixl_mem,

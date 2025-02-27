@@ -155,6 +155,9 @@ class nixlBackendEngine {
         // pure virtual, and return errors, as parent shouldn't call if supportsNotif is false.
         virtual bool supportsNotif () const = 0;
 
+        // Determines if a backend supports local operations
+        virtual bool supportsLocal () const = 0;
+        
         // Determines if a backend supports progress thread.
         virtual bool supportsProgTh () const = 0;
 
@@ -179,6 +182,9 @@ class nixlBackendEngine {
         // Child might just return 0, if making proactive connections are not necessary.
         virtual nixl_status_t connect(const std::string &remote_agent) = 0;
         virtual nixl_status_t disconnect(const std::string &remote_agent) = 0;
+
+        virtual nixl_status_t loadLocalMD (nixlBackendMD* input,
+                                           nixlBackendMD* &output) = 0;
 
         // Add and remove remtoe metadata
         virtual nixl_status_t loadRemoteMD (const nixlStringDesc &input,

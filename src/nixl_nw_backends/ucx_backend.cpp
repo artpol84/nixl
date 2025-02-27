@@ -185,7 +185,7 @@ nixlUcxEngine::connectionCheckAmCb(void *arg, const void *header,
     return UCS_OK;
 }
 
-    ucs_status_t
+ucs_status_t
 nixlUcxEngine::connectionTermAmCb (void *arg, const void *header,
                                    size_t header_length, void *data,
                                    size_t length,
@@ -346,6 +346,38 @@ void nixlUcxEngine::deregisterMem (nixlBackendMD* meta)
     delete priv;
 }
 
+nixl_status_t nixlUcxEngine::loadLocalMD (nixlBackendMD* input,
+                                          nixlBackendMD* &output) {
+    nixlUcxConnection conn;
+    nixlUcxPrivateMetadata* input_md = (nixlUcxPrivateMetadata*) input;
+    nixlUcxPublicMetadata *md = new nixlUcxPublicMetadata;
+
+    //look up our own name
+    auto search = remoteConnMap.find(localAgent);
+
+    if(search == remoteConnMap.end()) {
+        //TODO: something wrong, local connection should have been established
+        return NIXL_ERR_NOT_FOUND;
+    }
+    conn = (nixlUcxConnection) search->second;
+
+    //directly copy underlying conn struct
+    md->conn = conn;
+
+    size_t size = input_md->rkeyStr.size();
+    char *addr = new char[size];
+    nixlSerDes::_stringToBytes(addr, input_md->rkeyStr, size);
+    
+    int ret = uw->rkeyImport(conn.ep, addr, size, md->rkey);
+    if (ret) {
+        // TODO: error out. Should we indicate which desc failed or unroll everything prior
+        return NIXL_ERR_BACKEND;
+    }
+
+    output = (nixlBackendMD*) md;
+
+    return NIXL_SUCCESS;
+}
 
 // To be cleaned up
 nixl_status_t nixlUcxEngine::loadRemoteMD (const nixlStringDesc &input,

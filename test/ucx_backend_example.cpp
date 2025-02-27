@@ -35,13 +35,17 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
     nixl_xfer_state_t ret3;
     nixlBackendReqH* handle;
 
+    std::string remote_agent ("Agent2");
+
+    if(ucx1 == ucx2) remote_agent = "Agent1";
+
     std::string test_str("test");
     std::cout << "\t" << op2string(op) << " from " << addr1 << " to " << addr2 << "\n";
 
     // Posting a request, to be updated to return an async handler,
     // or an ID that later can be used to check the status as a new method
     // Also maybe we would remove the WRITE and let the backend class decide the op
-    ret3 = ucx1->postXfer(req_src_descs, req_dst_descs, op, "Agent2", test_str, handle);
+    ret3 = ucx1->postXfer(req_src_descs, req_dst_descs, op, remote_agent, test_str, handle);
     assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
 
 
@@ -95,11 +99,104 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
     cout << "OK" << endl;
 }
 
+void test_local_operation() {
+    nixlBackendEngine *ucx1;
+    std::string agent1("Agent1");
+    nixl_status_t ret1;
+
+    nixlUcxInitParams init1;
+    init1.enableProgTh=true;
+    init1.localAgent = agent1;
+
+    int iter = 10;
+    
+    ucx1 = (nixlBackendEngine*) new nixlUcxEngine (&init1);
+
+    assert(ucx1->supportsLocal());
+
+    //connection info is still a string
+    std::string conn_info1 = ucx1->getConnInfo();
+
+    ret1 = ucx1->loadRemoteConnInfo (agent1, conn_info1);
+
+    assert(ret1 == NIXL_SUCCESS);
+
+    std::cout << "Local connection complete\n";
+
+    nixlBasicDesc buff1, buff2;
+    nixlBackendMD* local_meta1, *local_meta2;
+    // Number of transfer descriptors
+    int desc_cnt = 16; 
+    // Size of a single descriptor 
+    // UCX SHMem is using 16MB bounce buffers, 
+    // use large size to ensure that request is non-inline
+    size_t desc_size = 32 * 1024 * 1024; 
+    size_t len = desc_cnt * desc_size;
+    void* addr1 = calloc(1, len);
+    void* addr2 = calloc(1, len);
+
+
+    buff1.addr   = (uintptr_t) addr1;
+    buff1.len    = len;
+    buff1.devId = 0;
+    ret1 = ucx1->registerMem(buff1, DRAM_SEG, local_meta1);
+    assert(ret1 == NIXL_SUCCESS);
+
+    buff2.addr   = (uintptr_t) addr2;
+    buff2.len    = len;
+    buff2.devId = 0;
+    ret1 = ucx1->registerMem(buff2, DRAM_SEG, local_meta2);
+    assert(ret1 == NIXL_SUCCESS);
+
+    //string descs unneccessary, convert meta locally
+    nixlBackendMD* remote_of_local_meta;
+    ret1 = ucx1->loadLocalMD (local_meta2, remote_of_local_meta);
+    assert(ret1 == NIXL_SUCCESS);
+
+    nixlDescList<nixlMetaDesc> req_src_descs (DRAM_SEG);
+    for(int i = 0; i < desc_cnt; i++) {
+        nixlMetaDesc req_src;
+        req_src.addr     = (uintptr_t) (((char*) addr1) + i * desc_size); //random offset
+        req_src.len      = desc_size;
+        req_src.devId   = 0;
+        req_src.metadata = local_meta1;
+        req_src_descs.addDesc(req_src);
+    }
+
+    nixlDescList<nixlMetaDesc> req_dst_descs (DRAM_SEG);
+    for(int i = 0; i < desc_cnt; i++) {
+        nixlMetaDesc req_dst;
+        req_dst.addr   = (uintptr_t) ((char*) addr2 + i * desc_size); //random offset
+        req_dst.len    = desc_size;
+        req_dst.devId = 0;
+        req_dst.metadata = remote_of_local_meta;
+        req_dst_descs.addDesc(req_dst);
+    }
+
+    nixl_xfer_op_t ops[] = {  NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF };
+
+    for (size_t i = 0; i < sizeof(ops)/sizeof(ops[i]); i++) {
+        cout << endl << op2string(ops[i]) << " test (" << iter << ") iterations" <<endl;
+        for(int k = 0; k < iter; k++ ) {
+            /* Init data */
+            memset(addr1, 0xbb, len);
+            memset(addr2, 0, len);
+        
+            /* Test */
+            performTransfer(ucx1, ucx1, req_src_descs, req_dst_descs,
+                                 addr1, addr2, len, ops[i], false);
+        }
+    }
+}
+
 int main()
 {
     int ret1, ret2;
     int iter = 10;
     std::vector<std::string> devs;
+
+    //Test local memory to local memory transfer
+    test_local_operation();
 
     // Example: assuming two agents running on the same machine,
     // with separate memory regions in DRAM
