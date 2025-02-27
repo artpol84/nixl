@@ -172,6 +172,7 @@ nixl_status_t nixlDescList<T>::addDesc (const T &desc, const bool overlap_check)
         return NIXL_ERR_INVALID_PARAM;
 
     if (!overlap_check) {
+        sorted = false;
         descs.push_back(desc);
         return NIXL_SUCCESS;
     }
@@ -230,7 +231,7 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
                 if (elm.covers(q)){
                     *p = q;
                     new_elm.copyMeta(elm);
-                    resp.addDesc(new_elm);
+                    resp.addDesc(new_elm, false);
                     count++;
                     break;
                 }
