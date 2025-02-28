@@ -1,11 +1,20 @@
 nixl_dep = declare_dependency(link_with: nixl_lib_rb, include_directories: inc_dir)
 ucx_backend_dep = declare_dependency(link_with: ucx_backend_lib, include_directories: [inc_dir, '../src/nixl_nw_backends'])
 
-ucx_backend_example = executable('ucx_backend_example',
-           'ucx_backend_example.cpp',
+ucx_backend_test = executable('ucx_backend_test',
+           'ucx_backend_test.cpp',
            dependencies: [nixl_dep, ucx_backend_dep],
            include_directories: [inc_dir, '../src/nixl_nw_backends'],
            install: true)
+
+if cuda_dep.found()
+    ucx_backend_test_cuda = executable('ucx_backend_test_cuda',
+           'ucx_backend_test.cpp',
+           dependencies: [nixl_dep, ucx_backend_dep, cuda_dep],
+           include_directories: [inc_dir, '../src/nixl_nw_backends'],
+           cpp_args : '-DUSE_VRAM',
+           install: true)
+endif
 
 ucx_backend_multi = executable('ucx_backend_multi',
            'ucx_backend_multi.cpp',

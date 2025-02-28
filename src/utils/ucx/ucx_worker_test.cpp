@@ -189,5 +189,12 @@ int main()
     }
 
 
+#ifdef USE_VRAM
+    checkCudaError(cudaFree(buffer[0]), "Failed to allocate CUDA buffer 0");
+    checkCudaError(cudaFree(buffer[1]), "Failed to allocate CUDA buffer 0");
+#else
+    free(buffer[0]);
+    free(buffer[1]);
+#endif
 
 }

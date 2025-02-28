@@ -194,7 +194,6 @@ nixlUcxEngine::connectionTermAmCb (void *arg, const void *header,
     struct nixl_ucx_am_hdr* hdr = (struct nixl_ucx_am_hdr*) header;
 
     std::string remote_agent( (char*) data, length);
-    nixlUcxEngine* engine = (nixlUcxEngine*) arg;
 
     if(hdr->op != DISCONNECT) {
         //is this the best way to ERR?
@@ -206,12 +205,14 @@ nixlUcxEngine::connectionTermAmCb (void *arg, const void *header,
         //is this the best way to ERR?
         return UCS_ERR_INVALID_PARAM;
     }
-
+/*
+    // TODO: research UCX connection logic and fix.
+    nixlUcxEngine* engine = (nixlUcxEngine*) arg;
     if(NIXL_SUCCESS != engine->endConn(remote_agent)) {
         //TODO: received connect AM from agent we don't recognize
         return UCS_ERR_INVALID_PARAM;
     }
-
+*/
     return UCS_OK;
 }
 
