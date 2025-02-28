@@ -34,6 +34,7 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
 
     params->localAgent   = data.name;
     params->enableProgTh = data.config.useProgThread;
+    params->pthrDelay    = data.config.pthrDelay;
 
     switch (nixl_backend) { // For supported backends
         case UCX:

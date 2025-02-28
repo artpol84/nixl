@@ -5,6 +5,7 @@
 #include <string>
 #include "nixl_descriptors.h"
 #include "nixl_types.h"
+#include "utils/sys/nixl_time.h"
 
 // Might be removed to be decided by backend, or changed to high
 // level direction or so.
@@ -17,8 +18,9 @@ typedef std::vector<std::pair<std::string, std::string>> notif_list_t;
 // from the user, we should make nixlBackendEngine/nixlAgent friend classes.
 class nixlBackendInitParams {
     public:
-        std::string localAgent;
-        bool        enableProgTh;
+        std::string    localAgent;
+        bool           enableProgTh;
+        nixlTime::us_t pthrDelay;
 
         virtual nixl_backend_t getType() const = 0;
 
