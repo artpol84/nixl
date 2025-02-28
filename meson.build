@@ -21,23 +21,36 @@ project('nixl', 'CPP',
 # set up some global vars for compiler, platform, configuration, etc.
 cpp = meson.get_compiler('cpp')
 
-ucx_dep = dependency('ucx')
 cuda_dep = dependency('cuda', required : false)
+prefix_path = get_option('prefix')
+prefix_inc = prefix_path + '/include'
+
+ucx_path = get_option('ucx_path')
+if ucx_path != ''
+  ucx_lib_path = ucx_path + '/lib'
+  ucx_inc_path = ucx_path + '/include'
+  ucx_dep = declare_dependency(
+    link_args : ['-L' + ucx_lib_path, '-lucp', '-lucs', '-luct'],
+    include_directories : include_directories(ucx_inc_path))
+else
+  ucx_dep = dependency('ucx')
+endif
+
 
 inc_dir = include_directories('include', 'include/internal', 'src', 
                               'src/utils/serdes', 'src/utils/data_structures',
                               'src/utils/sys', 'src/utils/ucx')
-
 subdir('include')
 subdir('include/internal')
 subdir('src')
 subdir('test')
 
-#install_headers('include/nixl.h', subdir: '.')
-#install_headers('include/nixl_params.h', subdir: '.')
-#install_headers('include/nixl_descriptors.h', subdir: '.')
-#install_headers('src/utils/serdes/serdes.h', subdir: '.')
-#install_headers('include/internal/backend_engine.h', subdir: '.')
-#install_headers('include/internal/transfer_request.h', subdir: '.')
-#install_headers('include/internal/agent_data.h', subdir: '.')
-#install_headers('include/internal/mem_section.h', subdir: '.')
+install_headers('include/nixl.h', install_dir: prefix_inc)
+install_headers('include/nixl_params.h', install_dir: prefix_inc)
+install_headers('include/nixl_descriptors.h', install_dir: prefix_inc)
+install_headers('src/utils/serdes/serdes.h', install_dir: prefix_inc + '/utils/serdes')
+install_headers('src/utils/sys/nixl_time.h', install_dir: prefix_inc + '/utils/sys')
+install_headers('include/internal/backend_engine.h', install_dir: prefix_inc + '/internal')
+install_headers('include/internal/transfer_request.h', install_dir: prefix_inc + '/internal')
+install_headers('include/internal/agent_data.h', install_dir: prefix_inc + '/internal')
+install_headers('include/internal/mem_section.h', install_dir: prefix_inc + '/internal')

@@ -1,0 +1,2 @@
+option('ucx_path', type: 'string', value: '/usr/local', description: 'Path to UCX install')
+
