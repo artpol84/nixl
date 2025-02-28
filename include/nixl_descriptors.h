@@ -16,7 +16,7 @@ class nixlBasicDesc {
         size_t    len;   // Buffer length
         uint32_t  devId; // Device ID
 
-        nixlBasicDesc() {};
+        nixlBasicDesc() {}; // No initialization to zero
         nixlBasicDesc(uintptr_t addr, size_t len, uint32_t dev_id);
         nixlBasicDesc(const std::string &str); // deserializer
         nixlBasicDesc(const nixlBasicDesc &desc) = default;

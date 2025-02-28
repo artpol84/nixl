@@ -18,11 +18,19 @@ class nixlXferReqH {
         nixl_xfer_state_t           state;
 
     public:
-        inline nixlXferReqH() {}
+        inline nixlXferReqH() {
+            initiatorDescs = nullptr;
+            targetDescs    = nullptr;
+            engine         = nullptr;
+            backendHandle  = nullptr;
+        }
+
         inline ~nixlXferReqH() {
+            // delete checks for nullptr itself
             delete initiatorDescs;
             delete targetDescs;
-            if(backendHandle != NULL) engine->releaseReqH(backendHandle);
+            if (backendHandle != nullptr)
+                engine->releaseReqH(backendHandle);
         }
 
     friend class nixlAgent;
@@ -37,7 +45,10 @@ class nixlXferSideH {
         bool                        isLocal;
 
     public:
-        inline nixlXferSideH() {}
+        inline nixlXferSideH() {
+            engine = nullptr;
+        }
+
         inline ~nixlXferSideH() {
             delete descs;
         }

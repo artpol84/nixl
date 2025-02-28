@@ -66,6 +66,8 @@ class nixlMetaDesc : public nixlBasicDesc {
         // Reuse parent constructor without the metadata
         using nixlBasicDesc::nixlBasicDesc;
 
+        nixlMetaDesc() : nixlBasicDesc() { metadata = nullptr; }
+
         // No serializer or deserializer, using parent not to expose the metadata
 
         inline friend bool operator==(const nixlMetaDesc &lhs, const nixlMetaDesc &rhs) {
