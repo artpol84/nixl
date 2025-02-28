@@ -46,6 +46,7 @@ subdir('src')
 subdir('test')
 
 install_headers('include/nixl.h', install_dir: prefix_inc)
+install_headers('include/nixl_types.h', install_dir: prefix_inc)
 install_headers('include/nixl_params.h', install_dir: prefix_inc)
 install_headers('include/nixl_descriptors.h', install_dir: prefix_inc)
 install_headers('src/utils/serdes/serdes.h', install_dir: prefix_inc + '/utils/serdes')

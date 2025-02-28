@@ -5,7 +5,7 @@
 #include <cstdint>
 #include "internal/backend_engine.h"
 #include "nixl_types.h"
-#include <nixl_time.h>
+#include "utils/sys/nixl_time.h"
 
 // Per Agent configuration information, such as if progress thread should be used.
 // Other configs such as assigned IP/port or device access can be added.
