@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include "serdes.h"
+#include "utils/serdes/serdes.h"
 #include "nixl_types.h"
 
 // A basic descriptor class, contiguous in memory, with some supporting methods
