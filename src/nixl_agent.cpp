@@ -59,13 +59,12 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
 }
 
 nixl_status_t nixlAgent::registerMem(const nixl_dlist_t &descs,
-                           nixlBackendEngine* backend) {
+                                     nixlBackendEngine* backend) {
     return (data.memorySection.addDescList(descs, backend));
 }
 
 nixl_status_t nixlAgent::deregisterMem(const nixl_dlist_t &descs,
-                             nixlBackendEngine* backend) {
-    // Might not need unified and sorted info
+                                       nixlBackendEngine* backend) {
     nixlDescList<nixlMetaDesc> resp(descs.getType(),
                                     descs.isUnifiedAddr(),
                                     descs.isSorted());
@@ -99,11 +98,11 @@ nixl_status_t nixlAgent::makeConnection(const std::string &remote_agent) {
 }
 
 nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
-                             const nixl_dlist_t &remote_descs,
-                             const std::string &remote_agent,
-                             const std::string &notif_msg,
-                             const nixl_xfer_op_t &operation,
-                             nixlXferReqH* &req_handle) {
+                                       const nixl_dlist_t &remote_descs,
+                                       const std::string &remote_agent,
+                                       const std::string &notif_msg,
+                                       const nixl_xfer_op_t &operation,
+                                       nixlXferReqH* &req_handle) {
     nixl_status_t ret;
     req_handle = nullptr;
 
@@ -126,7 +125,6 @@ nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
     // TODO [Perf]: merge descriptors back to back in memory (unlikly case).
 
     nixlXferReqH *handle = new nixlXferReqH;
-    // Might not need unified and sorted info
     handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
                                      local_descs.getType(),
                                      local_descs.isUnifiedAddr(), false);
@@ -233,7 +231,6 @@ nixl_status_t nixlAgent::prepXferSide (const nixl_dlist_t &descs,
     nixlXferSideH *handle = new nixlXferSideH;
 
     handle->engine = backend;
-    // Might not need unified and sorted info
     handle->descs = new nixlDescList<nixlMetaDesc> (descs.getType(),
                                                     descs.isUnifiedAddr(),
                                                     descs.isSorted());
@@ -304,7 +301,6 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
     }
 
     nixlXferReqH *handle = new nixlXferReqH;
-    // Might not need unified and sorted info
     handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
                                      local_side->descs->getType(),
                                      local_side->descs->isUnifiedAddr(),

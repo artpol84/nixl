@@ -18,10 +18,13 @@ nixlBasicDesc::nixlBasicDesc(uintptr_t addr, size_t len, uint32_t dev_id) {
 }
 
 nixlBasicDesc::nixlBasicDesc(const std::string &str) {
-    if (str.size()==sizeof(nixlBasicDesc))
+    if (str.size()==sizeof(nixlBasicDesc)) {
         str.copy(reinterpret_cast<char*>(this), sizeof(nixlBasicDesc));
-    else
-        len = 0; // Error indicator
+    } else { // Error indicator, not possible by descList deserializer call
+        addr  = 0;
+        len   = 0;
+        devId = 0;
+    }
 }
 
 bool operator==(const nixlBasicDesc &lhs, const nixlBasicDesc &rhs) {
@@ -68,8 +71,10 @@ nixlStringDesc::nixlStringDesc(const std::string &str) {
         str.copy(reinterpret_cast<char*>(this), sizeof(nixlBasicDesc));
         str.copy(reinterpret_cast<char*>(&metadata[0]),
                  meta_size, sizeof(nixlBasicDesc));
-    } else { // Error
-        len = 0;
+    } else { // Error indicator, not possible by descList deserializer call
+        addr  = 0;
+        len   = 0;
+        devId = 0;
         metadata.resize(0);
     }
 }
@@ -120,28 +125,22 @@ nixlDescList<T>::nixlDescList(nixlSerDes* deserializer) {
         str = deserializer->getStr("");
         if (str.size()!= n_desc * sizeof(nixlBasicDesc))
             return;
+        // If size is proper, deserializer cannot fail
         descs.resize(n_desc);
         str.copy(reinterpret_cast<char*>(descs.data()), str.size());
 
-        for (size_t i=0; i<n_desc; ++i)
-            if (descs[i].len == 0) { // Error indicator
-                descs.clear();
-                return;
-            }
     } else if(std::is_same<nixlStringDesc, T>::value) {
         if (str!="nixlSDList")
             return;
         for (size_t i=0; i<n_desc; ++i) {
             str = deserializer->getStr("");
-            if (str.size()==0) {
+            // If size is proper, deserializer cannot fail
+            // Allowing empty strings, might change later
+            if (str.size() < sizeof(nixlBasicDesc)) {
                 descs.clear();
                 return;
             }
             T elm(str);
-            if (elm.len == 0) { // Error indicator
-                descs.clear();
-                return;
-            }
             descs.push_back(elm);
         }
     } else {
@@ -256,29 +255,32 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
     if(std::is_same<nixlBasicDesc, T>::value)
         return NIXL_ERR_INVALID_PARAM;
 
-    if ((type != query.getType()) || (type != resp.getType()))
+    if ((type != query.getType()) || (type != resp.type))
         return NIXL_ERR_INVALID_PARAM;
 
     if ((unifiedAddr != query.isUnifiedAddr()) ||
-        (unifiedAddr != resp.isUnifiedAddr()))
+        (unifiedAddr != resp.unifiedAddr))
         return NIXL_ERR_INVALID_PARAM;
 
     // 1-to-1 mapping cannot hold
-    if (query.isSorted() != resp.isSorted())
+    if (query.isSorted() != resp.sorted)
         return NIXL_ERR_INVALID_PARAM;
 
     T new_elm;
     nixlBasicDesc *p = &new_elm;
     int count = 0, last_found = 0;
     bool found, q_sorted = query.isSorted();
+    nixlBasicDesc q;
+
+    resp.resize(query.descCount());
 
     if (!sorted) {
-        for (auto & q : query)
+        for (int i=0; i<query.descCount(); ++i)
             for (auto & elm : descs)
-                if (elm.covers(q)){
-                    *p = q;
+                if (elm.covers(query[i])){
+                    *p = query[i];
                     new_elm.copyMeta(elm);
-                    resp.addDesc(new_elm);
+                    resp[i]=new_elm;
                     count++;
                     break;
                 }
@@ -290,8 +292,9 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
             return NIXL_ERR_BAD;
         }
     } else {
-        for (auto & q : query) {
+        for (int i=0; i<query.descCount(); ++i) {
             found = false;
+            q = query[i];
             auto itr = std::lower_bound(descs.begin() + last_found,
                                         descs.end(), q, desc_comparator_f);
 
@@ -313,7 +316,7 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
             if (found) {
                 *p = q;
                 new_elm.copyMeta(*itr);
-                resp.addDesc(new_elm);
+                resp[i] = new_elm;
                 if (q_sorted) // only check rest of the list
                     last_found = itr - descs.begin();
             } else {
@@ -321,6 +324,7 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
                 return NIXL_ERR_BAD;
             }
         }
+        resp.sorted = query.isSorted(); // Update as [] assignments resets it
         return NIXL_SUCCESS;
     }
 }

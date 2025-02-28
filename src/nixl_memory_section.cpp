@@ -94,6 +94,8 @@ nixl_status_t nixlLocalSection::addDescList (const nixl_dlist_t &mem_elms,
             return ret;
         }
         *p = mem_elms[i]; // Copy the basic desc part
+        if ((nixl_mem == FILE_SEG) && (p->len==0))
+            p->len = SIZE_MAX; // File has no range limit
         target->addDesc(out);
     }
     return NIXL_SUCCESS;
