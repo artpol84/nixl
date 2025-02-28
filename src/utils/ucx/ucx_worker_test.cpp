@@ -95,8 +95,8 @@ int main()
 #else
     buffer[0] = (uint8_t*) calloc(1, buf_size);
     buffer[1] = (uint8_t*) calloc(1, buf_size);
-    chk_buffer = (uint8_t*) calloc(1, buf_size);
 #endif
+    chk_buffer = (uint8_t*) calloc(1, buf_size);
 
     assert(buffer[0]);
     assert(buffer[1]);
