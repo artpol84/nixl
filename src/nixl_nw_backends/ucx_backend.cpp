@@ -346,6 +346,11 @@ void nixlUcxEngine::deregisterMem (nixlBackendMD* meta)
     delete priv;
 }
 
+std::string nixlUcxEngine::getPublicData (const nixlBackendMD* meta) const {
+    const nixlUcxPrivateMetadata *priv = (nixlUcxPrivateMetadata*) meta;
+    return priv->get();
+}
+
 nixl_status_t nixlUcxEngine::loadLocalMD (nixlBackendMD* input,
                                           nixlBackendMD* &output) {
     nixlUcxConnection conn;

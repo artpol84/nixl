@@ -25,39 +25,24 @@ class nixlBackendInitParams {
         virtual ~nixlBackendInitParams() = default;
 };
 
+// Pure virtual class to have a common pointer type
 class nixlBackendReqH {
 public:
     nixlBackendReqH() { }
     ~nixlBackendReqH() { }
 };
 
-// Main goal of BackendMetadata class is to have a common pointer type
-// for different backend metadata
-// Not sure get/set for serializer/deserializer is necessary
-// We can add nixl_backend and memory_type, but can't see use case
+// Pure virtual class to have a common pointer type for different backendMD.
 class nixlBackendMD {
-    bool privateMetadata = true;
+    protected:
+        bool isPrivateMD;
 
     public:
         nixlBackendMD(bool isPrivate){
-            privateMetadata = isPrivate;
+            isPrivateMD = isPrivate;
         }
 
         virtual ~nixlBackendMD(){
-        }
-
-        bool isPrivate () const { return  privateMetadata; }
-        bool isPublic  () const { return !privateMetadata; }
-
-        // Desired serializer instead of std::string
-        virtual std::string get() const {
-            std::string err = "Not Implemented";
-            return err;
-        }
-
-        // To be able to populate when receiving data
-        int set(const std::string &str) {
-            return -1; // Not implemented
         }
 };
 
@@ -146,18 +131,19 @@ class nixlBackendEngine {
 
         bool getInitErr() { return initErr; }
 
-        // Can add checks for being public metadata
-        std::string getPublicData (const nixlBackendMD* meta) const {
-            return meta->get();
-        }
+        // The support function determine which methods are necessary by the child backend, and
+        // if they're called by mistake, they will return error if not implemented by backend.
+
+        // Determines if a backend supports remote operations
+        virtual bool supportsRemote () const = 0;
+
+        // Determines if a backend supports local operations
+        virtual bool supportsLocal () const = 0;
 
         // Determines if a backend supports sending notifications. Related methods are not
         // pure virtual, and return errors, as parent shouldn't call if supportsNotif is false.
         virtual bool supportsNotif () const = 0;
 
-        // Determines if a backend supports local operations
-        virtual bool supportsLocal () const = 0;
-        
         // Determines if a backend supports progress thread.
         virtual bool supportsProgTh () const = 0;
 
@@ -169,34 +155,45 @@ class nixlBackendEngine {
                                            nixlBackendMD* &out) = 0;
         virtual void deregisterMem (nixlBackendMD* meta) = 0;
 
-        // If we use an external connection manager, the next 3 methods might change
+        // Gets serialized form of public metadata
+        virtual std::string getPublicData (const nixlBackendMD* meta) const = 0;
+
         // Provide the required connection info for remote nodes
         virtual std::string getConnInfo() const = 0;
 
-        // Deserialize from string the connection info for a remote node
+        // Deserialize from string the connection info for a remote node, if supported
         // The generated data should be deleted in nixlBackendEngine destructor
         virtual nixl_status_t loadRemoteConnInfo (const std::string &remote_agent,
-                                                  const std::string &remote_conn_info) = 0;
+                                                  const std::string &remote_conn_info) {
+            return NIXL_ERR_BACKEND;
+        }
 
         // Make connection to a remote node identified by the name into loaded conn infos
         // Child might just return 0, if making proactive connections are not necessary.
+        // An agent might need to connect to itself for local operations.
         virtual nixl_status_t connect(const std::string &remote_agent) = 0;
         virtual nixl_status_t disconnect(const std::string &remote_agent) = 0;
 
+        // Provide the target metadata necessary for local operations, if supported
         virtual nixl_status_t loadLocalMD (nixlBackendMD* input,
-                                           nixlBackendMD* &output) = 0;
+                                           nixlBackendMD* &output) {
+            return NIXL_ERR_BACKEND;
+        }
 
-        // Add and remove remtoe metadata
+        // Load remtoe metadata, if supported.
         virtual nixl_status_t loadRemoteMD (const nixlStringDesc &input,
                                             const nixl_mem_t &nixl_mem,
                                             const std::string &remote_agent,
-                                            nixlBackendMD* &output) = 0;
+                                            nixlBackendMD* &output) {
+            return NIXL_ERR_BACKEND;
+        }
 
-        virtual nixl_status_t removeRemoteMD (nixlBackendMD* input) = 0;
+        // Remove remtoe metadata, if supported.
+        virtual nixl_status_t removeRemoteMD (nixlBackendMD* input) {
+            return NIXL_ERR_BACKEND;
+        }
 
         // Posting a request, which returns populates the async handle.
-        // Returns the status of transfer, among NIXL_XFER_PROC/DONE/ERR.
-        // Empty notif_msg means no notification, or can be ignored if supportsNotif is false.
         virtual nixl_xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
                                             const nixlDescList<nixlMetaDesc> &remote,
                                             const nixl_xfer_op_t &operation,
@@ -214,13 +211,11 @@ class nixlBackendEngine {
         virtual int getNotifs(notif_list_t &notif_list) { return NIXL_ERR_BACKEND; }
 
         // Generates a standalone notification, not bound to a transfer.
-        // Used for extra sync or ctrl msgs.
         virtual nixl_status_t genNotif(const std::string &remote_agent, const std::string &msg) {
             return NIXL_ERR_BACKEND;
         }
 
         // Force backend engine worker to progress.
-        // TODO: remove
         virtual int progress() { return 0; }
 
     // public:

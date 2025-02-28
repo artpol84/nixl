@@ -63,11 +63,6 @@ class nixlUcxPublicMetadata : public nixlBackendMD {
 
         ~nixlUcxPublicMetadata(){
         }
-
-        // int set(std::string) {
-        //     // check for string being proper and populate rkey
-        //     return 0;
-        // }
 };
 
 class nixlUcxEngine : nixlBackendEngine {
@@ -163,14 +158,17 @@ class nixlUcxEngine : nixlBackendEngine {
         nixlUcxEngine(const nixlUcxInitParams* init_params);
         ~nixlUcxEngine();
 
-        bool supportsNotif () const { return true; }
+        bool supportsRemote () const { return true; }
         bool supportsLocal () const { return true; }
+        bool supportsNotif () const { return true; }
         bool supportsProgTh () const { return pthrOn; }
 
         /* Object management */
+        std::string getPublicData (const nixlBackendMD* meta) const;
         std::string getConnInfo() const;
         nixl_status_t loadRemoteConnInfo (const std::string &remote_agent,
                                           const std::string &remote_conn_info);
+
         nixl_status_t connect(const std::string &remote_agent);
         nixl_status_t disconnect(const std::string &remote_agent);
 
@@ -179,7 +177,7 @@ class nixlUcxEngine : nixlBackendEngine {
                                    nixlBackendMD* &out);
         void deregisterMem (nixlBackendMD* meta);
 
-        nixl_status_t loadLocalMD (nixlBackendMD* input, 
+        nixl_status_t loadLocalMD (nixlBackendMD* input,
                                    nixlBackendMD* &output);
 
         nixl_status_t loadRemoteMD (const nixlStringDesc &input,
