@@ -21,7 +21,7 @@ project('nixl', 'CPP',
 # set up some global vars for compiler, platform, configuration, etc.
 cpp = meson.get_compiler('cpp')
 
-cuda_dep = dependency('cuda', required : false)
+cuda_dep = dependency('cuda', required : false, modules : [ 'cudart', 'cuda' ])
 prefix_path = get_option('prefix')
 prefix_inc = prefix_path + '/include'
 

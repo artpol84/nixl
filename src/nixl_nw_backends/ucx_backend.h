@@ -14,6 +14,13 @@
 #include <ucx_utils.h>
 #include <list_elem.h>
 
+#ifdef HAVE_CUDA
+
+#include <cuda_runtime.h>
+#include <cufile.h>
+
+#endif
+
 typedef enum {CONN_CHECK, NOTIF_STR, DISCONNECT} ucx_cb_op_t;
 
 struct nixl_ucx_am_hdr {
@@ -65,6 +72,13 @@ class nixlUcxPublicMetadata : public nixlBackendMD {
         }
 };
 
+// Forward declaration of CUDA context
+// It is only visible in ucx_backend.cpp to ensure that
+// HAVE_CUDA works properly
+// Once we will introduce static config (i.e. config.h) that
+// will be part of NIXL installation - we can have
+// HAVE_CUDA in h-files
+class nixlUcxCudaCtx;
 class nixlUcxEngine : nixlBackendEngine {
     private:
 
@@ -79,6 +93,10 @@ class nixlUcxEngine : nixlBackendEngine {
         int noSyncIters;
         std::thread pthr;
         nixlTime::us_t pthrDelay;
+
+        /* CUDA data*/
+        nixlUcxCudaCtx *cudaCtx;
+        bool cuda_addr_wa;
 
         /* Notifications */
         notif_list_t notifMainList;
@@ -110,11 +128,17 @@ class nixlUcxEngine : nixlBackendEngine {
                 void completed() { _completed = 1; }
         };
 
+        void vramInitCtx();
+        void vramFiniCtx();
+        int vramUpdateCtx(void *address, uint32_t  devId, bool &restart_reqd);
+        int vramApplyCtx();
+
         // Threading infrastructure
         //   TODO: move the thread management one outside of NIXL common infra
         void progressFunc();
-        void startProgressThread(nixlTime::us_t delay);
-        void stopProgressThread();
+        void progressThreadStart();
+        void progressThreadStop();
+        void progressThreadRestart();
         bool isProgressThread(){
             return (std::this_thread::get_id() == pthr.get_id());
         }

@@ -2,6 +2,162 @@
 #include "serdes.h"
 #include <cassert>
 
+class nixlUcxCudaCtx {
+public:
+#ifdef HAVE_CUDA
+    CUcontext pthrCudaCtx;
+
+    nixlUcxCudaCtx() {
+        pthrCudaCtx = NULL;
+    }
+#endif
+    void cudaResetCtxPtr();
+    int cudaUpdateCtxPtr(void *address, int expected_dev, bool &was_updated);
+    int cudaSetCtx();
+};
+
+#ifdef HAVE_CUDA
+
+/****************************************
+ * CUDA related code
+*****************************************/
+
+static int cudaQueryAddr(void *address, bool &is_dev,
+                         CUdevice &dev, CUcontext &ctx)
+{
+    CUmemorytype mem_type = CU_MEMORYTYPE_HOST;
+    uint32_t is_managed = 0;
+#define NUM_ATTRS 4
+    CUpointer_attribute attr_type[NUM_ATTRS];
+    void *attr_data[NUM_ATTRS];
+    CUresult result;
+
+    attr_type[0] = CU_POINTER_ATTRIBUTE_MEMORY_TYPE;
+    attr_data[0] = &mem_type;
+    attr_type[1] = CU_POINTER_ATTRIBUTE_IS_MANAGED;
+    attr_data[1] = &is_managed;
+    attr_type[2] = CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL;
+    attr_data[2] = &dev;
+    attr_type[3] = CU_POINTER_ATTRIBUTE_CONTEXT;
+    attr_data[3] = &ctx;
+
+    result = cuPointerGetAttributes(4, attr_type, attr_data, (CUdeviceptr)address);
+
+    is_dev = (mem_type == CU_MEMORYTYPE_DEVICE);
+
+    return (CUDA_SUCCESS != result);
+}
+
+int nixlUcxCudaCtx::cudaUpdateCtxPtr(void *address, int expected_dev, bool &was_updated)
+{
+    bool is_dev;
+    CUdevice dev;
+    CUcontext ctx;
+    int ret;
+
+    was_updated = false;
+
+    ret = cudaQueryAddr(address, is_dev, dev, ctx);
+    if (ret) {
+        return ret;
+    }
+
+    if (!is_dev) {
+        return 0;
+    }
+
+    assert(dev == expected_dev);
+    if (dev != expected_dev) {
+        /* TODO: proper error codes */
+        return -1;
+    }
+
+    if (pthrCudaCtx) {
+        // Context was already set previously
+        assert(pthrCudaCtx == ctx);
+        if (pthrCudaCtx != ctx) {
+            // Fatal error
+            abort();
+        }
+        return 0;
+    }
+
+    pthrCudaCtx = ctx;
+    was_updated = true;
+
+    return 0;
+}
+
+int nixlUcxCudaCtx::cudaSetCtx()
+{
+    CUresult result;
+    if (NULL == pthrCudaCtx) {
+        return 0;
+    }
+
+    result = cuCtxSetCurrent(pthrCudaCtx);
+
+    return (CUDA_SUCCESS == result);
+}
+
+#else
+
+int nixlUcxCudaCtx::cudaUpdateCtxPtr(void *address, int expected_dev, bool &was_updated)
+{
+    was_updated = false;
+    return 0;
+}
+
+int nixlUcxCudaCtx::cudaSetCtx() {
+    return 0;
+}
+
+#endif
+
+
+void nixlUcxEngine::vramInitCtx()
+{
+    cudaCtx = new nixlUcxCudaCtx;
+}
+
+int nixlUcxEngine::vramUpdateCtx(void *address, uint32_t  devId, bool &restart_reqd)
+{
+    int ret;
+    bool was_updated;
+
+    restart_reqd = false;
+
+    if(!cuda_addr_wa) {
+        // Nothing to do
+        return 0;
+    }
+
+    ret = cudaCtx->cudaUpdateCtxPtr(address, devId, was_updated);
+    assert(!ret);
+    if (ret) {
+        return ret;
+    }
+
+    restart_reqd = was_updated;
+
+    return 0;
+}
+
+int nixlUcxEngine::vramApplyCtx()
+{
+    if(!cuda_addr_wa) {
+        // Nothing to do
+        return 0;
+    }
+
+    return cudaCtx->cudaSetCtx();
+}
+
+void nixlUcxEngine::vramFiniCtx()
+{
+    delete cudaCtx;
+}
+
 /****************************************
  * UCX request management
 *****************************************/
@@ -29,6 +185,8 @@ void nixlUcxEngine::progressFunc()
     using namespace nixlTime;
     pthrActive = 1;
 
+    vramApplyCtx();
+
     while (!pthrStop) {
         int i;
         for(i = 0; i < noSyncIters; i++) {
@@ -37,6 +195,14 @@ void nixlUcxEngine::progressFunc()
         notifProgress();
         // TODO: once NIXL thread infrastructure is available - move it there!!!
 
+        // {
+        //     static uint64_t cnt = 0;
+        //     if ( !(cnt % 1000000)) {
+        //         std::cout << "Progress round" << std::endl;
+        //     }
+        //     cnt++;
+        // }
+        
         /* Wait for predefined number of */
         us_t start = getUs();
         while( (start + pthrDelay) > getUs()) {
@@ -45,12 +211,15 @@ void nixlUcxEngine::progressFunc()
     }
 }
 
-void nixlUcxEngine::startProgressThread(nixlTime::us_t delay)
+void nixlUcxEngine::progressThreadStart()
 {
     pthrStop = pthrActive = 0;
     noSyncIters = 32;
 
-    pthrDelay = delay;
+    if (!pthrOn) {
+        // not enabled
+        return;
+    }
 
     // Start the thread
     // TODO [Relaxed mem] mem barrier to ensure pthr_x updates are complete
@@ -62,10 +231,21 @@ void nixlUcxEngine::startProgressThread(nixlTime::us_t delay)
     }
 }
 
-void nixlUcxEngine::stopProgressThread()
+void nixlUcxEngine::progressThreadStop()
 {
+    if (!pthrOn) {
+        // not enabled
+        return;
+    }
+
     pthrStop = 1;
     pthr.join();
+}
+
+void nixlUcxEngine::progressThreadRestart()
+{
+    progressThreadStop();
+    progressThreadStart();
 }
 
 /****************************************
@@ -96,12 +276,20 @@ nixlUcxEngine::nixlUcxEngine (const nixlUcxInitParams* init_params)
 
     if (init_params->enableProgTh) {
         pthrOn = true;
-        startProgressThread(init_params->pthrDelay);
+        pthrDelay = init_params->pthrDelay;
     } else {
         pthrOn = false;
     }
-    // TODO: check if UCX does not support threading but it was asked to set initErr.
-    //       and destruct any allocated resources, or use the flag in destructor.
+
+    // Temp fixup
+    if (getenv("NIXL_DISABLE_CUDA_ADDR_WA")) {
+        std::cout << "WARNING: disabling CUDA address workaround" << std::endl;
+        cuda_addr_wa = false;
+    } else {
+        cuda_addr_wa = true;
+    }
+    vramInitCtx();
+    progressThreadStart();
 }
 
 // Through parent destructor the unregister will be called.
@@ -114,8 +302,8 @@ nixlUcxEngine::~nixlUcxEngine () {
         return;
     }
 
-    if (pthrOn)
-        stopProgressThread();
+    progressThreadStop();
+    vramFiniCtx();
     delete uw;
     delete uc;
 }
@@ -329,6 +517,16 @@ nixl_status_t nixlUcxEngine::registerMem (const nixlStringDesc &mem,
     nixlUcxPrivateMetadata *priv = new nixlUcxPrivateMetadata;
     uint64_t rkey_addr;
     size_t rkey_size;
+
+    if (nixl_mem == VRAM_SEG) {
+        bool need_restart;
+        if (vramUpdateCtx((void*)mem.addr, mem.devId, need_restart)){
+            //TODO Log out
+        }
+        if (need_restart) {
+            progressThreadRestart();
+        }
+    }
 
     // TODO: Add nixl_mem check?
     ret = uw->memReg((void*) mem.addr, mem.len, priv->mem);
