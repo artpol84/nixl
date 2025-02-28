@@ -177,7 +177,7 @@ nixlUcxEngine::connectionCheckAmCb(void *arg, const void *header,
         return UCS_ERR_INVALID_PARAM;
     }
 
-    if(!engine->checkConn(remote_agent)) {
+    if(engine->checkConn(remote_agent)) {
         //TODO: received connect AM from agent we don't recognize
         return UCS_ERR_INVALID_PARAM;
     }
