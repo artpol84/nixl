@@ -94,7 +94,7 @@ int main()
     stringd1.addr   = 2392382;
     stringd1.len    = 23;
     stringd1.devId  = 4;
-    stringd1.metadata = std::string("567");
+    stringd1.metaInfo = std::string("567");
 
     nixlStringDesc importStringD(stringd1.serialize());
     assert(stringd1 == importStringD);
@@ -110,22 +110,22 @@ int main()
     std::cout << "\n";
 
     nixlStringDesc stringd2;
-    stringd2.addr   = 1010;
-    stringd2.len    = 31;
-    stringd2.devId  = 0;
-    stringd2.metadata = std::string("567f");
+    stringd2.addr     = 1010;
+    stringd2.len      = 31;
+    stringd2.devId    = 0;
+    stringd2.metaInfo = std::string("567f");
 
     nixlMetaDesc meta1;
-    meta1.addr     = 56;
-    meta1.len      = 1294;
-    meta1.devId    = 0;
-    meta1.metadata = nullptr;
+    meta1.addr      = 56;
+    meta1.len       = 1294;
+    meta1.devId     = 0;
+    meta1.metadataP = nullptr;
 
     nixlMetaDesc meta2;
-    meta2.addr     = 70;
-    meta2.len      = 43;
-    meta2.devId    = 0;
-    meta2.metadata = nullptr;
+    meta2.addr      = 70;
+    meta2.len       = 43;
+    meta2.devId     = 0;
+    meta2.metadataP = nullptr;
 
     assert (stringd1!=buff1);
     assert (stringd2==buff8);
@@ -142,8 +142,8 @@ int main()
     std::cout << "\n\n";
     nixlMetaDesc meta3 (10070, 43, 0);
     nixlMetaDesc meta4 (10070, 42, 0);
-    meta3.metadata = nullptr;
-    meta4.metadata = nullptr;
+    meta3.metadataP = nullptr;
+    meta4.metadataP = nullptr;
     int dummy;
 
     nixlDescList<nixlMetaDesc> dlist1 (DRAM_SEG);
@@ -190,13 +190,13 @@ int main()
     // Populate and unifiedAddr test
     std::cout << "\n\n";
     nixlStringDesc s1 (10070, 43, 0);
-    s1.metadata = "s1";
+    s1.metaInfo = "s1";
     nixlStringDesc s2 (900, 43, 2);
-    s2.metadata = "s2";
+    s2.metaInfo = "s2";
     nixlStringDesc s3 (500, 43, 1);
-    s3.metadata = "s3";
+    s3.metaInfo = "s3";
     nixlStringDesc s4 (100, 43, 3);
-    s4.metadata = "s4";
+    s4.metaInfo = "s4";
 
     nixlBasicDesc b1 (10075, 30, 0);
     nixlBasicDesc b2 (905, 30, 2);

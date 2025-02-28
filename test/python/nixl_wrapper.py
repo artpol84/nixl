@@ -20,8 +20,8 @@ class nixl_wrapper:
                           "VRAM":       nixl.VRAM_SEG,
                           "cpu":        nixl.DRAM_SEG,
                           "cuda":       nixl.VRAM_SEG}
-        self.nixl_ops = {"WRITE":       nixl.NIXL_WR_FLUSH,
-                         "READ":        nixl.NIXL_RD_FLUSH,
+        self.nixl_ops = {"WRITE":       nixl.NIXL_WRITE,
+                         "READ":        nixl.NIXL_READ,
                          "WRITE_NOTIF": nixl.NIXL_WR_NOTIF,
                          "READ_NOTIF":  nixl.NIXL_RD_NOTIF}
 

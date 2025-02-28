@@ -389,7 +389,7 @@ nixl_status_t nixlUcxEngine::loadRemoteMD (const nixlStringDesc &input,
                                            const nixl_mem_t &nixl_mem,
                                            const std::string &remote_agent,
                                            nixlBackendMD* &output) {
-    size_t size = input.metadata.size();
+    size_t size = input.metaInfo.size();
     char *addr = new char[size];
     int ret;
     nixlUcxConnection conn;
@@ -404,7 +404,7 @@ nixl_status_t nixlUcxEngine::loadRemoteMD (const nixlStringDesc &input,
     }
     conn = (nixlUcxConnection) search->second;
 
-    nixlSerDes::_stringToBytes(addr, input.metadata, size);
+    nixlSerDes::_stringToBytes(addr, input.metaInfo, size);
 
     md->conn = conn;
     ret = uw->rkeyImport(conn.ep, addr, size, md->rkey);
@@ -478,8 +478,8 @@ nixl_xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &loc
         void *raddr = (void*) remote[i].addr;
         size_t rsize = remote[i].len;
 
-        lmd = (nixlUcxPrivateMetadata*) local[i].metadata;
-        rmd = (nixlUcxPublicMetadata*) remote[i].metadata;
+        lmd = (nixlUcxPrivateMetadata*) local[i].metadataP;
+        rmd = (nixlUcxPublicMetadata*) remote[i].metadataP;
 
         if (lsize != rsize) {
             // TODO: err output
@@ -507,7 +507,7 @@ nixl_xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &loc
         }
     }
 
-    rmd = (nixlUcxPublicMetadata*) remote[0].metadata;
+    rmd = (nixlUcxPublicMetadata*) remote[0].metadataP;
     ret = uw->flushEp(rmd->conn.ep, req);
     if (retHelper(ret, head, req)) {
         return ret;

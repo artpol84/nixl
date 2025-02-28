@@ -63,57 +63,29 @@ class nixlBackendConnMD {
 class nixlMetaDesc : public nixlBasicDesc {
   public:
         // To be able to point to any object
-        nixlBackendMD* metadata;
+        nixlBackendMD* metadataP;
 
-        // Reuse parent constructor without the metadata
+        // Reuse parent constructor without the metadata pointer
         using nixlBasicDesc::nixlBasicDesc;
 
-        nixlMetaDesc() : nixlBasicDesc() { metadata = nullptr; }
+        nixlMetaDesc() : nixlBasicDesc() { metadataP = nullptr; }
 
         // No serializer or deserializer, using parent not to expose the metadata
 
         inline friend bool operator==(const nixlMetaDesc &lhs, const nixlMetaDesc &rhs) {
             return (((nixlBasicDesc)lhs == (nixlBasicDesc)rhs) &&
-                          (lhs.metadata == rhs.metadata));
+                          (lhs.metadataP == rhs.metadataP));
         }
 
         // Main use case is to take the BasicDesc from another object, so just
         // the metadata part is separately copied here, used in DescList
         inline void copyMeta (const nixlMetaDesc &meta) {
-            this->metadata = meta.metadata;
+            this->metadataP = meta.metadataP;
         }
 
         inline void print(const std::string &suffix) const {
             nixlBasicDesc::print(", Backend ptr val: " +
-                                 std::to_string((uintptr_t)metadata) + suffix);
-        }
-};
-
-// String of metadata next to each BasicDesc, used to import/export
-class nixlStringDesc : public nixlBasicDesc {
-    public:
-        std::string metadata;
-
-        // Reuse parent constructor without the metadata
-        using nixlBasicDesc::nixlBasicDesc;
-
-        nixlStringDesc(const std::string &str); // Deserializer
-
-        inline friend bool operator==(const nixlStringDesc &lhs, const nixlStringDesc &rhs){
-            return (((nixlBasicDesc)lhs == (nixlBasicDesc)rhs) &&
-                          (lhs.metadata == rhs.metadata));
-        }
-
-        inline std::string serialize() const {
-            return nixlBasicDesc::serialize() + metadata;
-        }
-
-        inline void copyMeta (const nixlStringDesc &meta){
-            this->metadata = meta.metadata;
-        }
-
-        inline void print(const std::string &suffix) const {
-            nixlBasicDesc::print(", Metadata: " + metadata + suffix);
+                                 std::to_string((uintptr_t)metadataP) + suffix);
         }
 };
 
@@ -162,7 +134,7 @@ class nixlBackendEngine {
         // Gets serialized form of public metadata
         virtual std::string getPublicData (const nixlBackendMD* meta) const = 0;
 
-        // Provide the required connection info for remote nodes
+        // Provide the required connection info for remote nodes, should be non-empty
         virtual std::string getConnInfo() const = 0;
 
         // Deserialize from string the connection info for a remote node, if supported

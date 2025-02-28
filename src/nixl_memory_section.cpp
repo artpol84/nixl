@@ -44,7 +44,7 @@ nixlDescList<nixlStringDesc> nixlLocalSection::getStringDesc (
 
     for (int i=0; i<d_list.descCount(); ++i) {
         *p = (nixlBasicDesc) d_list[i];
-        element.metadata = backend->getPublicData(d_list[i].metadata);
+        element.metaInfo = backend->getPublicData(d_list[i].metadataP);
         output_desclist.addDesc(element);
     }
     return output_desclist;
@@ -85,11 +85,11 @@ nixl_status_t nixlLocalSection::addDescList (const nixl_dlist_t &mem_elms,
         // TODO: check if fully covered, continue. If partially covered
         //       split and get new metadata for the new part
         //       can also do hasOverlaps check
-        ret = backend->registerMem(mem_elms[i], nixl_mem, out.metadata);
+        ret = backend->registerMem(mem_elms[i], nixl_mem, out.metadataP);
         if (ret<0) {
             for (int j=0; j<i; ++j) {
                 int index = target->getIndex(mem_elms[j]);
-                backend->deregisterMem((*target)[index].metadata);
+                backend->deregisterMem((*target)[index].metadataP);
             }
             return ret;
         }
@@ -122,7 +122,7 @@ nixl_status_t nixlLocalSection::remDescList (const nixlDescList<nixlMetaDesc> &m
         if (index<0)
             return NIXL_ERR_BAD;
 
-        backend->deregisterMem ((*target)[index].metadata);
+        backend->deregisterMem ((*target)[index].metadataP);
         target->remDesc(index);
     }
 
@@ -219,7 +219,7 @@ nixl_status_t nixlRemoteSection::addDescList (
     for (int i=0; i<mem_elms.descCount(); ++i) {
         // TODO: remote might change the metadata, have to keep stringDesc to compare
         if (target->getIndex((const nixlBasicDesc) mem_elms[i]) < 0) {
-            ret = backend->loadRemoteMD(mem_elms[i], nixl_mem, agentName, out.metadata);
+            ret = backend->loadRemoteMD(mem_elms[i], nixl_mem, agentName, out.metadataP);
             // In case of errors, no need to remove the previous entries
             // Agent will delete the full object.
             if (ret<0)
@@ -261,7 +261,7 @@ nixlRemoteSection::~nixlRemoteSection() {
         nixl_backend = seg.first.second;
         m_desc = seg.second;
         for (auto & elm : *m_desc)
-            backendToEngineMap[nixl_backend]->removeRemoteMD(elm.metadata);
+            backendToEngineMap[nixl_backend]->removeRemoteMD(elm.metadataP);
         delete m_desc;
     }
     // nixlMemSection destructor will clean up the rest

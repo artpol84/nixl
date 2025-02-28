@@ -316,21 +316,21 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
     while(i<(desc_count)) {
         nixlMetaDesc local_desc1 = (*local_side->descs)[local_indices[i]];
         nixlMetaDesc remote_desc1 = (*remote_side->descs)[remote_indices[i]];
-    
-        if(i != (desc_count-1) ) {   
+
+        if(i != (desc_count-1) ) {
             nixlMetaDesc local_desc2 = (*local_side->descs)[local_indices[i+1]];
             nixlMetaDesc remote_desc2 = (*remote_side->descs)[remote_indices[i+1]];
-        
+
           while(((local_desc1.addr + local_desc1.len) == local_desc2.addr)
              && ((remote_desc1.addr + remote_desc1.len) == remote_desc2.addr)
-             && (local_desc1.metadata == local_desc2.metadata)
-             && (remote_desc1.metadata == remote_desc2.metadata)
+             && (local_desc1.metadataP == local_desc2.metadataP)
+             && (remote_desc1.metadataP == remote_desc2.metadataP)
              && (local_desc1.devId == local_desc2.devId)
              && (remote_desc1.devId == remote_desc2.devId))
             {
                 local_desc1.len += local_desc2.len;
                 remote_desc1.len += remote_desc2.len;
-            
+
                 i++;
                 if(i == (desc_count-1)) break;
 

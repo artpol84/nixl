@@ -156,20 +156,20 @@ void test_local_operation() {
     nixlDescList<nixlMetaDesc> req_src_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
         nixlMetaDesc req_src;
-        req_src.addr     = (uintptr_t) (((char*) addr1) + i * desc_size); //random offset
-        req_src.len      = desc_size;
-        req_src.devId   = 0;
-        req_src.metadata = local_meta1;
+        req_src.addr      = (uintptr_t) (((char*) addr1) + i * desc_size); //random offset
+        req_src.len       = desc_size;
+        req_src.devId     = 0;
+        req_src.metadataP = local_meta1;
         req_src_descs.addDesc(req_src);
     }
 
     nixlDescList<nixlMetaDesc> req_dst_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
         nixlMetaDesc req_dst;
-        req_dst.addr   = (uintptr_t) ((char*) addr2 + i * desc_size); //random offset
-        req_dst.len    = desc_size;
-        req_dst.devId = 0;
-        req_dst.metadata = remote_of_local_meta;
+        req_dst.addr      = (uintptr_t) ((char*) addr2 + i * desc_size); //random offset
+        req_dst.len       = desc_size;
+        req_dst.devId     = 0;
+        req_dst.metadataP = remote_of_local_meta;
         req_dst_descs.addDesc(req_dst);
     }
 
@@ -279,16 +279,16 @@ int main()
     ucx_dram_info1.addr     = (uintptr_t) addr1;
     ucx_dram_info1.len      = len;
     ucx_dram_info1.devId    = 0;
-    ucx_dram_info1.metadata = ucx1->getPublicData(local_meta1);
+    ucx_dram_info1.metaInfo = ucx1->getPublicData(local_meta1);
 
     nixlStringDesc ucx_dram_info2;
     ucx_dram_info2.addr     = (uintptr_t) addr2;
     ucx_dram_info2.len      = len;
     ucx_dram_info2.devId    = 0;
-    ucx_dram_info2.metadata = ucx2->getPublicData(local_meta2);
+    ucx_dram_info2.metaInfo = ucx2->getPublicData(local_meta2);
 
-    assert(ucx_dram_info1.metadata.size() > 0);
-    assert(ucx_dram_info2.metadata.size() > 0);
+    assert(ucx_dram_info1.metaInfo.size() > 0);
+    assert(ucx_dram_info2.metaInfo.size() > 0);
 
     // We get the data from the cetnral location and populate the backend, and receive remote_meta
     nixlBackendMD* remote_meta1of2, *remote_meta2of1;
@@ -301,20 +301,20 @@ int main()
     nixlDescList<nixlMetaDesc> req_src_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
         nixlMetaDesc req_src;
-        req_src.addr     = (uintptr_t) (((char*) addr1) + i * desc_size); //random offset
-        req_src.len      = desc_size;
-        req_src.devId   = 0;
-        req_src.metadata = local_meta1;
+        req_src.addr      = (uintptr_t) (((char*) addr1) + i * desc_size); //random offset
+        req_src.len       = desc_size;
+        req_src.devId     = 0;
+        req_src.metadataP = local_meta1;
         req_src_descs.addDesc(req_src);
     }
 
     nixlDescList<nixlMetaDesc> req_dst_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
         nixlMetaDesc req_dst;
-        req_dst.addr   = (uintptr_t) ((char*) addr2 + i * desc_size); //random offset
-        req_dst.len    = desc_size;
-        req_dst.devId = 0;
-        req_dst.metadata = remote_meta1of2;
+        req_dst.addr      = (uintptr_t) ((char*) addr2 + i * desc_size); //random offset
+        req_dst.len       = desc_size;
+        req_dst.devId     = 0;
+        req_dst.metadataP = remote_meta1of2;
         req_dst_descs.addDesc(req_dst);
     }
 

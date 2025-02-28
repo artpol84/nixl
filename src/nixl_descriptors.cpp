@@ -11,7 +11,9 @@
 // No Virtual function in nixlBasicDesc class or its children, as we want
 // each object to just have the members during serialization.
 
-nixlBasicDesc::nixlBasicDesc(uintptr_t addr, size_t len, uint32_t dev_id) {
+nixlBasicDesc::nixlBasicDesc(const uintptr_t &addr,
+                             const size_t &len,
+                             const uint32_t &dev_id) {
     this->addr  = addr;
     this->len   = len;
     this->devId = dev_id;
@@ -64,19 +66,48 @@ void nixlBasicDesc::print(const std::string &suffix) const {
               << ") from devID " << devId << suffix << "\n";
 }
 
+
+/*** Class nixlStringDesc implementation ***/
+
+nixlStringDesc::nixlStringDesc(const uintptr_t &addr,
+                               const size_t &len,
+                               const uint32_t &dev_id,
+                               const std::string &meta_info) {
+    nixlBasicDesc(addr, len, dev_id);
+    this->metaInfo = meta_info;
+}
+
 nixlStringDesc::nixlStringDesc(const std::string &str) {
     size_t meta_size = str.size() - sizeof(nixlBasicDesc);
     if (meta_size>0) {
-        metadata.resize(meta_size);
+        metaInfo.resize(meta_size);
         str.copy(reinterpret_cast<char*>(this), sizeof(nixlBasicDesc));
-        str.copy(reinterpret_cast<char*>(&metadata[0]),
+        str.copy(reinterpret_cast<char*>(&metaInfo[0]),
                  meta_size, sizeof(nixlBasicDesc));
     } else { // Error indicator, not possible by descList deserializer call
         addr  = 0;
         len   = 0;
         devId = 0;
-        metadata.resize(0);
+        metaInfo.resize(0);
     }
+}
+
+bool operator==(const nixlStringDesc &lhs, const nixlStringDesc &rhs) {
+    return (((nixlBasicDesc)lhs == (nixlBasicDesc)rhs) &&
+                  (lhs.metaInfo == rhs.metaInfo));
+}
+
+
+std::string nixlStringDesc::serialize() const {
+    return nixlBasicDesc::serialize() + metaInfo;
+}
+
+void nixlStringDesc::copyMeta (const nixlStringDesc &info){
+    this->metaInfo = info.metaInfo;
+}
+
+void nixlStringDesc::print(const std::string &suffix) const {
+    nixlBasicDesc::print(", Metadata: " + metaInfo + suffix);
 }
 
 /*** Class nixlDescList implementation ***/

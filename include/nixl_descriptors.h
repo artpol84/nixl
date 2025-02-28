@@ -17,7 +17,9 @@ class nixlBasicDesc {
         uint32_t  devId; // Device ID
 
         nixlBasicDesc() {}; // No initialization to zero
-        nixlBasicDesc(uintptr_t addr, size_t len, uint32_t dev_id);
+        nixlBasicDesc(const uintptr_t &addr,
+                      const size_t &len,
+                      const uint32_t &dev_id);
         nixlBasicDesc(const std::string &str); // deserializer
         nixlBasicDesc(const nixlBasicDesc &desc) = default;
         nixlBasicDesc& operator=(const nixlBasicDesc &desc) = default;
@@ -28,10 +30,32 @@ class nixlBasicDesc {
         bool covers (const nixlBasicDesc &query) const;
         bool overlaps (const nixlBasicDesc &query) const;
 
-        void copyMeta (const nixlBasicDesc &desc) {}; // No metadata in BasicDesc
+        void copyMeta (const nixlBasicDesc &desc) {}; // No meta info in BasicDesc
         std::string serialize() const;
         void print(const std::string &suffix) const; // For debugging
 };
+
+
+// String next to each BasicDesc, used for extra info for memory registrartion
+class nixlStringDesc : public nixlBasicDesc {
+    public:
+        std::string metaInfo;
+
+        // Reuse parent constructor without the extra info
+        using nixlBasicDesc::nixlBasicDesc;
+
+        nixlStringDesc(const uintptr_t &addr, const size_t &len,
+                       const uint32_t &dev_id, const std::string &meta_info);
+        nixlStringDesc(const std::string &str); // Deserializer
+
+        friend bool operator==(const nixlStringDesc &lhs,
+                               const nixlStringDesc &rhs);
+
+        std::string serialize() const;
+        void copyMeta (const nixlStringDesc &info);
+        void print(const std::string &suffix) const;
+};
+
 
 // A class for a list of descriptors, where transfer requests are made from.
 // It has some additional methods to help with creation and population.
