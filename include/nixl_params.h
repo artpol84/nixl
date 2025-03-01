@@ -49,8 +49,29 @@ class nixlUcxInitParams : public nixlBackendInitParams
          */
         std::vector<std::string> devices;
 
+        /*
+         * Progress frequency knob (in us)
+         * The progress thread is calling sched_yield to avoid blocking a core
+         * If pthrDelay time is less than sched_yield time - option has no effect
+         * Otherwise pthread will be calling sched_yield untill the specified
+         * amount of time has past.
+         */
+        nixlTime::us_t pthrDelay;
+
+        nixlUcxInitParams() : nixlBackendInitParams()  {
+            pthrDelay = 0;
+        }
+
         inline nixl_backend_t getType() const { return UCX; }
 
 };
+
+class nixlGdsInitParams : Public nixlBackendInitParams
+{
+
+    public:
+        std::vector<std::string> mount_targets;
+        inline nixl_backend_t getType() const { return GPUDIRECTIO;}
+}
 
 #endif
