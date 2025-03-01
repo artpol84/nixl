@@ -376,7 +376,7 @@ void test_intra_agent_transfer(bool p_thread, nixlBackendEngine *ucx, nixl_mem_t
         }
     }
 
-    ucx->removeRemoteMD (rmd2);
+    ucx->unloadMD (rmd2);
     deallocateAndDeregister(ucx, 0, mem_type, addr1, lmd1);
     deallocateAndDeregister(ucx, 0, mem_type, addr2, lmd2);
 
@@ -482,8 +482,8 @@ void test_inter_agent_transfer(bool p_thread,
 
     // As well as all the remote notes, asking to remove them one by one
     // need to provide list of descs
-    ucx1->removeRemoteMD (rmd1);
-    //ucx2->removeRemoteMD (rmd2);
+    ucx1->unloadMD (rmd1);
+    //ucx2->unloadMD (rmd2);
 
     // Release memory regions
     deallocateAndDeregister(ucx1, src_dev_id, src_mem_type, addr1, lmd1);

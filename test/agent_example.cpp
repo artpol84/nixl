@@ -14,6 +14,16 @@ void check_buf(void* buf, size_t len) {
     }
 }
 
+bool equal_buf (void* buf1, void* buf2, size_t len) {
+
+    // Do some checks on the data.
+    for (size_t i = 0; i<len; i++)
+        if (((uint8_t*) buf1)[i] != ((uint8_t*) buf2)[i])
+            return false;
+    return true;
+}
+
+
 void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, nixlBackendEngine* backend2){
 
 
@@ -111,7 +121,7 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
 
     A1->invalidateXferReq(reqh1);
     A1->invalidateXferReq(reqh2);
-   
+
     status = A1->deregisterMem(mem_list1, backend);
     assert(status == NIXL_SUCCESS);
     status = A2->deregisterMem(mem_list2, backend2);
@@ -291,11 +301,12 @@ int main()
 
     // User allocates memories, and passes the corresponding address
     // and length to register with the backend
-    nixlStringDesc buff1, buff2;
+    nixlStringDesc buff1, buff2, buff3;
     nixl_reg_dlist_t dlist1(DRAM_SEG), dlist2(DRAM_SEG);
     size_t len = 256;
     void* addr1 = calloc(1, len);
     void* addr2 = calloc(1, len);
+    void* addr3 = calloc(1, len);
 
     memset(addr1, 0xbb, len);
     memset(addr2, 0, len);
@@ -309,6 +320,11 @@ int main()
     buff2.len    = len;
     buff2.devId = 0;
     dlist2.addDesc(buff2);
+
+    buff3.addr   = (uintptr_t) addr3;
+    buff3.len    = len;
+    buff3.devId = 0;
+    dlist1.addDesc(buff3);
 
     // dlist1.print();
     // dlist2.print();
@@ -346,8 +362,15 @@ int main()
     req_dst.devId = 0;
     req_dst_descs.addDesc(req_dst);
 
+    nixl_xfer_dlist_t req_ldst_descs (DRAM_SEG);
+    nixlBasicDesc req_ldst;
+    req_ldst.addr   = (uintptr_t) ((char*) addr3) + dst_offset; //random offset
+    req_ldst.len    = req_size;
+    req_ldst.devId = 0;
+    req_ldst_descs.addDesc(req_ldst);
+
     std::cout << "Transfer request from " << addr1 << " to " << addr2 << "\n";
-    nixlXferReqH* req_handle;
+    nixlXferReqH *req_handle, *req_handle2;
 
     ret1 = A1.createXferReq(req_src_descs, req_dst_descs, agent2, "notification", NIXL_WR_NOTIF, req_handle);
     assert(ret1 == NIXL_SUCCESS);
@@ -369,6 +392,8 @@ int main()
     std::vector<std::string> agent1_notifs = notif_map[agent1];
     assert(agent1_notifs.size() == 1);
     assert(agent1_notifs.front() == "notification");
+    notif_map[agent1].clear();
+    n_notifs = 0;
 
     std::cout << "Transfer verified\n";
 
@@ -376,7 +401,27 @@ int main()
     ret1 = sideXferTest(&A1, &A2, req_handle, ucx2);
     assert(ret1 == NIXL_SUCCESS);
 
+    std::cout << "Performing local test\n";
+    ret2 = A1.createXferReq(req_src_descs, req_ldst_descs, agent1, "local_notif", NIXL_WR_NOTIF, req_handle2);
+    assert(ret2 == NIXL_SUCCESS);
+
+    status = A1.postXferReq(req_handle2);
+    std::cout << "Local transfer was posted\n";
+
+    while(status != NIXL_XFER_DONE || n_notifs == 0) {
+        if(status != NIXL_XFER_DONE) status = A1.getXferStatus(req_handle2);
+        if(n_notifs == 0) n_notifs = A1.getNotifs(notif_map);
+        assert(status != NIXL_XFER_ERR);
+        assert(n_notifs >= 0);
+    }
+
+    agent1_notifs = notif_map[agent1];
+    assert(agent1_notifs.size() == 1);
+    assert(agent1_notifs.front() == "local_notif");
+    assert(equal_buf((void*) req_src.addr, (void*) req_ldst.addr, req_size) == true);
+
     A1.invalidateXferReq(req_handle);
+    A1.invalidateXferReq(req_handle2);
     ret1 = A1.deregisterMem(dlist1, ucx1);
     ret2 = A2.deregisterMem(dlist2, ucx2);
 

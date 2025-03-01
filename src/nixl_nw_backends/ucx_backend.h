@@ -184,7 +184,7 @@ class nixlUcxEngine : nixlBackendEngine {
                                     const nixl_mem_t &nixl_mem,
                                     const std::string &remote_agent,
                                     nixlBackendMD* &output);
-        nixl_status_t removeRemoteMD (nixlBackendMD* input);
+        nixl_status_t unloadMD (nixlBackendMD* input);
 
         // Data transfer
         nixl_xfer_state_t postXfer (const nixl_meta_dlist_t &local,

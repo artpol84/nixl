@@ -222,6 +222,10 @@ nixl_status_t nixlUcxEngine::connect(const std::string &remote_agent) {
     nixl_xfer_state_t ret;
     nixlUcxReq req;
 
+    if (remote_agent == localAgent)
+        return loadRemoteConnInfo (remote_agent,
+                   nixlSerDes::_bytesToString(workerAddr, workerSize));
+
     auto search = remoteConnMap.find(remote_agent);
 
     if(search == remoteConnMap.end()) {
@@ -421,7 +425,7 @@ nixl_status_t nixlUcxEngine::loadRemoteMD (const nixlStringDesc &input,
     return NIXL_SUCCESS;
 }
 
-nixl_status_t nixlUcxEngine::removeRemoteMD (nixlBackendMD* input) {
+nixl_status_t nixlUcxEngine::unloadMD (nixlBackendMD* input) {
 
     nixlUcxPublicMetadata *md = (nixlUcxPublicMetadata*) input; //typecast?
 

@@ -105,7 +105,7 @@ build-job:       # This job runs in the build stage, which runs first.
     - echo "==== Running C++ tests ===="
     - ./build/test/desc_example
     - ./build/test/agent_example
-    - ./build/test/ucx_backend_example
+    - ./build/test/ucx_backend_test
     - ./build/test/ucx_backend_multi
     - ./build/src/utils/serdes/serdes_test
     - echo "==== Running python tests with PYTHONPATH=$PYTHONPATH ===="

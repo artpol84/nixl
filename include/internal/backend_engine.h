@@ -112,6 +112,9 @@ class nixlBackendEngine {
         // The support function determine which methods are necessary by the child backend, and
         // if they're called by mistake, they will return error if not implemented by backend.
 
+
+        // *** Pure virtual methods that need to be implemented by any backend *** //
+
         // Determines if a backend supports remote operations
         virtual bool supportsRemote () const = 0;
 
@@ -133,43 +136,14 @@ class nixlBackendEngine {
                                            nixlBackendMD* &out) = 0;
         virtual void deregisterMem (nixlBackendMD* meta) = 0;
 
-        // Gets serialized form of public metadata
-        virtual std::string getPublicData (const nixlBackendMD* meta) const = 0;
-
-        // Provide the required connection info for remote nodes, should be non-empty
-        virtual std::string getConnInfo() const = 0;
-
-        // Deserialize from string the connection info for a remote node, if supported
-        // The generated data should be deleted in nixlBackendEngine destructor
-        virtual nixl_status_t loadRemoteConnInfo (const std::string &remote_agent,
-                                                  const std::string &remote_conn_info) {
-            return NIXL_ERR_BACKEND;
-        }
-
         // Make connection to a remote node identified by the name into loaded conn infos
         // Child might just return 0, if making proactive connections are not necessary.
         // An agent might need to connect to itself for local operations.
         virtual nixl_status_t connect(const std::string &remote_agent) = 0;
         virtual nixl_status_t disconnect(const std::string &remote_agent) = 0;
 
-        // Provide the target metadata necessary for local operations, if supported
-        virtual nixl_status_t loadLocalMD (nixlBackendMD* input,
-                                           nixlBackendMD* &output) {
-            return NIXL_ERR_BACKEND;
-        }
-
-        // Load remtoe metadata, if supported.
-        virtual nixl_status_t loadRemoteMD (const nixlStringDesc &input,
-                                            const nixl_mem_t &nixl_mem,
-                                            const std::string &remote_agent,
-                                            nixlBackendMD* &output) {
-            return NIXL_ERR_BACKEND;
-        }
-
-        // Remove remtoe metadata, if supported.
-        virtual nixl_status_t removeRemoteMD (nixlBackendMD* input) {
-            return NIXL_ERR_BACKEND;
-        }
+        // Remove loaded local or remtoe metadata for target
+        virtual nixl_status_t unloadMD (nixlBackendMD* input) = 0;
 
         // Posting a request, which returns populates the async handle.
         virtual nixl_xfer_state_t postXfer (const nixl_meta_dlist_t &local,
@@ -185,6 +159,42 @@ class nixlBackendEngine {
         //Backend aborts the transfer if necessary, and destructs the relevant objects
         virtual void releaseReqH(nixlBackendReqH* handle) = 0;
 
+
+        // *** Needs to be implemented if supportsRemote() is true *** //
+
+        // Gets serialized form of public metadata
+        virtual std::string getPublicData (const nixlBackendMD* meta) const { return ""; };
+
+        // Provide the required connection info for remote nodes, should be non-empty
+        virtual std::string getConnInfo() const { return ""; }
+
+        // Deserialize from string the connection info for a remote node, if supported
+        // The generated data should be deleted in nixlBackendEngine destructor
+        virtual nixl_status_t loadRemoteConnInfo (const std::string &remote_agent,
+                                                  const std::string &remote_conn_info) {
+            return NIXL_ERR_BACKEND;
+        }
+
+        // Load remtoe metadata, if supported.
+        virtual nixl_status_t loadRemoteMD (const nixlStringDesc &input,
+                                            const nixl_mem_t &nixl_mem,
+                                            const std::string &remote_agent,
+                                            nixlBackendMD* &output) {
+            return NIXL_ERR_BACKEND;
+        }
+
+
+        // *** Needs to be implemented if supportsLocal() is true *** //
+
+        // Provide the target metadata necessary for local operations, if supported
+        virtual nixl_status_t loadLocalMD (nixlBackendMD* input,
+                                           nixlBackendMD* &output) {
+            return NIXL_ERR_BACKEND;
+        }
+
+
+        // *** Needs to be implemented if supportsNotif() is true *** //
+
         // Populate an empty received notif list. Elements are released within backend then.
         virtual int getNotifs(notif_list_t &notif_list) { return NIXL_ERR_BACKEND; }
 
@@ -192,6 +202,9 @@ class nixlBackendEngine {
         virtual nixl_status_t genNotif(const std::string &remote_agent, const std::string &msg) {
             return NIXL_ERR_BACKEND;
         }
+
+
+        // *** Needs to be implemented if supportsProgTh() is true *** //
 
         // Force backend engine worker to progress.
         virtual int progress() { return 0; }
