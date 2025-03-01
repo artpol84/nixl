@@ -59,18 +59,19 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
     return backend; // nullptr in case of error
 }
 
-nixl_status_t nixlAgent::registerMem(const nixl_dlist_t &descs,
+nixl_status_t nixlAgent::registerMem(const nixl_reg_dlist_t &descs,
                                      nixlBackendEngine* backend) {
     return (data.memorySection.addDescList(descs, backend));
 }
 
-nixl_status_t nixlAgent::deregisterMem(const nixl_dlist_t &descs,
+nixl_status_t nixlAgent::deregisterMem(const nixl_reg_dlist_t &descs,
                                        nixlBackendEngine* backend) {
-    nixlDescList<nixlMetaDesc> resp(descs.getType(),
-                                    descs.isUnifiedAddr(),
-                                    descs.isSorted());
+    nixl_meta_dlist_t resp(descs.getType(),
+                           descs.isUnifiedAddr(),
+                           descs.isSorted());
     // TODO: check status of populate, and if the entry match with getIndex
-    data.memorySection.populate(descs, backend->getType(), resp);
+    nixl_xfer_dlist_t trimmed = descs.trim();
+    data.memorySection.populate(trimmed, backend->getType(), resp);
     return (data.memorySection.remDescList(resp, backend));
 }
 
@@ -98,8 +99,8 @@ nixl_status_t nixlAgent::makeConnection(const std::string &remote_agent) {
     return NIXL_SUCCESS;
 }
 
-nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
-                                       const nixl_dlist_t &remote_descs,
+nixl_status_t nixlAgent::createXferReq(const nixl_xfer_dlist_t &local_descs,
+                                       const nixl_xfer_dlist_t &remote_descs,
                                        const std::string &remote_agent,
                                        const std::string &notif_msg,
                                        const nixl_xfer_op_t &operation,
@@ -126,7 +127,7 @@ nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
     // TODO [Perf]: merge descriptors back to back in memory (unlikly case).
 
     nixlXferReqH *handle = new nixlXferReqH;
-    handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
+    handle->initiatorDescs = new nixl_meta_dlist_t (
                                      local_descs.getType(),
                                      local_descs.isUnifiedAddr(), false);
 
@@ -145,7 +146,7 @@ nixl_status_t nixlAgent::createXferReq(const nixl_dlist_t &local_descs,
         return NIXL_ERR_BACKEND;
     }
 
-    handle->targetDescs = new nixlDescList<nixlMetaDesc> (
+    handle->targetDescs = new nixl_meta_dlist_t (
                                   remote_descs.getType(),
                                   remote_descs.isUnifiedAddr(), false);
 
@@ -212,7 +213,7 @@ nixlBackendEngine* nixlAgent::getXferBackend(nixlXferReqH* req) {
     return req->engine;
 }
 
-nixl_status_t nixlAgent::prepXferSide (const nixl_dlist_t &descs,
+nixl_status_t nixlAgent::prepXferSide (const nixl_xfer_dlist_t &descs,
                                        const std::string &remote_agent,
                                        nixlBackendEngine* backend,
                                        nixlXferSideH* &side_handle) {
@@ -232,9 +233,9 @@ nixl_status_t nixlAgent::prepXferSide (const nixl_dlist_t &descs,
     nixlXferSideH *handle = new nixlXferSideH;
 
     handle->engine = backend;
-    handle->descs = new nixlDescList<nixlMetaDesc> (descs.getType(),
-                                                    descs.isUnifiedAddr(),
-                                                    descs.isSorted());
+    handle->descs = new nixl_meta_dlist_t (descs.getType(),
+                                           descs.isUnifiedAddr(),
+                                           descs.isSorted());
 
     if (remote_agent.size()==0) { // Local descriptor list
         handle->isLocal = true;
@@ -302,12 +303,12 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
     }
 
     nixlXferReqH *handle = new nixlXferReqH;
-    handle->initiatorDescs = new nixlDescList<nixlMetaDesc> (
+    handle->initiatorDescs = new nixl_meta_dlist_t (
                                      local_side->descs->getType(),
                                      local_side->descs->isUnifiedAddr(),
                                      false, desc_count);
 
-    handle->targetDescs = new nixlDescList<nixlMetaDesc> (
+    handle->targetDescs = new nixl_meta_dlist_t (
                                   remote_side->descs->getType(),
                                   remote_side->descs->isUnifiedAddr(),
                                   false, desc_count);

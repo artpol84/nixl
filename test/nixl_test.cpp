@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     /** Agent and backend creation parameters */
     nixlAgentConfig   cfg(true);
     nixlUcxInitParams params;
-    nixlBasicDesc     buf[NUM_TRANSFERS];
+    nixlStringDesc    buf[NUM_TRANSFERS];
     nixlBackendEngine *ucx;
 
     /** Serialization/Deserialization object to create a blob */
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     nixlSerDes        *remote_serdes;
 
     /** Descriptors and Transfer Request */
-    nixl_dlist_t      dram_for_ucx(DRAM_SEG);
+    nixl_reg_dlist_t  dram_for_ucx(DRAM_SEG);
     nixlXferReqH      *treq;
 
     /** Argument Parsing */
@@ -184,7 +184,8 @@ int main(int argc, char *argv[]) {
         std::cout << " Verfiy Deserialized Target's Desc List at Initiator\n";
         remote_serdes = new nixlSerDes();
         remote_serdes->importStr(remote_desc);
-        nixl_dlist_t dram_target_ucx(remote_serdes);
+        nixl_xfer_dlist_t dram_target_ucx(remote_serdes);
+        nixl_xfer_dlist_t dram_initiator_ucx = dram_for_ucx.trim();
         dram_target_ucx.print();
         agent.loadRemoteMD(tgt_md_init);
 
@@ -192,7 +193,7 @@ int main(int argc, char *argv[]) {
         std::cout << " Start Data Path Exchanges \n\n";
         std::cout << " Create transfer request with UCX backend\n ";
 
-        ret = agent.createXferReq(dram_for_ucx, dram_target_ucx,
+        ret = agent.createXferReq(dram_initiator_ucx, dram_target_ucx,
                                   "target", "", NIXL_WRITE, treq);
         if (ret != NIXL_SUCCESS) {
             std::cerr << "Error creating transfer request\n";

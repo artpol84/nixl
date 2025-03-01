@@ -172,7 +172,7 @@ class nixlUcxEngine : nixlBackendEngine {
         nixl_status_t connect(const std::string &remote_agent);
         nixl_status_t disconnect(const std::string &remote_agent);
 
-        nixl_status_t registerMem (const nixlBasicDesc &mem,
+        nixl_status_t registerMem (const nixlStringDesc &mem,
                                    const nixl_mem_t &nixl_mem,
                                    nixlBackendMD* &out);
         void deregisterMem (nixlBackendMD* meta);
@@ -187,8 +187,8 @@ class nixlUcxEngine : nixlBackendEngine {
         nixl_status_t removeRemoteMD (nixlBackendMD* input);
 
         // Data transfer
-        nixl_xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
-                                    const nixlDescList<nixlMetaDesc> &remote,
+        nixl_xfer_state_t postXfer (const nixl_meta_dlist_t &local,
+                                    const nixl_meta_dlist_t &remote,
                                     const nixl_xfer_op_t &op,
                                     const std::string &remote_agent,
                                     const std::string &notif_msg,

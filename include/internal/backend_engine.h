@@ -89,6 +89,8 @@ class nixlMetaDesc : public nixlBasicDesc {
         }
 };
 
+typedef nixlDescList<nixlMetaDesc> nixl_meta_dlist_t;
+
 // Base backend engine class for different backend implementaitons
 class nixlBackendEngine {
     private:
@@ -126,7 +128,7 @@ class nixlBackendEngine {
         virtual ~nixlBackendEngine () = default;
 
         // Register and deregister local memory
-        virtual nixl_status_t registerMem (const nixlBasicDesc &mem,
+        virtual nixl_status_t registerMem (const nixlStringDesc &mem,
                                            const nixl_mem_t &nixl_mem,
                                            nixlBackendMD* &out) = 0;
         virtual void deregisterMem (nixlBackendMD* meta) = 0;
@@ -170,8 +172,8 @@ class nixlBackendEngine {
         }
 
         // Posting a request, which returns populates the async handle.
-        virtual nixl_xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
-                                            const nixlDescList<nixlMetaDesc> &remote,
+        virtual nixl_xfer_state_t postXfer (const nixl_meta_dlist_t &local,
+                                            const nixl_meta_dlist_t &remote,
                                             const nixl_xfer_op_t &operation,
                                             const std::string &remote_agent,
                                             const std::string &notif_msg,

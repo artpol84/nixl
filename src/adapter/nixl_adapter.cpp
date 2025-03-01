@@ -57,7 +57,7 @@ pybind11::bytes nixlAdapter::registerMemory(uintptr_t buffer_addr,
                                             size_t len,
                                             const char *type_name)
 {
-    nixlBasicDesc       desc_buf;
+    nixlStringDesc      desc_buf;
     nixl_mem_t          type;
     std::string         str_desc;
     nixlSerDes          sd_obj;
@@ -72,7 +72,7 @@ pybind11::bytes nixlAdapter::registerMemory(uintptr_t buffer_addr,
         type = VRAM_SEG;
     }
 
-    nixl_dlist_t descs(type);
+    nixl_reg_dlist_t descs(type);
     descs.addDesc(desc_buf);
 
     agent->registerMem(descs, ucx);
@@ -88,7 +88,7 @@ int nixlAdapter::deregisterMemory(pybind11::bytes desc_list_blob)
     std::string desc_list_str = static_cast<std::string>(desc_list_blob);
 
     serdes_obj.importStr(desc_list_str);
-    nixl_dlist_t rdescs(&serdes_obj);
+    nixl_reg_dlist_t rdescs(&serdes_obj);
 
     return agent->deregisterMem(rdescs, ucx);
 }
@@ -110,8 +110,8 @@ int nixlAdapter::transferAndSync(pybind11::bytes src_desc_bytes,
     src_sd.importStr(src_str_desc);
     tgt_sd.importStr(target_str_desc);
 
-    nixl_dlist_t src_descs(&src_sd);
-    nixl_dlist_t target_descs(&tgt_sd);
+    nixl_xfer_dlist_t src_descs(&src_sd);
+    nixl_xfer_dlist_t target_descs(&tgt_sd);
 
     if (op == "READ")
         operation = NIXL_READ;

@@ -54,21 +54,21 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .value("NIXL_ERR_BAD", NIXL_ERR_BAD)
         .export_values();
 
-    py::class_<nixl_dlist_t>(m, "nixlDescList")
+    py::class_<nixl_xfer_dlist_t>(m, "nixlDescList")
         .def(py::init<nixl_mem_t, bool, bool, int>(), py::arg("type"), py::arg("unifiedAddr")=true, py::arg("sorted")=false, py::arg("init_size")=0)
         .def(py::init([](nixl_mem_t mem, std::vector<py::tuple> descs, bool unifiedAddr, bool sorted) {
-                nixl_dlist_t new_list(mem, unifiedAddr, sorted, descs.size());
+                nixl_xfer_dlist_t new_list(mem, unifiedAddr, sorted, descs.size());
                 for(long unsigned int i = 0; i<descs.size(); i++)
                     new_list[i] = nixlBasicDesc(descs[i][0].cast<uintptr_t>(), descs[i][1].cast<size_t>(), descs[i][2].cast<uint32_t>());
                 return new_list;
             }), py::arg("type"), py::arg("descs"), py::arg("unifiedAddr")=true, py::arg("sorted")=false)
-        .def("getType", &nixl_dlist_t::getType)
-        .def("isUnifiedAddr", &nixl_dlist_t::isUnifiedAddr)
-        .def("descCount", &nixl_dlist_t::descCount)
-        .def("isEmpty", &nixl_dlist_t::isEmpty)
-        .def("isSorted", &nixl_dlist_t::isSorted)
+        .def("getType", &nixl_xfer_dlist_t::getType)
+        .def("isUnifiedAddr", &nixl_xfer_dlist_t::isUnifiedAddr)
+        .def("descCount", &nixl_xfer_dlist_t::descCount)
+        .def("isEmpty", &nixl_xfer_dlist_t::isEmpty)
+        .def("isSorted", &nixl_xfer_dlist_t::isSorted)
         .def(py::self == py::self)
-        .def("__getitem__", [](nixl_dlist_t &list, unsigned int i) ->
+        .def("__getitem__", [](nixl_xfer_dlist_t &list, unsigned int i) ->
               std::tuple<uintptr_t, size_t, uint32_t> {
                     std::tuple<uintptr_t, size_t, uint32_t> ret;
                     nixlBasicDesc desc = list[i];
@@ -77,17 +77,17 @@ PYBIND11_MODULE(nixl_bindings, m) {
                     std::get<2>(ret) = desc.devId;
                     return ret;
               })
-        .def("__setitem__", [](nixl_dlist_t &list, unsigned int i, const py::tuple &desc) {
+        .def("__setitem__", [](nixl_xfer_dlist_t &list, unsigned int i, const py::tuple &desc) {
                 list[i] = nixlBasicDesc(desc[0].cast<uintptr_t>(), desc[1].cast<size_t>(), desc[2].cast<uint32_t>());
             })
-        .def("addDesc", [](nixl_dlist_t &list, const py::tuple &desc) {
+        .def("addDesc", [](nixl_xfer_dlist_t &list, const py::tuple &desc) {
                 list.addDesc(nixlBasicDesc(desc[0].cast<uintptr_t>(), desc[1].cast<size_t>(), desc[2].cast<uint32_t>()));
             })
-        .def("remDesc", &nixl_dlist_t::remDesc)
-        .def("clear", &nixl_dlist_t::clear)
-        .def("print", &nixl_dlist_t::print)
+        .def("remDesc", &nixl_xfer_dlist_t::remDesc)
+        .def("clear", &nixl_xfer_dlist_t::clear)
+        .def("print", &nixl_xfer_dlist_t::print)
         .def(py::pickle(
-            [](const nixl_dlist_t& self) { // __getstate__
+            [](const nixl_xfer_dlist_t& self) { // __getstate__
                 nixlSerDes serdes;
                 nixl_status_t ret = self.serialize(&serdes);
                 assert(ret == NIXL_SUCCESS);
@@ -96,8 +96,8 @@ PYBIND11_MODULE(nixl_bindings, m) {
             [](py::bytes serdes_str) { // __setstate__
                 nixlSerDes serdes;
                 serdes.importStr(std::string(serdes_str));
-                nixl_dlist_t newObj =
-                    nixl_dlist_t(&serdes);
+                nixl_xfer_dlist_t newObj =
+                    nixl_xfer_dlist_t(&serdes);
                 return newObj;
             }
         ));
@@ -121,17 +121,23 @@ PYBIND11_MODULE(nixl_bindings, m) {
         .def("createBackend", [](nixlAgent &agent, nixlUcxInitParams initParams) -> uintptr_t {
                     return (uintptr_t) agent.createBackend(&initParams);
             })
-        .def("registerMem", [](nixlAgent &agent, nixl_dlist_t descs, uintptr_t backend) -> nixl_status_t {
-                    return agent.registerMem(descs, (nixlBackendEngine*) backend);
+        .def("registerMem", [](nixlAgent &agent, nixl_xfer_dlist_t descs, uintptr_t backend) -> nixl_status_t {
+                    nixl_reg_dlist_t reg_descs(descs.getType(), descs.isUnifiedAddr(), descs.isSorted());
+                    for (int i=0; i<descs.descCount(); ++i)
+                        reg_descs.addDesc(nixlStringDesc(descs[i],""));
+                    return agent.registerMem(reg_descs, (nixlBackendEngine*) backend);
                 })
-        .def("deregisterMem", [](nixlAgent &agent, nixl_dlist_t descs, uintptr_t backend) -> nixl_status_t {
-                    return agent.deregisterMem(descs, (nixlBackendEngine*) backend);
+        .def("deregisterMem", [](nixlAgent &agent, nixl_xfer_dlist_t descs, uintptr_t backend) -> nixl_status_t {
+                    nixl_reg_dlist_t reg_descs(descs.getType(), descs.isUnifiedAddr(), descs.isSorted());
+                    for (int i=0; i<descs.descCount(); ++i)
+                        reg_descs.addDesc(nixlStringDesc(descs[i],""));
+                    return agent.deregisterMem(reg_descs, (nixlBackendEngine*) backend);
                 })
         .def("makeConnection", &nixlAgent::makeConnection)
         //note: slight API change, python cannot receive values by passing refs, so handle must be returned
         .def("createXferReq", [](nixlAgent &agent,
-                                 const nixl_dlist_t &local_descs,
-                                 const nixl_dlist_t &remote_descs,
+                                 const nixl_xfer_dlist_t &local_descs,
+                                 const nixl_xfer_dlist_t &remote_descs,
                                  const std::string &remote_agent,
                                  const std::string &notif_msg,
                                  const nixl_xfer_op_t &operation) -> uintptr_t {
@@ -144,7 +150,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
                     return (uintptr_t) agent.getXferBackend((nixlXferReqH*) reqh);
             })
         .def("prepXferSide", [](nixlAgent &agent,
-                                const nixl_dlist_t &descs,
+                                const nixl_xfer_dlist_t &descs,
                                 const std::string &remote_agent,
                                 uintptr_t backend) -> uintptr_t {
                     nixlXferSideH* handle;

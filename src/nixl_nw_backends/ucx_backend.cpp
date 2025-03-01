@@ -313,7 +313,7 @@ nixl_status_t nixlUcxEngine::loadRemoteConnInfo (const std::string &remote_agent
 /****************************************
  * Memory management
 *****************************************/
-nixl_status_t nixlUcxEngine::registerMem (const nixlBasicDesc &mem,
+nixl_status_t nixlUcxEngine::registerMem (const nixlStringDesc &mem,
                                           const nixl_mem_t &nixl_mem,
                                           nixlBackendMD* &out)
 {
@@ -451,8 +451,8 @@ nixl_status_t nixlUcxEngine::retHelper(nixl_xfer_state_t ret, nixlUcxBckndReq *h
     return NIXL_SUCCESS;
 }
 
-nixl_xfer_state_t nixlUcxEngine::postXfer (const nixlDescList<nixlMetaDesc> &local,
-                                           const nixlDescList<nixlMetaDesc> &remote,
+nixl_xfer_state_t nixlUcxEngine::postXfer (const nixl_meta_dlist_t &local,
+                                           const nixl_meta_dlist_t &remote,
                                            const nixl_xfer_op_t &op,
                                            const std::string &remote_agent,
                                            const std::string &notif_msg,

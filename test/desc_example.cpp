@@ -9,7 +9,7 @@
 void testPerf(){
     int desc_count = 24*64*1024;
     void* buf = malloc(256);
-    nixl_dlist_t dlist (DRAM_SEG);
+    nixl_xfer_dlist_t dlist (DRAM_SEG);
 
     struct timeval start_time, end_time, diff_time;
 
@@ -30,7 +30,7 @@ void testPerf(){
     std::cout << "time per desc " << time_per_desc << "us\n";
 
 
-    nixl_dlist_t dlist2 (DRAM_SEG, false, false, desc_count);
+    nixl_xfer_dlist_t dlist2 (DRAM_SEG, false, false, desc_count);
 
     gettimeofday(&start_time, NULL);
 
@@ -146,23 +146,23 @@ int main()
     meta4.metadataP = nullptr;
     int dummy;
 
-    nixlDescList<nixlMetaDesc> dlist1 (DRAM_SEG);
+    nixl_meta_dlist_t dlist1 (DRAM_SEG);
     dlist1.addDesc(meta1);
     assert (dlist1.overlaps(meta2, dummy));
     dlist1.addDesc(meta3);
 
-    nixlDescList<nixlMetaDesc> dlist2 (VRAM_SEG, false, false);
+    nixl_meta_dlist_t dlist2 (VRAM_SEG, false, false);
     dlist2.addDesc(meta3);
     dlist2.addDesc(meta2);
     assert (dlist2.overlaps(meta1, dummy));
 
-    nixlDescList<nixlMetaDesc> dlist3 (VRAM_SEG, false, true);
+    nixl_meta_dlist_t dlist3 (VRAM_SEG, false, true);
     dlist3.addDesc(meta3);
     dlist3.addDesc(meta2);
     assert (dlist3.overlaps(meta1, dummy));
 
-    nixlDescList<nixlMetaDesc> dlist4 (dlist1);
-    nixlDescList<nixlMetaDesc> dlist5 (VRAM_SEG);
+    nixl_meta_dlist_t dlist4 (dlist1);
+    nixl_meta_dlist_t dlist5 (VRAM_SEG);
     dlist5 = dlist3;
 
     // TODO: test overlap_check flag
@@ -205,13 +205,13 @@ int main()
     nixlBasicDesc b5 (305, 30, 4);
     nixlBasicDesc b6 (100, 30, 3);
 
-    nixl_dlist_t dlist10 (DRAM_SEG, false, false);
-    nixl_dlist_t dlist11 (DRAM_SEG, false, true);
-    nixl_dlist_t dlist12 (DRAM_SEG, true,  true);
-    nixl_dlist_t dlist13 (DRAM_SEG, true,  true);
-    nixl_dlist_t dlist14 (DRAM_SEG, true,  true);
+    nixl_xfer_dlist_t dlist10 (DRAM_SEG, false, false);
+    nixl_xfer_dlist_t dlist11 (DRAM_SEG, false, true);
+    nixl_xfer_dlist_t dlist12 (DRAM_SEG, true,  true);
+    nixl_xfer_dlist_t dlist13 (DRAM_SEG, true,  true);
+    nixl_xfer_dlist_t dlist14 (DRAM_SEG, true,  true);
 
-    nixlDescList<nixlStringDesc> dlist20 (DRAM_SEG, false,  true);
+    nixl_reg_dlist_t dlist20 (DRAM_SEG, false,  true);
 
     dlist10.addDesc(b1);
     dlist10.addDesc(b2);
@@ -253,11 +253,11 @@ int main()
     nixlSerDes* ser_des2 = new nixlSerDes();
 
     assert(dlist10.serialize(ser_des) == 0);
-    nixl_dlist_t importList (ser_des);;
+    nixl_xfer_dlist_t importList (ser_des);;
     assert(importList == dlist10);
 
     assert(dlist20.serialize(ser_des2) == 0);
-    nixlDescList<nixlStringDesc> importSList (ser_des2);
+    nixl_reg_dlist_t importSList (ser_des2);
     assert(importSList == dlist20);
 
     dlist10.print();
@@ -269,11 +269,11 @@ int main()
     importSList.print();
     std::cout << "\n";
 
-    nixlDescList<nixlStringDesc> dlist21 (DRAM_SEG, false,  false);
-    nixlDescList<nixlStringDesc> dlist22 (DRAM_SEG, false,  false);
-    nixlDescList<nixlStringDesc> dlist23 (DRAM_SEG, true,  false);
-    nixlDescList<nixlStringDesc> dlist24 (DRAM_SEG, true,  false);
-    nixlDescList<nixlStringDesc> dlist25 (DRAM_SEG, true,  false);
+    nixl_reg_dlist_t dlist21 (DRAM_SEG, false,  false);
+    nixl_reg_dlist_t dlist22 (DRAM_SEG, false,  false);
+    nixl_reg_dlist_t dlist23 (DRAM_SEG, true,  false);
+    nixl_reg_dlist_t dlist24 (DRAM_SEG, true,  false);
+    nixl_reg_dlist_t dlist25 (DRAM_SEG, true,  false);
 
     dlist20.populate (dlist10, dlist21);
     dlist20.populate (dlist11, dlist22);

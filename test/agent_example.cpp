@@ -20,8 +20,8 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
     int n_mems = 32;
     int descs_per_mem = 64*1024;
     int n_iters = 1;
-    nixlDescList<nixlBasicDesc> mem_list1(DRAM_SEG), mem_list2(DRAM_SEG);
-    nixlDescList<nixlBasicDesc> src_list(DRAM_SEG), dst_list(DRAM_SEG);
+    nixl_reg_dlist_t mem_list1(DRAM_SEG), mem_list2(DRAM_SEG);
+    nixl_xfer_dlist_t src_list(DRAM_SEG), dst_list(DRAM_SEG);
     nixl_status_t status;
 
     struct timeval start_time, end_time, diff_time;
@@ -32,8 +32,8 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
     for(int i = 0; i<n_mems; i++) {
         void* src_buf = malloc(descs_per_mem*8);
         void* dst_buf = malloc(descs_per_mem*8);
-        nixlBasicDesc src_desc((uintptr_t) src_buf, descs_per_mem*8, 0);
-        nixlBasicDesc dst_desc((uintptr_t) dst_buf, descs_per_mem*8, 0);
+        nixlStringDesc src_desc((uintptr_t) src_buf, descs_per_mem*8, 0);
+        nixlStringDesc dst_desc((uintptr_t) dst_buf, descs_per_mem*8, 0);
 
         mem_list1.addDesc(src_desc);
         mem_list2.addDesc(dst_desc);
@@ -139,8 +139,9 @@ nixl_status_t sideXferTest(nixlAgent* A1, nixlAgent* A2, nixlXferReqH* src_handl
     nixl_status_t status;
     void* src_bufs[n_bufs], *dst_bufs[n_bufs];
 
-    nixlDescList<nixlBasicDesc> src_list(DRAM_SEG), dst_list(DRAM_SEG);
-    nixlBasicDesc src_desc[4], dst_desc[4];
+    nixl_reg_dlist_t mem_list1(DRAM_SEG), mem_list2(DRAM_SEG);
+    nixl_xfer_dlist_t src_list(DRAM_SEG), dst_list(DRAM_SEG);
+    nixlStringDesc src_desc[4], dst_desc[4];
     for(int i = 0; i<n_bufs; i++) {
 
         src_bufs[i] = calloc(1, len);
@@ -155,14 +156,17 @@ nixl_status_t sideXferTest(nixlAgent* A1, nixlAgent* A2, nixlXferReqH* src_handl
         dst_desc[i].devId = 0;
         dst_desc[i].addr = (uintptr_t) dst_bufs[i];
 
-        src_list.addDesc(src_desc[i]);
-        dst_list.addDesc(dst_desc[i]);
+        mem_list1.addDesc(src_desc[i]);
+        mem_list2.addDesc(dst_desc[i]);
     }
 
-    status = A1->registerMem(src_list, src_backend);
+    src_list = mem_list1.trim();
+    dst_list = mem_list2.trim();
+
+    status = A1->registerMem(mem_list1, src_backend);
     assert(status == NIXL_SUCCESS);
 
-    status = A2->registerMem(dst_list, dst_backend);
+    status = A2->registerMem(mem_list2, dst_backend);
     assert(status == NIXL_SUCCESS);
 
     std::string meta2 = A2->getLocalMD();
@@ -247,9 +251,9 @@ nixl_status_t sideXferTest(nixlAgent* A1, nixlAgent* A2, nixlXferReqH* src_handl
     A1->invalidateXferReq(req2);
     A1->invalidateXferReq(req3);
 
-    status = A1->deregisterMem(src_list, src_backend);
+    status = A1->deregisterMem(mem_list1, src_backend);
     assert(status == NIXL_SUCCESS);
-    status = A2->deregisterMem(dst_list, dst_backend);
+    status = A2->deregisterMem(mem_list2, dst_backend);
     assert(status == NIXL_SUCCESS);
 
     A1->invalidateXferSide(src_side);
@@ -287,8 +291,8 @@ int main()
 
     // User allocates memories, and passes the corresponding address
     // and length to register with the backend
-    nixlBasicDesc buff1, buff2;
-    nixlDescList<nixlBasicDesc> dlist1(DRAM_SEG), dlist2(DRAM_SEG);
+    nixlStringDesc buff1, buff2;
+    nixl_reg_dlist_t dlist1(DRAM_SEG), dlist2(DRAM_SEG);
     size_t len = 256;
     void* addr1 = calloc(1, len);
     void* addr2 = calloc(1, len);
@@ -328,14 +332,14 @@ int main()
     size_t req_size = 8;
     size_t dst_offset = 8;
 
-    nixlDescList<nixlBasicDesc> req_src_descs (DRAM_SEG);
+    nixl_xfer_dlist_t req_src_descs (DRAM_SEG);
     nixlBasicDesc req_src;
     req_src.addr     = (uintptr_t) (((char*) addr1) + 16); //random offset
     req_src.len      = req_size;
     req_src.devId   = 0;
     req_src_descs.addDesc(req_src);
 
-    nixlDescList<nixlBasicDesc> req_dst_descs (DRAM_SEG);
+    nixl_xfer_dlist_t req_dst_descs (DRAM_SEG);
     nixlBasicDesc req_dst;
     req_dst.addr   = (uintptr_t) ((char*) addr2) + dst_offset; //random offset
     req_dst.len    = req_size;

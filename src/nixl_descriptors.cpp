@@ -77,6 +77,14 @@ nixlStringDesc::nixlStringDesc(const uintptr_t &addr,
     this->metaInfo = meta_info;
 }
 
+nixlStringDesc::nixlStringDesc(const nixlBasicDesc &desc,
+                               const std::string &meta_info) {
+    this->addr     = desc.addr;
+    this->len      = desc.len;
+    this->devId    = desc.devId;
+    this->metaInfo = meta_info;
+}
+
 nixlStringDesc::nixlStringDesc(const std::string &str) {
     size_t meta_size = str.size() - sizeof(nixlBasicDesc);
     if (meta_size>0) {
@@ -97,7 +105,6 @@ bool operator==(const nixlStringDesc &lhs, const nixlStringDesc &rhs) {
                   (lhs.metaInfo == rhs.metaInfo));
 }
 
-
 std::string nixlStringDesc::serialize() const {
     return nixlBasicDesc::serialize() + metaInfo;
 }
@@ -116,8 +123,8 @@ void nixlStringDesc::print(const std::string &suffix) const {
 // There are no virtual functions, so the object is all data, no pointers.
 
 template <class T>
-nixlDescList<T>::nixlDescList (nixl_mem_t type, bool unified_addr,
-                               bool sorted, int init_size) {
+nixlDescList<T>::nixlDescList (const nixl_mem_t &type, const bool &unified_addr,
+                               const bool &sorted, const int &init_size) {
     static_assert(std::is_base_of<nixlBasicDesc, T>::value);
     this->type        = type;
     this->unifiedAddr = unified_addr;
@@ -272,11 +279,18 @@ bool nixlDescList<T>::hasOverlaps () const {
 }
 
 template <class T>
-nixl_status_t nixlDescList<T>::remDesc (int index){
+nixl_status_t nixlDescList<T>::remDesc (const int &index){
     if (((size_t) index >= descs.size()) || (index < 0))
         return NIXL_ERR_INVALID_PARAM;
     descs.erase(descs.begin() + index);
     return NIXL_SUCCESS;
+}
+
+template <class T>
+void nixlDescList<T>::resize (const size_t &count) {
+    if (count > descs.size())
+        sorted = false;
+    descs.resize(count);
 }
 
 template <class T>
@@ -311,7 +325,7 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
                 if (elm.covers(query[i])){
                     *p = query[i];
                     new_elm.copyMeta(elm);
-                    resp[i]=new_elm;
+                    resp.descs[i]=new_elm;
                     count++;
                     break;
                 }
@@ -347,7 +361,7 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
             if (found) {
                 *p = q;
                 new_elm.copyMeta(*itr);
-                resp[i] = new_elm;
+                resp.descs[i] = new_elm;
                 if (q_sorted) // only check rest of the list
                     last_found = itr - descs.begin();
             } else {
@@ -355,9 +369,25 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
                 return NIXL_ERR_BAD;
             }
         }
-        resp.sorted = query.isSorted(); // Update as [] assignments resets it
+        resp.sorted = query.isSorted(); // Update as resize resets it
         return NIXL_SUCCESS;
     }
+}
+
+template <class T>
+nixlDescList<nixlBasicDesc> nixlDescList<T>::trim() const {
+
+    // Potential optimization for (std::is_same<nixlBasicDesc, T>::value)
+    nixlDescList<nixlBasicDesc> trimmed(type, unifiedAddr, sorted);
+    nixlBasicDesc* p;
+
+    for (auto & elm: descs) {
+        p = (nixlBasicDesc*) (&elm);
+        trimmed.addDesc(*p);
+    }
+
+    // No failure scenario
+    return trimmed;
 }
 
 template <class T>

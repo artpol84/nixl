@@ -26,8 +26,8 @@ static string op2string(nixl_xfer_op_t op)
 }
 
 void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
-                     nixlDescList<nixlMetaDesc> &req_src_descs,
-                     nixlDescList<nixlMetaDesc> &req_dst_descs,
+                     nixl_meta_dlist_t &req_src_descs,
+                     nixl_meta_dlist_t &req_dst_descs,
                      void* addr1, void* addr2, size_t len, 
                      nixl_xfer_op_t op, bool progress_ucx2)
 {
@@ -123,7 +123,7 @@ void test_local_operation() {
 
     std::cout << "Local connection complete\n";
 
-    nixlBasicDesc buff1, buff2;
+    nixlStringDesc buff1, buff2;
     nixlBackendMD* local_meta1, *local_meta2;
     // Number of transfer descriptors
     int desc_cnt = 16; 
@@ -153,7 +153,7 @@ void test_local_operation() {
     ret1 = ucx1->loadLocalMD (local_meta2, remote_of_local_meta);
     assert(ret1 == NIXL_SUCCESS);
 
-    nixlDescList<nixlMetaDesc> req_src_descs (DRAM_SEG);
+    nixl_meta_dlist_t req_src_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
         nixlMetaDesc req_src;
         req_src.addr      = (uintptr_t) (((char*) addr1) + i * desc_size); //random offset
@@ -163,7 +163,7 @@ void test_local_operation() {
         req_src_descs.addDesc(req_src);
     }
 
-    nixlDescList<nixlMetaDesc> req_dst_descs (DRAM_SEG);
+    nixl_meta_dlist_t req_dst_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
         nixlMetaDesc req_dst;
         req_dst.addr      = (uintptr_t) ((char*) addr2 + i * desc_size); //random offset
@@ -244,7 +244,7 @@ int main()
 
     // User allocates memories, and passes the corresponding address
     // and length to register with the backend
-    nixlBasicDesc buff1, buff2;
+    nixlStringDesc buff1, buff2;
     nixlBackendMD* local_meta1, *local_meta2;
     // Number of transfer descriptors
     int desc_cnt = 16; 
@@ -298,7 +298,7 @@ int main()
     assert(ret1 == NIXL_SUCCESS);
     assert(ret2 == NIXL_SUCCESS);
 
-    nixlDescList<nixlMetaDesc> req_src_descs (DRAM_SEG);
+    nixl_meta_dlist_t req_src_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
         nixlMetaDesc req_src;
         req_src.addr      = (uintptr_t) (((char*) addr1) + i * desc_size); //random offset
@@ -308,7 +308,7 @@ int main()
         req_src_descs.addDesc(req_src);
     }
 
-    nixlDescList<nixlMetaDesc> req_dst_descs (DRAM_SEG);
+    nixl_meta_dlist_t req_dst_descs (DRAM_SEG);
     for(int i = 0; i < desc_cnt; i++) {
         nixlMetaDesc req_dst;
         req_dst.addr      = (uintptr_t) ((char*) addr2 + i * desc_size); //random offset

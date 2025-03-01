@@ -46,6 +46,7 @@ class nixlStringDesc : public nixlBasicDesc {
 
         nixlStringDesc(const uintptr_t &addr, const size_t &len,
                        const uint32_t &dev_id, const std::string &meta_info);
+        nixlStringDesc(const nixlBasicDesc &desc, const std::string &meta_info);
         nixlStringDesc(const std::string &str); // Deserializer
 
         friend bool operator==(const nixlStringDesc &lhs,
@@ -68,8 +69,8 @@ class nixlDescList {
         std::vector<T> descs;
 
     public:
-        nixlDescList(nixl_mem_t type, bool unifiedAddr=true,
-                     bool sorted=false, int init_size=0);
+        nixlDescList(const nixl_mem_t &type, const bool &unifiedAddr=true,
+                     const bool &sorted=false, const int &init_size=0);
         nixlDescList(nixlSerDes* deserializer);
         nixlDescList(const nixlDescList<T> &d_list) = default;
         nixlDescList& operator=(const nixlDescList<T> &d_list) = default;
@@ -96,12 +97,13 @@ class nixlDescList {
         template <class Y> friend bool operator==(const nixlDescList<Y> &lhs,
                                                   const nixlDescList<Y> &rhs);
 
-        void resize (size_t count) { descs.resize(count); }
-        void clear() { descs.clear(); }
+        void resize (const size_t &count);
+        inline void clear() { descs.clear(); }
         void addDesc(const T &desc); // If sorted, keeps it sorted
-        nixl_status_t remDesc(int index);
+        nixl_status_t remDesc(const int &index);
         nixl_status_t populate(const nixlDescList<nixlBasicDesc> &query,
                                nixlDescList<T> &resp) const;
+        nixlDescList<nixlBasicDesc> trim() const;
 
         bool overlaps (const T &desc, int &index) const;
         int getIndex(const nixlBasicDesc &query) const;
@@ -109,6 +111,7 @@ class nixlDescList {
         void print() const;
 };
 
-typedef nixlDescList<nixlBasicDesc> nixl_dlist_t;
+typedef nixlDescList<nixlBasicDesc>  nixl_xfer_dlist_t;
+typedef nixlDescList<nixlStringDesc> nixl_reg_dlist_t;
 
 #endif
