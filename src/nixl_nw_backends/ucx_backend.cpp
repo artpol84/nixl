@@ -257,26 +257,29 @@ nixl_status_t nixlUcxEngine::disconnect(const std::string &remote_agent) {
     nixl_xfer_state_t ret;
     nixlUcxReq req;
 
-    auto search = remoteConnMap.find(remote_agent);
+    if (remote_agent != localAgent) {
+        auto search = remoteConnMap.find(remote_agent);
 
-    if(search == remoteConnMap.end()) {
-        return NIXL_ERR_NOT_FOUND;
+        if(search == remoteConnMap.end()) {
+            return NIXL_ERR_NOT_FOUND;
+        }
+
+        nixlUcxConnection &conn = remoteConnMap[remote_agent];
+
+        hdr.op = DISCONNECT;
+        //agent names should never be long enough to need RNDV
+        flags |= UCP_AM_SEND_FLAG_EAGER;
+
+        ret = uw->sendAm(conn.ep, DISCONNECT,
+                        &hdr, sizeof(struct nixl_ucx_am_hdr),
+                        (void*) localAgent.data(), localAgent.size(),
+                        flags, req);
+
+        //don't care
+        if(ret == NIXL_XFER_PROC){
+            uw->reqRelease(req);
+        }
     }
-
-    nixlUcxConnection &conn = remoteConnMap[remote_agent];
-
-    hdr.op = DISCONNECT;
-    //agent names should never be long enough to need RNDV
-    flags |= UCP_AM_SEND_FLAG_EAGER;
-
-    ret = uw->sendAm(conn.ep, DISCONNECT,
-                     &hdr, sizeof(struct nixl_ucx_am_hdr),
-                     (void*) localAgent.data(), localAgent.size(),
-                     flags, req);
-
-    //don't care
-    if(ret == NIXL_XFER_PROC)
-        uw->reqRelease(req);
 
     endConn(remote_agent);
 
