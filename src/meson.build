@@ -10,6 +10,8 @@ nixl_infra = library('nixl_build',
             install: true)
 
 subdir('nixl_nw_backends')
+subdir('nixl_storage_backends')
+
 nixl_lib   = library('nixl',
               'nixl_descriptors.cpp',
               'nixl_memory_section.cpp',

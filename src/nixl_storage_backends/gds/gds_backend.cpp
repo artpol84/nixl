@@ -3,7 +3,7 @@
 
 nixlGdsEngine::nixlGdsEngine (const nixlGdsInitParams* init_params)
 : nixlBackendEngine ((const nixlBackendInitParams *) init_params) {
- 
+
         CufileError_t   err;
 
         err = cuFileDriverOpen();
@@ -13,5 +13,5 @@ nixlGdsEngine::nixlGdsEngine (const nixlGdsInitParams* init_params)
                       << std::cout;
             this->initErr = true;
         }
-        return NIXL_SUCCESS;       
+        return NIXL_SUCCESS;
 }
