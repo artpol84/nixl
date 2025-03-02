@@ -3,9 +3,9 @@
 
 #include <nixl.h>
 #include <cuda_runtime.h>
-#include <cufile.h>
-#include <unistd>
+#include <unistd.h>
 #include <fcntl.h>
+#include "cufile.h"
 
 class nixlGdsFile {
 private:
@@ -13,12 +13,12 @@ private:
    // What if file is not preallocated
    // -1 means inf size file?
    size_t         size;
-   CUFileHandle_t handle;
+   CUfileHandle_t handle;
 };
 
 class nixlGdsHandle {
 private:
-   CuFileHandle_t	handle;
+   CUfileHandle_t	handle;
 };
 
 class nixlGdsConnection : public nixlBackendConnMD {
@@ -34,14 +34,18 @@ class nixlGdsConnection : public nixlBackendConnMD {
 
 class nixlGdsPrivateMetadata : public nixlBackendMD {
    private:
-	   nixlGdsFile    fileH;
+       nixlGdsFile    fileH;
+       std::string    handleStr;
+
    // serialized handle for sharing
    public:
        nixlGdsPrivateMetadata() : nixlBackendMD(true) {
        }
        ~nixlGdsPrivateMetadata() {
        }
-       std::string get() const {
+       std::string get() const
+       {
+	       return handleStr;
        }
 };
 
@@ -55,7 +59,6 @@ class nixlGdsPublicMetadata : public nixlBackendMD {
 
 class nixlGdsEngine : nixlBackendEngine {
    nixlGdsFile	fh;
-   std::vector<std::string, CUFileHandle_t> handle_map;
 
 
 public:
@@ -65,24 +68,38 @@ public:
    // File operations - target is the distributed FS
    // So no requirements to connect to target.
    // Just treat it locally.
-   bool		     supportsNotif () const { return false; }
+   bool		 supportsNotif () const { return false; }
    bool          supportsRemote  () const { return false; }
    bool          supportsLocal   () const { return true; }
    bool          supportsProgTh  () const { return false; }
 
    // No Public metadata for this backend - let us return empty string here.
-   std::string   getPublicData (const nixlBackendMD* meta) const { return std::string();}
+   std::string   getPublicData (const nixlBackendMD* meta) const
+   {
+	   return std::string();
+   }
 
-   nixl_status_t connect(const std::string &remote_agent) { return NIXL_SUCCESS; }
-   nixl_status_t disconnect(const std::string &remote_agent) { return NIXL_SUCCESS; }
+   nixl_status_t connect(const std::string &remote_agent)
+   {
+	   return NIXL_SUCCESS;
+   }
 
-   nixl_status_t registerMem(const nixlBasicDesc &mem,
+   nixl_status_t disconnect(const std::string &remote_agent)
+   {
+	   return NIXL_SUCCESS;
+   }
+
+   nixl_status_t registerMem(const nixlStringDesc &mem,
                              const nixl_mem_t &nixl_mem,
-	                          nixlBackendMD* &out);
+	                     nixlBackendMD* &out);
    void deregisterMem (nixlBackendMD *meta);
+   nixl_status_t loadRemoteMD (const nixlStringDesc &input,
+			       const nixl_mem_t &nixl_mem,
+			       const std::string &remote_agent,
+			       nixlBackendMD* &output);
 
-   nixl_xfer_state_t postXfer (const nixlDescList<nixlMetaDesc> &local,
-			       const nixlDescList<nixlMetaDesc> &remote,
+   nixl_xfer_state_t postXfer (const nixl_meta_dlist_t &local,
+			       const nixl_meta_dlist_t &remote,
 			       const nixl_xfer_op_t &op,
 			       const std::string &remote_agent,
 			       const std::string &notif_msg,
