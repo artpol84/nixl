@@ -1,5 +1,5 @@
 subdir('utils')
-nixl_lib = library('nixl_build',
+nixl_infra = library('nixl_build',
            'nixl_descriptors.cpp',
            'nixl_memory_section.cpp',
            'nixl_metadata_stream.cpp',
@@ -10,7 +10,7 @@ nixl_lib = library('nixl_build',
             install: true)
 
 subdir('nixl_nw_backends')
-nixl_lib_rb = library('nixl',
+nixl_lib   = library('nixl',
               'nixl_descriptors.cpp',
               'nixl_memory_section.cpp',
               'nixl_agent.cpp',

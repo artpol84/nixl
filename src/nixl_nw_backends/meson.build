@@ -1,5 +1,5 @@
 ucx_utils_dep = declare_dependency(link_with: ucx_utils_lib, include_directories: inc_dir)
-nixl_dep = declare_dependency(link_with: nixl_lib, include_directories: inc_dir)
+nixl_dep = declare_dependency(link_with: nixl_infra, include_directories: inc_dir)
 
 compile_flags = []
 if cuda_dep.found()

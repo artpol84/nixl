@@ -1,4 +1,4 @@
-nixl_dep = declare_dependency(link_with: nixl_lib_rb, include_directories: inc_dir)
+nixl_dep = declare_dependency(link_with: nixl_lib, include_directories: inc_dir)
 ucx_backend_dep = declare_dependency(link_with: ucx_backend_lib, include_directories: [inc_dir, '../src/nixl_nw_backends'])
 
 if cuda_dep.found()
