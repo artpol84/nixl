@@ -98,6 +98,7 @@ class nixlDescList {
                                                   const nixlDescList<Y> &rhs);
 
         void resize (const size_t &count);
+        bool verifySorted();
         inline void clear() { descs.clear(); }
         void addDesc(const T &desc); // If sorted, keeps it sorted
         nixl_status_t remDesc(const int &index);

@@ -8,17 +8,17 @@ if __name__ == "__main__":
     buf_size = 256
     # Allocate memory and register with NIXL
     nixl_agent1 = nixl_wrapper("target", None)
-    addr1 = nixl_utils.malloc_passthru(buf_size)
-    addr2 = nixl_utils.malloc_passthru(buf_size)
+    addr1 = nixl_utils.malloc_passthru(buf_size*2)
+    addr2 = addr1 + buf_size
     agent1_descs = nixl_agent1.get_descs(("DRAM",
-                               [(addr1, buf_size, 0), (addr2, buf_size, 0)]))
+                               [(addr1, buf_size, 0), (addr2, buf_size, 0)]), True)
     assert (nixl_agent1.register_memory(agent1_descs) != None)
 
     nixl_agent2 = nixl_wrapper("initiator", None)
-    addr3 = nixl_utils.malloc_passthru(buf_size)
-    addr4 = nixl_utils.malloc_passthru(buf_size)
+    addr3 = nixl_utils.malloc_passthru(buf_size*2)
+    addr4 = addr3 + buf_size
     agent2_descs = nixl_agent2.register_memory(("DRAM",
-                               [(addr3, buf_size, 0), (addr4, buf_size, 0)]))
+                               [(addr3, buf_size, 0), (addr4, buf_size, 0)]), True)
     assert (agent2_descs != None)
 
     # Exchange metadata
@@ -60,7 +60,8 @@ if __name__ == "__main__":
 
     # prep transfer mode
     local_prep_handle  = nixl_agent2.prep_xfer_side(("DRAM",
-                               [(addr3, buf_size, 0), (addr4, buf_size, 0)]))
+                               [(addr3, buf_size, 0), (addr4, buf_size, 0)]),
+                               "", True)
     remote_prep_handle = nixl_agent2.prep_xfer_side(agent1_descs, remote_name)
 
     xfer_handle_2      = nixl_agent2.make_prepped_xfer(local_prep_handle, [0,1],
@@ -104,8 +105,6 @@ if __name__ == "__main__":
     nixl_agent2.deregister_memory(agent2_descs)
 
     nixl_utils.free_passthru(addr1)
-    nixl_utils.free_passthru(addr2)
     nixl_utils.free_passthru(addr3)
-    nixl_utils.free_passthru(addr4)
 
     print ("Test Complete.")

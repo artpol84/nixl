@@ -28,7 +28,8 @@ class nixl_wrapper:
         print("Initializied NIXL agent:", agent_name)
 
 
-    def get_descs(self, arg):
+    # TODO: Maybe we should add unifiedAddr flag, and remove from register/prep.
+    def get_descs(self, arg, is_sorted=False):
         # can add check for DLPack input
         if isinstance(arg, list): # List[torch.Tensor]:
             tensor_type = arg[0].device
@@ -43,11 +44,11 @@ class nixl_wrapper:
                 if (gpu_id==-1): # DRAM
                     gpu_id = 0
                 dlist[i] = (base_addr, region_len, gpu_id)
-            descs = nixl.nixlDescList(self.nixl_mems[tensor_type], dlist, True, False)
+            descs = nixl.nixlDescList(self.nixl_mems[tensor_type], dlist, True, is_sorted)
 
 
         elif isinstance(arg, tuple): # (str, List[(int,int,int)]):
-            descs = nixl.nixlDescList(self.nixl_mems[arg[0]], arg[1], True, False)
+            descs = nixl.nixlDescList(self.nixl_mems[arg[0]], arg[1], True, is_sorted)
 
         elif isinstance(arg, nixl.nixlDescList):
             return arg
@@ -64,9 +65,9 @@ class nixl_wrapper:
 
 
     # The returned descriptor object can be used for call to deregister
-    def register_memory(self, arg):
+    def register_memory(self, arg, is_sorted=False):
         # based on backend type and mem_type, figure what registrations are meaningful
-        reg_descs = self.get_descs(arg)
+        reg_descs = self.get_descs(arg, is_sorted)
         ret = self.agent.registerMem(reg_descs, self.backends["UCX"])
         if (ret != 0):
             return None
@@ -107,8 +108,8 @@ class nixl_wrapper:
 
 
     # "" remote agent means local. example xfer can be used to know the backend
-    def prep_xfer_side(self, args, remote_agent="", xfer_backend=None, example_xfer=None):
-        descs = self.get_descs(args)
+    def prep_xfer_side(self, args, remote_agent="", is_sorted=False, xfer_backend=None, example_xfer=None):
+        descs = self.get_descs(args, is_sorted)
         if (xfer_backend):
             handle = self.agent.prepXferSide(descs, remote_agent, xfer_backend);
         elif (example_xfer):

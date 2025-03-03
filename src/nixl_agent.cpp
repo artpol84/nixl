@@ -165,7 +165,8 @@ nixl_status_t nixlAgent::createXferReq(const nixl_xfer_dlist_t &local_descs,
     nixlXferReqH *handle = new nixlXferReqH;
     handle->initiatorDescs = new nixl_meta_dlist_t (
                                      local_descs.getType(),
-                                     local_descs.isUnifiedAddr(), false);
+                                     local_descs.isUnifiedAddr(),
+                                     local_descs.isSorted());
 
     handle->engine = data.memorySection.findQuery(local_descs,
                           remote_descs.getType(),
@@ -184,7 +185,8 @@ nixl_status_t nixlAgent::createXferReq(const nixl_xfer_dlist_t &local_descs,
 
     handle->targetDescs = new nixl_meta_dlist_t (
                                   remote_descs.getType(),
-                                  remote_descs.isUnifiedAddr(), false);
+                                  remote_descs.isUnifiedAddr(),
+                                  remote_descs.isSorted());
 
     // Based on the decided local backend, we check the remote counterpart
     ret = data.remoteSections[remote_agent]->populate(remote_descs,
@@ -353,6 +355,8 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
     //     return NIXL_ERR_BAD;
     // }
 
+    // Populate is already done, no benefit in having sorted descriptors
+    // which will be overwritten by [] assignement operator.
     nixlXferReqH *handle = new nixlXferReqH;
     handle->initiatorDescs = new nixl_meta_dlist_t (
                                      local_side->descs->getType(),

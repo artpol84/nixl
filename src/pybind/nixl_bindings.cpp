@@ -60,6 +60,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
                 nixl_xfer_dlist_t new_list(mem, unifiedAddr, sorted, descs.size());
                 for(long unsigned int i = 0; i<descs.size(); i++)
                     new_list[i] = nixlBasicDesc(descs[i][0].cast<uintptr_t>(), descs[i][1].cast<size_t>(), descs[i][2].cast<uint32_t>());
+                if (sorted) new_list.verifySorted();
                 return new_list;
             }), py::arg("type"), py::arg("descs"), py::arg("unifiedAddr")=true, py::arg("sorted")=false)
         .def("getType", &nixl_xfer_dlist_t::getType)
@@ -84,6 +85,7 @@ PYBIND11_MODULE(nixl_bindings, m) {
                 list.addDesc(nixlBasicDesc(desc[0].cast<uintptr_t>(), desc[1].cast<size_t>(), desc[2].cast<uint32_t>()));
             })
         .def("remDesc", &nixl_xfer_dlist_t::remDesc)
+        .def("verifySorted", &nixl_xfer_dlist_t::verifySorted)
         .def("clear", &nixl_xfer_dlist_t::clear)
         .def("print", &nixl_xfer_dlist_t::print)
         .def(py::pickle(

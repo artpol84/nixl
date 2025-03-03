@@ -29,7 +29,7 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
 
     int n_mems = 32;
     int descs_per_mem = 64*1024;
-    int n_iters = 1;
+    int n_iters = 10;
     nixl_reg_dlist_t mem_list1(DRAM_SEG), mem_list2(DRAM_SEG);
     nixl_xfer_dlist_t src_list(DRAM_SEG), dst_list(DRAM_SEG);
     nixl_status_t status;
@@ -39,11 +39,12 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
     nixlXferSideH *src_side[n_iters];
     nixlXferSideH *dst_side[n_iters];
 
+    void* src_buf = malloc(n_mems*descs_per_mem*8);
+    void* dst_buf = malloc(n_mems*descs_per_mem*8);
+
     for(int i = 0; i<n_mems; i++) {
-        void* src_buf = malloc(descs_per_mem*8);
-        void* dst_buf = malloc(descs_per_mem*8);
-        nixlStringDesc src_desc((uintptr_t) src_buf, descs_per_mem*8, 0);
-        nixlStringDesc dst_desc((uintptr_t) dst_buf, descs_per_mem*8, 0);
+        nixlStringDesc src_desc((uintptr_t) src_buf + i*descs_per_mem*8, descs_per_mem*8, 0);
+        nixlStringDesc dst_desc((uintptr_t) dst_buf + i*descs_per_mem*8, descs_per_mem*8, 0);
 
         mem_list1.addDesc(src_desc);
         mem_list2.addDesc(dst_desc);
@@ -51,13 +52,16 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
         //std::cout << "mem region " << i << " working \n";
 
         for(int j = 0; j<descs_per_mem; j++){
-            nixlBasicDesc src_desc2((uintptr_t) src_buf + 8*j, 8, 0);
-            nixlBasicDesc dst_desc2((uintptr_t) dst_buf + 8*j, 8, 0);
+            nixlBasicDesc src_desc2((uintptr_t) src_buf + i*descs_per_mem*8 + 8*j, 8, 0);
+            nixlBasicDesc dst_desc2((uintptr_t) dst_buf + i*descs_per_mem*8 + 8*j, 8, 0);
 
             src_list.addDesc(src_desc2);
             dst_list.addDesc(dst_desc2);
         }
     }
+
+    assert (src_list.verifySorted() == true);
+    assert (dst_list.verifySorted() == true);
 
     assert(mem_list1.descCount() == n_mems);
     assert(mem_list2.descCount() == n_mems);
@@ -131,6 +135,9 @@ void test_side_perf(nixlAgent* A1, nixlAgent* A2, nixlBackendEngine* backend, ni
         A1->invalidateXferSide(src_side[i]);
         A1->invalidateXferSide(dst_side[i]);
     }
+
+    free(src_buf);
+    free(dst_buf);
 }
 
 nixl_status_t sideXferTest(nixlAgent* A1, nixlAgent* A2, nixlXferReqH* src_handle, nixlBackendEngine* dst_backend){

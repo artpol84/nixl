@@ -294,6 +294,26 @@ void nixlDescList<T>::resize (const size_t &count) {
 }
 
 template <class T>
+bool nixlDescList<T>::verifySorted() {
+    int size = (int) descs.size();
+    if (size==0) {
+        return false;
+    } else if (size == 1) {
+        sorted = true;
+        return true;
+    }
+
+    for (int i=0; i<size-1; ++i) {
+        if (descAddrCompare(descs[i+1], descs[i], unifiedAddr)){
+            sorted = false;
+            return false;
+        }
+    }
+    sorted = true;
+    return true;
+}
+
+template <class T>
 nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &query,
                                          nixlDescList<T> &resp) const {
     // Populate only makes sense when there is extra metadata
@@ -314,8 +334,9 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
     T new_elm;
     nixlBasicDesc *p = &new_elm;
     int count = 0, last_found = 0;
+    int s_index, q_index, size;
     bool found, q_sorted = query.isSorted();
-    nixlBasicDesc q;
+    const nixlBasicDesc *q, *s;
 
     resp.resize(query.descCount());
 
@@ -337,40 +358,66 @@ nixl_status_t nixlDescList<T>::populate (const nixlDescList<nixlBasicDesc> &quer
             return NIXL_ERR_BAD;
         }
     } else {
-        for (int i=0; i<query.descCount(); ++i) {
-            found = false;
-            q = query[i];
-            auto itr = std::lower_bound(descs.begin() + last_found,
-                                        descs.end(), q, desc_comparator_f);
+        if (q_sorted) {
+            size = (int) descs.size();
+            s_index = 0;
+            q_index = 0;
 
-            // Same start address case
-            if (itr != descs.end()){
-                if ((*itr).covers(q)) {
-                    found = true;
+            while (q_index<query.descCount()){
+                s = &descs[s_index];
+                q = &query[q_index];
+                if ((*s).covers(*q)) {
+                    *p = *q;
+                    new_elm.copyMeta(descs[s_index]); // needs const nixlBasicDesc&
+                    resp.descs[q_index] = new_elm;
+                    q_index++;
+                } else {
+                    s_index++;
+                    // if ((descAddrCompare(*q, descs[s_index], unifiedAddr)) ||
+                    if (s_index==size) {
+                        resp.clear();
+                        return NIXL_ERR_BAD;
+                    }
                 }
             }
 
-            // query starts starts later, try previous entry
-            if ((!found) && (itr != descs.begin())){
-                itr = std::prev(itr , 1);
-                if ((*itr).covers(q)) {
-                    found = true;
+            resp.sorted = true; // Should be redundant
+            return NIXL_SUCCESS;
+
+        } else {
+            for (int i=0; i<query.descCount(); ++i) {
+                found = false;
+                q = &query[i];
+                auto itr = std::lower_bound(descs.begin() + last_found,
+                                            descs.end(), *q, desc_comparator_f);
+
+                // Same start address case
+                if (itr != descs.end()){
+                    if ((*itr).covers(*q)) {
+                        found = true;
+                    }
+                }
+
+                // query starts starts later, try previous entry
+                if ((!found) && (itr != descs.begin())){
+                    itr = std::prev(itr , 1);
+                    if ((*itr).covers(*q)) {
+                        found = true;
+                    }
+                }
+
+                if (found) {
+                    *p = *q;
+                    new_elm.copyMeta(*itr);
+                    resp.descs[i] = new_elm;
+                } else {
+                    resp.clear();
+                    return NIXL_ERR_BAD;
                 }
             }
-
-            if (found) {
-                *p = q;
-                new_elm.copyMeta(*itr);
-                resp.descs[i] = new_elm;
-                if (q_sorted) // only check rest of the list
-                    last_found = itr - descs.begin();
-            } else {
-                resp.clear();
-                return NIXL_ERR_BAD;
-            }
+            resp.sorted = query.isSorted(); // Update as resize resets it
+            return NIXL_SUCCESS;
         }
-        resp.sorted = query.isSorted(); // Update as resize resets it
-        return NIXL_SUCCESS;
     }
 }
 

@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     start_time = time.perf_counter()
 
-    descs = nixl_agent.get_descs(("DRAM", addr_list))
+    descs = nixl_agent.get_descs(("DRAM", addr_list), True)
 
     end_time = time.perf_counter()
 
