@@ -7,7 +7,7 @@
 #include <set>
 #include "nixl_descriptors.h"
 #include "nixl.h"
-#include "internal/backend_engine.h"
+#include "backend/backend_engine.h"
 
 typedef std::pair<nixl_mem_t, nixl_backend_t> section_key_t;
 typedef std::set<nixl_backend_t>              backend_set_t;

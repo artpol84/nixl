@@ -5,7 +5,7 @@
 #include "nixl_types.h"
 #include "nixl_descriptors.h"
 #include "nixl_params.h"
-#include "internal/backend_engine.h"
+#include "backend/backend_engine.h"
 #include "internal/transfer_request.h"
 #include "internal/agent_data.h"
 

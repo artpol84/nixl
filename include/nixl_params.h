@@ -3,7 +3,7 @@
 
 #include <string>
 #include <cstdint>
-#include "internal/backend_engine.h"
+#include "backend/backend_engine.h"
 #include "nixl_types.h"
 
 // Per Agent configuration information, such as if progress thread should be used.

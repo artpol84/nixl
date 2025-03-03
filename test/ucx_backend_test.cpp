@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "ucx_backend.h"
+#include "backend_tester.h"
 
 using namespace std;
 
@@ -27,26 +28,30 @@ static void checkCudaError(cudaError_t result, const char *message) {
 
 nixlBackendEngine *createEngine(std::string name, bool p_thread)
 {
-    nixlBackendEngine *ucx;
     nixlUcxInitParams init;
 
     init.enableProgTh = p_thread;
     init.pthrDelay = 100;
     init.localAgent = name;
 
-    ucx = (nixlBackendEngine*) new nixlUcxEngine (&init);
-    assert(!ucx->getInitErr());
-    if (ucx->getInitErr()) {
+    return (nixlBackendEngine*) new nixlUcxEngine (&init);
+}
+
+nixlBackendTester *createTester(nixlBackendEngine* engine)
+{
+    nixlBackendTester* ucxt = new nixlBackendTester (engine);
+    assert(!ucxt->getInitErr());
+    if (ucxt->getInitErr()) {
         std::cout << "Failed to initialize worker1" << std::endl;
         exit(1);
     }
-
-    return ucx;
+    return ucxt;
 }
 
 void releaseEngine(nixlBackendEngine *ucx)
 {
-    delete ucx;
+    //protected now, should not call
+//    delete ucx;
 }
 void releaseTester(nixlBackendTester *ucxt)
 {
@@ -501,7 +506,7 @@ void test_inter_agent_transfer(bool p_thread,
 
 int main()
 {
-    bool thread_on[2] = {true, true};
+    bool thread_on[2] = {false, true};
     nixlBackendEngine *ucx[2][2] = { 0 };
     nixlBackendTester *ucxt[2][2] = { 0 };
 
@@ -511,7 +516,7 @@ int main()
             std::stringstream s;
             s << "Agent" << (j + 1);
             ucx[i][j] = createEngine(s.str(), thread_on[i]);
-            ucxt[i][j] = new nixlBackendTester(ucx[i][j]);
+            ucxt[i][j] = createTester(ucx[i][j]);
         }
     }
 
@@ -555,7 +560,6 @@ int main()
     // Allocate UCX engines
     for(int i = 0; i < 2; i++) {
         for(int j = 0; j < 2; j++) {
-            releaseEngine(ucx[i][j]);
             releaseTester(ucxt[i][j]);
         }
     }
