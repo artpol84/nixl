@@ -76,6 +76,37 @@ std::string memType2Str(nixl_mem_t mem_type)
 }
 
 
+#ifdef USE_VRAM
+
+static int cudaQueryAddr(void *address, bool &is_dev,
+                         CUdevice &dev, CUcontext &ctx)
+{
+    CUmemorytype mem_type = CU_MEMORYTYPE_HOST;
+    uint32_t is_managed = 0;
+#define NUM_ATTRS 4
+    CUpointer_attribute attr_type[NUM_ATTRS];
+    void *attr_data[NUM_ATTRS];
+    CUresult result;
+
+    attr_type[0] = CU_POINTER_ATTRIBUTE_MEMORY_TYPE;
+    attr_data[0] = &mem_type;
+    attr_type[1] = CU_POINTER_ATTRIBUTE_IS_MANAGED;
+    attr_data[1] = &is_managed;
+    attr_type[2] = CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL;
+    attr_data[2] = &dev;
+    attr_type[3] = CU_POINTER_ATTRIBUTE_CONTEXT;
+    attr_data[3] = &ctx;
+
+    result = cuPointerGetAttributes(4, attr_type, attr_data, (CUdeviceptr)address);
+
+    is_dev = (mem_type == CU_MEMORYTYPE_DEVICE);
+
+    return (CUDA_SUCCESS != result);
+}
+
+#endif
+
+
 void allocateBuffer(nixl_mem_t mem_type, int dev_id, size_t len, void* &addr)
 {
     switch(mem_type) {
@@ -83,10 +114,18 @@ void allocateBuffer(nixl_mem_t mem_type, int dev_id, size_t len, void* &addr)
         addr = calloc(1, len);
         break;
 #ifdef USE_VRAM
-    case VRAM_SEG:
+    case VRAM_SEG:{
+        bool is_dev;
+        CUdevice dev;
+        CUcontext ctx;
+
         checkCudaError(cudaSetDevice(dev_id), "Failed to set device");
         checkCudaError(cudaMalloc(&addr, len), "Failed to allocate CUDA buffer 0");
+        cudaQueryAddr(addr, is_dev, dev, ctx);
+        std::cout << "CUDA addr: " << std::hex << addr << " dev=" << std::dec << dev 
+            << " ctx=" << std::hex << ctx << std::dec << std::endl;
         break;
+    }
 #endif
     default:
         std::cout << "Unsupported memory type!" << std::endl;
@@ -550,10 +589,10 @@ int main()
                                 ucxt[i][1], VRAM_SEG, dev_ids[1]);
         test_inter_agent_transfer(thread_on[i], 
                                 ucxt[i][0], DRAM_SEG, 0,
-                                ucxt[i][1], VRAM_SEG, 0);
+                                ucxt[i][1], VRAM_SEG, dev_ids[1]);
         test_inter_agent_transfer(thread_on[i],
                                 ucxt[i][0], VRAM_SEG, 0,
-                                ucxt[i][1], DRAM_SEG, 0);
+                                ucxt[i][1], DRAM_SEG, dev_ids[1]);
 #endif
     }
 
