@@ -154,7 +154,9 @@ int nixlAdapter::loadNixlMD(pybind11::bytes remote_md_bytes)
 
 int nixlAdapter::remoteProgress()
 {
-    return ucx->progress();
+    //now protected, and should be unnecessary with progress thread
+    //return ucx->progress();
+    return 0;
 }
 
 PYBIND11_MODULE(nixlAdapter, n) {

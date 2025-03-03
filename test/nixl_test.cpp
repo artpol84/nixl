@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
         std::cout << " Waiting to receive Data from Initiator\n";
 
         while (!rc) {
-            ucx->progress();
+            //Only works with progress thread now, as backend is protected
             /** Sanity Check */
             for (int i = 0; i < NUM_TRANSFERS; i++) {
                 rc = allBytesAre(addr[i], SIZE, 0xbb);

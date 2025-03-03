@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cassert>
 #include <thread>
+#include <chrono>
 
 #include "ucx_backend.h"
 
@@ -13,6 +14,7 @@ void test_thread(int id)
 {
     nixlUcxInitParams init_params;
     nixlBackendEngine* ucxw;
+    nixlBackendTester* ucx_tester;
     nixl_status_t ret;
     
     std::string my_name("Agent1");
@@ -24,46 +26,47 @@ void test_thread(int id)
     }
 
     init_params.localAgent = my_name;
+    init_params.enableProgTh = true;
 
     std::cout << my_name << " Started\n";
 
     ucxw = (nixlBackendEngine*) new nixlUcxEngine (&init_params);
+    ucx_tester = new nixlBackendTester(ucxw);
 
-    conn_info[id] = ucxw->getConnInfo();
+    conn_info[id] = ucx_tester->getConnInfo();
     
-    ucxw->progress();
-
     ready[id] = true;
     //wait for other
     while(!ready[!id]);
 
-    ret = ucxw->loadRemoteConnInfo(other, conn_info[!id]);
+    ret = ucx_tester->loadRemoteConnInfo(other, conn_info[!id]);
     assert(ret == NIXL_SUCCESS);
 
     //one-sided connect
     if(!id) 
-        ret = ucxw->connect(other);
+        ret = ucx_tester->connect(other);
 
     assert(ret == NIXL_SUCCESS);
 
     done[id] = true;
-    while(!done[!id])
-        if(id) ucxw->progress();
+    while(!done[!id]);
 
     std::cout << "Thread passed with id " << id << "\n";
 
     //test one-sided disconnect
     if(!id)
-        ucxw->disconnect(other);
+        ucx_tester->disconnect(other);
 
     disconnect[id] = true;
     //wait for other
     while(!disconnect[!id]);
 
-    //let disconnect process
-    ucxw->progress();
-
     std::cout << "Thread disconnected with id " << id << "\n";
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    delete ucx_tester;
+    delete ucxw;
 }
 
 int main()

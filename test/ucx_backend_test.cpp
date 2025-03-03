@@ -48,7 +48,10 @@ void releaseEngine(nixlBackendEngine *ucx)
 {
     delete ucx;
 }
-
+void releaseTester(nixlBackendTester *ucxt)
+{
+    delete ucxt;
+}
 
 std::string memType2Str(nixl_mem_t mem_type)
 {
@@ -159,7 +162,7 @@ void *releaseValidationPtr(nixl_mem_t mem_type, void *addr)
     return NULL;
 }
 
-void allocateAndRegister(nixlBackendEngine *ucx, int dev_id, nixl_mem_t mem_type, 
+void allocateAndRegister(nixlBackendTester *ucx, int dev_id, nixl_mem_t mem_type, 
                          void* &addr, size_t len, nixlBackendMD* &md)
 {
     nixlStringDesc desc;
@@ -175,14 +178,14 @@ void allocateAndRegister(nixlBackendEngine *ucx, int dev_id, nixl_mem_t mem_type
     assert(ret == NIXL_SUCCESS);
 }
 
-void deallocateAndDeregister(nixlBackendEngine *ucx, int dev_id, nixl_mem_t mem_type,
+void deallocateAndDeregister(nixlBackendTester *ucx, int dev_id, nixl_mem_t mem_type,
                              void* &addr, nixlBackendMD* &md)
 {
     ucx->deregisterMem(md);
     releaseBuffer(mem_type, dev_id, addr);
 }
 
-void loadRemote(nixlBackendEngine *ucx, int dev_id, std::string agent, 
+void loadRemote(nixlBackendTester *ucx, int dev_id, std::string agent, 
                 nixl_mem_t mem_type, void *addr, size_t len,
                 nixlBackendMD* &lmd, nixlBackendMD* &rmd)
 {
@@ -233,7 +236,7 @@ static string op2string(nixl_xfer_op_t op)
 
 
 
-void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
+void performTransfer(nixlBackendTester *ucx1, nixlBackendTester *ucx2,
                      nixl_meta_dlist_t &req_src_descs,
                      nixl_meta_dlist_t &req_dst_descs,
                      void* addr1, void* addr2, size_t len, 
@@ -315,7 +318,7 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
     cout << "OK" << endl;
 }
 
-void test_intra_agent_transfer(bool p_thread, nixlBackendEngine *ucx, nixl_mem_t mem_type)
+void test_intra_agent_transfer(bool p_thread, nixlBackendTester *ucx, nixl_mem_t mem_type)
 {
 
     std::cout << std::endl << std::endl;
@@ -384,8 +387,8 @@ void test_intra_agent_transfer(bool p_thread, nixlBackendEngine *ucx, nixl_mem_t
 }
 
 void test_inter_agent_transfer(bool p_thread, 
-                                nixlBackendEngine *ucx1, nixl_mem_t src_mem_type, int src_dev_id, 
-                                nixlBackendEngine *ucx2, nixl_mem_t dst_mem_type, int dst_dev_id)
+                                nixlBackendTester *ucx1, nixl_mem_t src_mem_type, int src_dev_id, 
+                                nixlBackendTester *ucx2, nixl_mem_t dst_mem_type, int dst_dev_id)
 {
     int ret;
     int iter = 10;
@@ -498,8 +501,9 @@ void test_inter_agent_transfer(bool p_thread,
 
 int main()
 {
-    bool thread_on[2] = {false, true};
+    bool thread_on[2] = {true, true};
     nixlBackendEngine *ucx[2][2] = { 0 };
+    nixlBackendTester *ucxt[2][2] = { 0 };
 
     // Allocate UCX engines
     for(int i = 0; i < 2; i++) {
@@ -507,6 +511,7 @@ int main()
             std::stringstream s;
             s << "Agent" << (j + 1);
             ucx[i][j] = createEngine(s.str(), thread_on[i]);
+            ucxt[i][j] = new nixlBackendTester(ucx[i][j]);
         }
     }
 
@@ -524,26 +529,26 @@ int main()
 
     for(int i = 0; i < 2; i++) {
         //Test local memory to local memory transfer
-        test_intra_agent_transfer(thread_on[i], ucx[i][0], DRAM_SEG);
+        test_intra_agent_transfer(thread_on[i], ucxt[i][0], DRAM_SEG);
 #ifdef USE_VRAM
-        test_intra_agent_transfer(thread_on[i], ucx[i][0], VRAM_SEG);
+        test_intra_agent_transfer(thread_on[i], ucxt[i][0], VRAM_SEG);
 #endif
     }
 
     for(int i = 0; i < 2; i++) {
         test_inter_agent_transfer(thread_on[i], 
-                                ucx[i][0], DRAM_SEG, 0,
-                                ucx[i][1], DRAM_SEG, 0);
+                                ucxt[i][0], DRAM_SEG, 0,
+                                ucxt[i][1], DRAM_SEG, 0);
 #ifdef USE_VRAM
         test_inter_agent_transfer(thread_on[i], 
-                                ucx[i][0], VRAM_SEG, dev_ids[0],
-                                ucx[i][1], VRAM_SEG, dev_ids[1]);
+                                ucxt[i][0], VRAM_SEG, dev_ids[0],
+                                ucxt[i][1], VRAM_SEG, dev_ids[1]);
         test_inter_agent_transfer(thread_on[i], 
-                                ucx[i][0], DRAM_SEG, 0,
-                                ucx[i][1], VRAM_SEG, 0);
+                                ucxt[i][0], DRAM_SEG, 0,
+                                ucxt[i][1], VRAM_SEG, 0);
         test_inter_agent_transfer(thread_on[i],
-                                ucx[i][0], VRAM_SEG, 0,
-                                ucx[i][1], DRAM_SEG, 0);
+                                ucxt[i][0], VRAM_SEG, 0,
+                                ucxt[i][1], DRAM_SEG, 0);
 #endif
     }
 
@@ -551,6 +556,7 @@ int main()
     for(int i = 0; i < 2; i++) {
         for(int j = 0; j < 2; j++) {
             releaseEngine(ucx[i][j]);
+            releaseTester(ucxt[i][j]);
         }
     }
 }

@@ -163,6 +163,7 @@ class nixlUcxEngine : nixlBackendEngine {
         bool supportsNotif () const { return true; }
         bool supportsProgTh () const { return pthrOn; }
 
+    protected:
         /* Object management */
         std::string getPublicData (const nixlBackendMD* meta) const;
         std::string getConnInfo() const;
