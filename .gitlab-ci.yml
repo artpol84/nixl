@@ -117,5 +117,5 @@ build-job:       # This job runs in the build stage, which runs first.
     - echo "./build/test/p2p_test disabled"
     - echo "./build/src/utils/ucx/ucx_worker_test disabled"
     - echo "${TXT_CLEAR}"
-  timeout: 0h 15m
+  timeout: 0h 30m
   tags: *TAGS_BUILDER
