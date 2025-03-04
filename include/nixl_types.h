@@ -26,4 +26,11 @@ typedef enum {
     NIXL_ERR_BAD = -6
 } nixl_status_t;
 
+class nixlXferReqH;
+class nixlXferSideH;
+class nixlBackendEngine;
+class nixlBackendInitParams;
+class nixlAgentData;
+class nixlSerDes;
+
 #endif

@@ -2,6 +2,7 @@
 #include <string>
 #include <cassert>
 #include "nixl.h"
+#include "utils/serdes/serdes.h"
 
 #include <sys/time.h>
 

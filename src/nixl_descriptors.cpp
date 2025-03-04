@@ -5,6 +5,7 @@
 #include "nixl.h"
 #include "nixl_descriptors.h"
 #include "backend/backend_engine.h"
+#include "utils/serdes/serdes.h"
 
 /*** Class nixlBasicDesc implementation ***/
 

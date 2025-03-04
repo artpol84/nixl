@@ -5,14 +5,11 @@
 #include "nixl_types.h"
 #include "nixl_descriptors.h"
 #include "nixl_params.h"
-#include "backend/backend_engine.h"
-#include "internal/transfer_request.h"
-#include "internal/agent_data.h"
 
 // Main transfer object
 class nixlAgent {
     private:
-        nixlAgentData data;
+        nixlAgentData* data;
 
     public:
 

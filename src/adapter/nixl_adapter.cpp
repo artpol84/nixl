@@ -1,4 +1,5 @@
 #include "nixl_adapter.h"
+#include "utils/serdes/serdes.h"
 #include <cassert>
 
 nixlAdapter::nixlAdapter() {}

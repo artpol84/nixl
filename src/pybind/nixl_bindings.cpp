@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "nixl.h"
+#include "utils/serdes/serdes.h"
 
 namespace py = pybind11;
 

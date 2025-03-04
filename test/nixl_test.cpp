@@ -6,6 +6,7 @@
 #include <nixl.h>
 #include <cassert>
 #include "internal/metadata_stream.h"
+#include "utils/serdes/serdes.h"
 #define NUM_TRANSFERS 1
 #define SIZE 1024
 
