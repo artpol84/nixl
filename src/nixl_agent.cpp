@@ -4,6 +4,7 @@
 #include "backend/backend_engine.h"
 #include "internal/transfer_request.h"
 #include "internal/agent_data.h"
+#include "gds_backend.h"
 
 nixlAgentData::nixlAgentData(const std::string &name,
                              const nixlAgentConfig &cfg) :
@@ -45,6 +46,10 @@ nixlBackendEngine* nixlAgent::createBackend(nixlBackendInitParams* params) {
             backend = (nixlBackendEngine*) new nixlUcxEngine(
                                                (nixlUcxInitParams*) params);
             break;
+	case GPUDIRECTIO:
+	    backend = (nixlBackendEngine *) new nixlGdsEngine(
+						(nixlGdsInitParams *) params);
+	    break;
 
         default: {} // backend stays nullptr
     }
