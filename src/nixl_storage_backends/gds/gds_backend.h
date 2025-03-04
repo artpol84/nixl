@@ -29,8 +29,6 @@ public:
   ~nixlGdsMetadata() { }
 };
 
-
-
 class nixlGdsIOBatch :  public nixlBackendReqH {
    private:
 	unsigned int	    max_reqs;
@@ -66,17 +64,12 @@ public:
    // File operations - target is the distributed FS
    // So no requirements to connect to target.
    // Just treat it locally.
-   bool		supportsNotif () const { return false; }
-   bool         supportsRemote  () const { return false; }
-   bool         supportsLocal   () const { return true; }
-   bool         supportsProgTh  () const { return false; }
+   bool	 supportsNotif () const { return false; }
+   bool	 supportsRemote  () const { return false; }
+   bool	 supportsLocal   () const { return true; }
+   bool	 supportsProgTh  () const { return false; }
 
-   // No Public metadata for this backend - let us return empty string here.
-   std::string   getPublicData (const nixlBackendMD* meta) const
-   {
-	   return std::string();
-   }
-
+protected:
    nixl_status_t connect(const std::string &remote_agent)
    {
 	   return NIXL_SUCCESS;
