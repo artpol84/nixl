@@ -54,3 +54,15 @@ nixl_app  = executable('nixl_test',
            include_directories: [inc_dir, '../src/utils/serdes'],
            link_with: [serdes_lib],
            install: true)
+
+nixl_ucx_app  = executable('nixl_test',
+                'nixl_test.cpp',
+                 dependencies: [nixl_dep],
+                 include_directories: [inc_dir, '../src/utils/serdes'],
+                 link_with: [serdes_lib],
+                 install: true)
+
+nixl_gds_app = executable('nixl_gds_test', 'gds_backend_test.cpp',
+                          dependencies: [nixl_dep, cuda_dep],
+                          include_directories: [inc_dir, '../src/utils/serdes'],
+                          install: true)
