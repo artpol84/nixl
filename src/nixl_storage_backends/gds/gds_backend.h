@@ -9,9 +9,9 @@
 #include "gds_utils.h"
 
 class nixlGdsConnection : public nixlBackendConnMD {
-   private:
-       std::string	mount_path;
-       volatile bool	compatible;
+private:
+   std::string	 mount_path;
+   volatile bool compatible;
 
    public:
        bool check_gds_compatibility();
@@ -94,6 +94,9 @@ public:
 	   return NIXL_SUCCESS;
    }
 
+   nixl_status_t unloadMD (nixlBackendMD* input) {
+	   return NIXL_SUCCESS;
+   }
    nixl_status_t registerMem(const nixlStringDesc &mem,
                              const nixl_mem_t &nixl_mem,
 	                     nixlBackendMD* &out);

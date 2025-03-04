@@ -42,6 +42,7 @@ int gdsUtil::openGdsDriver()
 {
 	CUfileError_t   err;
 
+	std::cout << "Opening cuFile Driver\n";
 	err = cuFileDriverOpen();
         if (err.err != CU_FILE_SUCCESS) {
             std::cerr <<" Error initializing GPU Direct Storage driver\n";

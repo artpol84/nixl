@@ -93,6 +93,7 @@ nixlGdsEngine::nixlGdsEngine (const nixlGdsInitParams* init_params)
 {
     gds_utils = new gdsUtil();
 
+    this->initErr = false;
     if (gds_utils->openGdsDriver() == -1)
         this->initErr = true;
 }
@@ -136,8 +137,10 @@ void nixlGdsEngine :: deregisterMem (nixlBackendMD* meta)
 {
     nixlGdsMetadata *md = (nixlGdsMetadata *)meta;
     if (md->type == FILE_SEG) {
-        gds_utils->deregisterFileHandle(md->handle);
+	std::cout << "Deregistering File Handle\n";
+	gds_utils->deregisterFileHandle(md->handle);
     } else {
+	std::cout << "Deregistering Buf Handle\n";
         gds_utils->deregisterBufHandle(md->buf.base);
     }
 	return;
@@ -158,7 +161,7 @@ nixl_xfer_state_t nixlGdsEngine :: postXfer (const nixl_meta_dlist_t &local,
     size_t file_cnt = remote.descCount();
 
     if ((buf_cnt != file_cnt) ||
-        ((operation != NIXL_READ)||(operation != NIXL_WRITE)))  {
+        ((operation != NIXL_READ) && (operation != NIXL_WRITE)))  {
             std::cerr <<"Error in count or operation selection\n";
             return NIXL_XFER_ERR;
     }
@@ -208,6 +211,9 @@ nixl_xfer_state_t nixlGdsEngine ::  checkXfer(nixlBackendReqH* handle)
 
 void nixlGdsEngine :: releaseReqH(nixlBackendReqH* handle)
 {
+
+	nixlGdsIOBatch *batch_ios = (nixlGdsIOBatch *)handle;
+	delete batch_ios;
 
 	return;
 }

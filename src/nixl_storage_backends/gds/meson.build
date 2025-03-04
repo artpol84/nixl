@@ -13,3 +13,4 @@ gds_backend_lib = library('gds_backend',
                   dependencies: [nixl_dep, cuda_dep, cufile_dep],
                   include_directories: inc_dir,
                   install: true)
+gds_backend_interface = declare_dependency(link_with: gds_backend_lib)
