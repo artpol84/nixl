@@ -8,6 +8,7 @@ if gds_path != ''
 endif
 
 gds_backend_lib = library('gds_backend',
+                  'gds_utils.cpp', 'gds_utils.h',
                   'gds_backend.cpp', 'gds_backend.h',
                   dependencies: [nixl_dep, cuda_dep, cufile_dep],
                   include_directories: inc_dir,

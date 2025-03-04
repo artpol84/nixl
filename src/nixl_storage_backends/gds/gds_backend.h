@@ -2,24 +2,11 @@
 #define __GDS_BACKEND_H
 
 #include <nixl.h>
+#include <nixl_types.h>
 #include <cuda_runtime.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "cufile.h"
-
-class nixlGdsFile {
-private:
-   int            fd;
-   // What if file is not preallocated
-   // -1 means inf size file?
-   size_t         size;
-   CUfileHandle_t handle;
-};
-
-class nixlGdsHandle {
-private:
-   CUfileHandle_t	handle;
-};
+#include "gds_utils.h"
 
 class nixlGdsConnection : public nixlBackendConnMD {
    private:
@@ -32,34 +19,45 @@ class nixlGdsConnection : public nixlBackendConnMD {
 };
 
 
-class nixlGdsPrivateMetadata : public nixlBackendMD {
+class nixlGdsMetadata : public nixlBackendMD {
+public:
+  gdsFileHandle  handle;
+  gdsMemBuf      buf;
+  nixl_mem_t     type;
+
+  nixlGdsMetadata() : nixlBackendMD(true) { }
+  ~nixlGdsMetadata() { }
+};
+
+
+
+class nixlGdsIOBatch :  public nixlBackendReqH {
    private:
-       nixlGdsFile    fileH;
-       std::string    handleStr;
+	unsigned int	    max_reqs;
 
-   // serialized handle for sharing
-   public:
-       nixlGdsPrivateMetadata() : nixlBackendMD(true) {
-       }
-       ~nixlGdsPrivateMetadata() {
-       }
-       std::string get() const
-       {
-	       return handleStr;
-       }
-};
-
-class nixlGdsPublicMetadata : public nixlBackendMD {
+	CUfileBatchHandle_t batch_handle;
+	CUfileIOEvents_t    *io_batch_events;
+	CUfileIOParams_t    *io_batch_params;
+	CUfileError_t       init_err;
+	nixl_xfer_state_t   current_status;
+	unsigned int	    entries_completed;
+	unsigned int        batch_size;
 
    public:
-       nixlGdsPublicMetadata() : nixlBackendMD(false) {}
-       ~nixlGdsPublicMetadata() {
-       }
+	nixlGdsIOBatch(int size);
+	~nixlGdsIOBatch();
+
+	int	            addToBatch(CUfileHandle_t fh,  void *buffer,
+				      size_t size, size_t file_offset,
+				      size_t ptr_offset, CUfileOpcode_t type);
+	int                 submitBatch(int flags);
+	nixl_xfer_state_t   checkStatus();
 };
+
 
 class nixlGdsEngine : nixlBackendEngine {
-   nixlGdsFile	fh;
-
+   gdsUtil		        *gds_utils;
+   std::map<int, gdsFileHandle> gds_file_map;
 
 public:
    nixlGdsEngine(const nixlGdsInitParams* init_params);
@@ -68,10 +66,10 @@ public:
    // File operations - target is the distributed FS
    // So no requirements to connect to target.
    // Just treat it locally.
-   bool		 supportsNotif () const { return false; }
-   bool          supportsRemote  () const { return false; }
-   bool          supportsLocal   () const { return true; }
-   bool          supportsProgTh  () const { return false; }
+   bool		supportsNotif () const { return false; }
+   bool         supportsRemote  () const { return false; }
+   bool         supportsLocal   () const { return true; }
+   bool         supportsProgTh  () const { return false; }
 
    // No Public metadata for this backend - let us return empty string here.
    std::string   getPublicData (const nixlBackendMD* meta) const
@@ -89,14 +87,17 @@ public:
 	   return NIXL_SUCCESS;
    }
 
+   nixl_status_t loadLocalMD (nixlBackendMD* input,
+			      nixlBackendMD* &output) {
+	   output = input;
+
+	   return NIXL_SUCCESS;
+   }
+
    nixl_status_t registerMem(const nixlStringDesc &mem,
                              const nixl_mem_t &nixl_mem,
 	                     nixlBackendMD* &out);
    void deregisterMem (nixlBackendMD *meta);
-   nixl_status_t loadRemoteMD (const nixlStringDesc &input,
-			       const nixl_mem_t &nixl_mem,
-			       const std::string &remote_agent,
-			       nixlBackendMD* &output);
 
    nixl_xfer_state_t postXfer (const nixl_meta_dlist_t &local,
 			       const nixl_meta_dlist_t &remote,
