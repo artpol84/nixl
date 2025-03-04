@@ -60,7 +60,8 @@ if __name__ == "__main__":
         while not nixl_agent.check_remote_xfer_done(peer_name, "UUID"):
             continue
     else:
-        # If send_notif is used, get_notifs should listen for it
+        # If send_notif is used, get_new_notifs should listen for it,
+        # or directly calling check_remote_xfer_done
         targer_descs = nixl_agent.deserialize_descs(_socket.recv())
         initiator_descs = reg_descs
         xfer_handle = nixl_agent.initialize_xfer(initiator_descs, targer_descs,

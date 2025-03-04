@@ -157,6 +157,7 @@ class nixl_wrapper:
             return "DONE"
 
 
+    # Only removes the specific notification from self.notifs
     def check_remote_xfer_done (self, remote_agent_name, lookup_msg):
         self.notifs = self.agent.getNotifs(self.notifs) # Adds new notifs
         message = None
@@ -180,6 +181,12 @@ class nixl_wrapper:
         self.agent.genNotif(remote_agent_name, notif_msg)
 
 
-    def get_notifs(self):
-        self.agent.getNotifs(self.notifs) # Adds new notifs
+    # Adds new notifs to self.notifs and returns it
+    def update_notifs(self):
+        self.notifs = self.agent.getNotifs(self.notifs)
         return self.notifs
+
+
+    # Returns new notifs, without touching self.notifs
+    def get_new_notifs(self):
+        return self.agent.getNotifs({})
