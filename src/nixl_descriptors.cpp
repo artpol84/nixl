@@ -304,7 +304,7 @@ bool nixlDescList<T>::verifySorted() {
     }
 
     for (int i=0; i<size-1; ++i) {
-        if (descAddrCompare(descs[i+1], descs[i], unifiedAddr)){
+        if (descAddrCompare(descs[i+1], descs[i], unifiedAddr)) {
             sorted = false;
             return false;
         }

@@ -99,14 +99,11 @@ nixl_status_t nixlLocalSection::addDescList (const nixl_reg_dlist_t &mem_elms,
         if ((ret1!=NIXL_SUCCESS) || (ret2!=NIXL_SUCCESS)) {
             for (int j=0; j<i; ++j) {
                 index = target->getIndex(mem_elms[j]);
-                backend->deregisterMem((*target)[index].metadataP);
+                backend->deregisterMem
+                    ((*(const nixl_meta_dlist_t*)target)[index].metadataP);
                 target->remDesc(index);
-
-                if (backend->supportsLocal()) {
-                    index = remote_self.getIndex(mem_elms[j]);
-                    remote_self.remDesc(index);
-                }
             }
+            remote_self.clear();
             if (ret1!=NIXL_SUCCESS)
                 return ret1;
             else
@@ -148,7 +145,8 @@ nixl_status_t nixlLocalSection::remDescList (const nixl_meta_dlist_t &mem_elms,
         if (index<0)
             return NIXL_ERR_BAD;
 
-        backend->deregisterMem ((*target)[index].metadataP);
+        backend->deregisterMem
+            ((*(const nixl_meta_dlist_t*)target)[index].metadataP);
         target->remDesc(index);
     }
 

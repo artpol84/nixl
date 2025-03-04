@@ -264,7 +264,7 @@ nixlBackendEngine* nixlAgent::getXferBackend(nixlXferReqH* req) {
 
 nixl_status_t nixlAgent::prepXferSide (const nixl_xfer_dlist_t &descs,
                                        const std::string &remote_agent,
-                                       nixlBackendEngine* backend,
+                                       const nixlBackendEngine* backend,
                                        nixlXferSideH* &side_handle) {
     nixl_status_t ret;
 
@@ -280,7 +280,9 @@ nixl_status_t nixlAgent::prepXferSide (const nixl_xfer_dlist_t &descs,
 
     nixlXferSideH *handle = new nixlXferSideH;
 
-    handle->engine = backend;
+    // This function is const regarding the backend, when transfer handle is
+    // generated, there the backend can change upong post.
+    handle->engine = const_cast<nixlBackendEngine*>(backend);
     handle->descs = new nixl_meta_dlist_t (descs.getType(),
                                            descs.isUnifiedAddr(),
                                            descs.isSorted());
@@ -308,9 +310,9 @@ nixl_status_t nixlAgent::prepXferSide (const nixl_xfer_dlist_t &descs,
     return NIXL_SUCCESS;
 }
 
-nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
+nixl_status_t nixlAgent::makeXferReq (const nixlXferSideH* local_side,
                                       const std::vector<int> &local_indices,
-                                      nixlXferSideH* remote_side,
+                                      const nixlXferSideH* remote_side,
                                       const std::vector<int> &remote_indices,
                                       const std::string &notif_msg,
                                       const nixl_xfer_op_t &operation,
@@ -355,7 +357,7 @@ nixl_status_t nixlAgent::makeXferReq (nixlXferSideH* local_side,
     //     return NIXL_ERR_BAD;
     // }
 
-    // Populate is already done, no benefit in having sorted descriptors
+    // Populate has been already done, no benefit in having sorted descriptors
     // which will be overwritten by [] assignement operator.
     nixlXferReqH *handle = new nixlXferReqH;
     handle->initiatorDescs = new nixl_meta_dlist_t (

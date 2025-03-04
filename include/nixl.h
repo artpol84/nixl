@@ -65,13 +65,13 @@ class nixlAgent {
         // Empty string for remote_agent means it's local side.
         nixl_status_t prepXferSide (const nixl_xfer_dlist_t &descs,
                                     const std::string &remote_agent,
-                                    nixlBackendEngine* backend,
+                                    const nixlBackendEngine* backend,
                                     nixlXferSideH* &side_handle);
 
         // Makes a transfer request from already prepared side transfer handles.
-        nixl_status_t makeXferReq (nixlXferSideH* local_side,
+        nixl_status_t makeXferReq (const nixlXferSideH* local_side,
                                    const std::vector<int> &local_indices,
-                                   nixlXferSideH* remote_side,
+                                   const nixlXferSideH* remote_side,
                                    const std::vector<int> &remote_indices,
                                    const std::string &notif_msg,
                                    const nixl_xfer_op_t &operation,
