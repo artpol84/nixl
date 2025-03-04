@@ -114,6 +114,7 @@ nixl_status_t nixlGdsEngine :: registerMem (const nixlStringDesc &mem,
         md->handle.fd = mem.devId;
         md->handle.size = mem.len;
         md->handle.metadata = mem.metaInfo;
+	md->type = nixl_mem;
         gds_file_map[mem.devId] = md->handle;
     } else {
         status = gds_utils->registerBufHandle((void *)mem.addr, mem.len, 0);
@@ -137,10 +138,8 @@ void nixlGdsEngine :: deregisterMem (nixlBackendMD* meta)
 {
     nixlGdsMetadata *md = (nixlGdsMetadata *)meta;
     if (md->type == FILE_SEG) {
-	std::cout << "Deregistering File Handle\n";
 	gds_utils->deregisterFileHandle(md->handle);
     } else {
-	std::cout << "Deregistering Buf Handle\n";
         gds_utils->deregisterBufHandle(md->buf.base);
     }
 	return;
@@ -153,38 +152,65 @@ nixl_xfer_state_t nixlGdsEngine :: postXfer (const nixl_meta_dlist_t &local,
                             const std::string &notif_msg,
                             nixlBackendReqH* &handle)
 {
-    gdsFileHandle fh;
-    nixl_xfer_state_t ret = NIXL_XFER_INIT;
-    int rc = 0;
-
-    size_t buf_cnt  = local.descCount();
-    size_t file_cnt = remote.descCount();
+    gdsFileHandle	fh;
+    void		*addr;
+    size_t		size;
+    size_t		offset;
+    nixl_xfer_state_t	ret = NIXL_XFER_INIT;
+    int			rc = 0;
+    size_t		buf_cnt  = local.descCount();
+    size_t		file_cnt = remote.descCount();
 
     if ((buf_cnt != file_cnt) ||
         ((operation != NIXL_READ) && (operation != NIXL_WRITE)))  {
             std::cerr <<"Error in count or operation selection\n";
             return NIXL_XFER_ERR;
     }
+
+    if ((remote.getType() != FILE_SEG) && (local.getType() != FILE_SEG)) {
+	    std::cerr <<"Only support I/O between VRAM to file type\n";
+	    return NIXL_XFER_ERR;
+    }
+
+    if ((remote.getType() == DRAM_SEG) || (local.getType() == DRAM_SEG)) {
+	    std::cerr <<"Backend does not support DRAM to/from files\n";
+	    return NIXL_XFER_ERR;
+    }
+
     nixlGdsIOBatch *batch_ios = new nixlGdsIOBatch(buf_cnt);
 
-
     for (size_t i = 0; i < buf_cnt; i++) {
-        void *laddr = (void *) local[i].addr;
-        size_t size = local[i].len;
-        size_t offset = (size_t) remote[i].addr;
+	if (local.getType() == VRAM_SEG) {
+	    addr = (void *) local[i].addr;
+	    size = local[i].len;
+	    offset = (size_t) remote[i].addr;
 
-        CUfileOpcode_t op = (operation == NIXL_READ) ?
-                              CUFILE_READ : CUFILE_WRITE;
+	    auto it = gds_file_map.find(remote[i].devId);
+	    if (it != gds_file_map.end()) {
+		    fh = it->second;
+	    } else {
+		    ret = NIXL_XFER_ERR;
+	            goto exit;
+	    }
+	} else {
+	    addr		= (void *) remote[i].addr;
+	    size		= remote[i].len;
+	    offset		= (size_t) local[i].addr;
 
-        auto it = gds_file_map.find(remote[i].devId);
-        if (it != gds_file_map.end()) {
-            fh = it->second;
-        } else {
-            ret = NIXL_XFER_ERR;
-            goto exit;
-        }
+	    auto it = gds_file_map.find(local[i].devId);
+	    if (it != gds_file_map.end()) {
+		    fh = it->second;
+	    } else {
+		    ret = NIXL_XFER_ERR;
+	            goto exit;
+	    }
+	}
 
-        rc = batch_ios->addToBatch(fh.cu_fhandle, laddr, size, offset, 0, op);
+	CUfileOpcode_t op = (operation == NIXL_READ) ?
+		CUFILE_READ : CUFILE_WRITE;
+
+
+        rc = batch_ios->addToBatch(fh.cu_fhandle, addr, size, offset, 0, op);
         if (rc != 0) {
             ret = NIXL_XFER_ERR;
             goto exit;
