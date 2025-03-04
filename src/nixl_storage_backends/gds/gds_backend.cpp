@@ -46,7 +46,7 @@ int nixlGdsIOBatch::addToBatch(CUfileHandle_t fh, void *buffer, size_t size,
 	params->u.batch.file_offset	= file_offset;
 	params->u.batch.devPtr_offset	= ptr_offset;
 	params->u.batch.size		= size;
-	params->opcode			= CUFILE_READ;
+	params->opcode			= type;
 	params->cookie			= params;
 	batch_size++;
 
@@ -77,7 +77,7 @@ nixl_xfer_state_t nixlGdsIOBatch::checkStatus()
 		std::cerr << "Error in IO Batch Get Status" << std::endl;
 		current_status = NIXL_XFER_ERR;
 	}
-	entries_completed += nr;
+
 	if (nr < (unsigned int)max_reqs)
 		current_status = NIXL_XFER_PROC;
 	else if (nr > max_reqs)
@@ -85,6 +85,7 @@ nixl_xfer_state_t nixlGdsIOBatch::checkStatus()
 	else
 		current_status = NIXL_XFER_DONE;
 
+	entries_completed += nr;
 	return current_status;
 }
 
