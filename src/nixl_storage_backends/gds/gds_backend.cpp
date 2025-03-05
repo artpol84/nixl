@@ -121,8 +121,7 @@ nixl_status_t nixlGdsEngine::registerMem (const nixlStringDesc &mem,
         md->type = nixl_mem;
         gds_file_map[mem.devId] = md->handle;
 
-    } else {
-
+    } else if (nixl_mem == VRAM_SEG) {
 	status = gds_utils->registerBufHandle((void *)mem.addr, mem.len, 0);
         if (NIXL_SUCCESS != status) {
 	     delete md;
@@ -131,10 +130,12 @@ nixl_status_t nixlGdsEngine::registerMem (const nixlStringDesc &mem,
         md->buf.base = (void *)mem.addr;
         md->buf.size = mem.len;
         md->type = nixl_mem;
+    } else {
+        // Unsupported in the backend.
+	return NIXL_ERR_BACKEND;
     }
     out = (nixlBackendMD*) md;
     // set value for gds handle here.
-
     return status;
 }
 
@@ -150,11 +151,11 @@ void nixlGdsEngine::deregisterMem (nixlBackendMD* meta)
 }
 
 nixl_xfer_state_t nixlGdsEngine::postXfer (const nixl_meta_dlist_t &local,
-        const nixl_meta_dlist_t &remote,
-        const nixl_xfer_op_t &operation,
-        const std::string &remote_agent,
-        const std::string &notif_msg,
-        nixlBackendReqH* &handle)
+					   const nixl_meta_dlist_t &remote,
+					   const nixl_xfer_op_t &operation,
+					   const std::string &remote_agent,
+					   const std::string &notif_msg,
+					   nixlBackendReqH* &handle)
 {
     gdsFileHandle	fh;
     void		*addr;
