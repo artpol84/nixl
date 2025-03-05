@@ -18,6 +18,19 @@
 #include "serdes.h"
 #include <cassert>
 
+#ifdef HAVE_CUDA
+
+#include <cuda_runtime.h>
+#include <cufile.h>
+
+#endif
+
+
+
+/****************************************
+ * CUDA related code
+*****************************************/
+
 class nixlUcxCudaCtx {
 public:
 #ifdef HAVE_CUDA
@@ -33,10 +46,6 @@ public:
 };
 
 #ifdef HAVE_CUDA
-
-/****************************************
- * CUDA related code
-*****************************************/
 
 static int cudaQueryAddr(void *address, bool &is_dev,
                          CUdevice &dev, CUcontext &ctx)
@@ -531,6 +540,7 @@ nixl_status_t nixlUcxEngine::loadRemoteConnInfo (const std::string &remote_agent
 /****************************************
  * Memory management
 *****************************************/
+
 nixl_status_t nixlUcxEngine::registerMem (const nixlStringDesc &mem,
                                           const nixl_mem_t &nixl_mem,
                                           nixlBackendMD* &out)
