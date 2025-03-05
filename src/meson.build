@@ -26,7 +26,7 @@ nixl_infra = library('nixl_build',
             install: true)
 
 subdir('nixl_nw_backends')
-nixl_lib_deps = [ucx_backend_interface, serdes_interface]
+nixl_lib_deps = [ucx_backend_interface, ucx_mo_backend_interface, serdes_interface]
 nixl_inc_dirs = ['../include', '../include/internal', 'nixl_nw_backends',
                  './utils/serdes', './utils/data_structures', './utils/sys/',
                  './utils/ucx/']
