@@ -1,5 +1,6 @@
 nixl_dep = declare_dependency(link_with: nixl_lib, include_directories: inc_dir)
 ucx_backend_dep = declare_dependency(link_with: ucx_backend_lib, include_directories: [inc_dir, '../src/nixl_nw_backends'])
+ucx_mo_backend_dep = declare_dependency(link_with: ucx_mo_backend_lib, include_directories: [inc_dir, '../src/nixl_nw_backends'])
 
 if cuda_dep.found()
     cuda_dependencies = [cuda_dep]
@@ -12,6 +13,13 @@ endif
 ucx_backend_test = executable('ucx_backend_test',
         'ucx_backend_test.cpp',
         dependencies: [nixl_dep, ucx_backend_dep] + cuda_dependencies,
+        include_directories: [inc_dir, '../src/nixl_nw_backends'],
+        cpp_args: cpp_args,
+        install: true)
+
+ucx_mo_backend_test = executable('ucx_mo_backend_test',
+        'ucx_mo_backend_test.cpp',
+        dependencies: [nixl_dep, ucx_mo_backend_dep] + cuda_dependencies,
         include_directories: [inc_dir, '../src/nixl_nw_backends'],
         cpp_args: cpp_args,
         install: true)

@@ -22,7 +22,7 @@ nixl_lib   = library('nixl',
                                     'nixl_storage_backends/gds/',
                                     './utils/serdes', './utils/data_structures',
                                     './utils/sys/', './utils/ucx/'],
-              dependencies: [ucx_backend_interface, gds_backend_interface,
+              dependencies: [ucx_backend_interface, ucx_mo_backend_interface, gds_backend_interface,
                              serdes_interface, cuda_dep],
               install: true)
 

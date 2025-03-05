@@ -53,6 +53,27 @@ class nixlUcxInitParams : public nixlBackendInitParams
 
 };
 
+// Example backend initialization data for UCX.
+// For now UCX autodetects devices, later might add hints.
+class nixlUcxMoInitParams : public nixlUcxInitParams
+{
+    public:
+
+        /*
+         * Restrict the list of used UCX devices
+         * empty vector instructs UCX to use all
+         * supported devices found on the node
+         */
+        uint32_t numHostEngines;
+
+        nixlUcxMoInitParams() {
+            numHostEngines = 1;
+        }
+
+        inline nixl_backend_t getType() const { return UCX_MULTI; }
+
+};
+
 class nixlGdsInitParams : public nixlBackendInitParams
 {
     public:

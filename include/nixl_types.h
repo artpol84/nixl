@@ -6,7 +6,7 @@
 
 typedef std::map<std::string, std::vector<std::string>> nixl_notifs_t;
 
-typedef enum {UCX, GPUDIRECTIO, NVMe, NVMeoF} nixl_backend_t;
+typedef enum {UCX, GPUDIRECTIO, NVMe, NVMeoF, UCX_MULTI} nixl_backend_t;
 
 typedef enum {DRAM_SEG, VRAM_SEG, BLK_SEG, FILE_SEG} nixl_mem_t;
 
