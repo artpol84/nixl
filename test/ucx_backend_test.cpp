@@ -575,7 +575,9 @@ int main()
         //Test local memory to local memory transfer
         test_intra_agent_transfer(thread_on[i], ucxt[i][0], DRAM_SEG);
 #ifdef USE_VRAM
-        test_intra_agent_transfer(thread_on[i], ucxt[i][0], VRAM_SEG);
+        if (n_vram_dev > 0) {
+            test_intra_agent_transfer(thread_on[i], ucxt[i][0], VRAM_SEG);
+        }
 #endif
     }
 
@@ -584,15 +586,17 @@ int main()
                                 ucxt[i][0], DRAM_SEG, 0,
                                 ucxt[i][1], DRAM_SEG, 0);
 #ifdef USE_VRAM
-        test_inter_agent_transfer(thread_on[i], 
-                                ucxt[i][0], VRAM_SEG, dev_ids[0],
-                                ucxt[i][1], VRAM_SEG, dev_ids[1]);
-        test_inter_agent_transfer(thread_on[i], 
-                                ucxt[i][0], DRAM_SEG, 0,
-                                ucxt[i][1], VRAM_SEG, dev_ids[1]);
-        test_inter_agent_transfer(thread_on[i],
-                                ucxt[i][0], VRAM_SEG, 0,
-                                ucxt[i][1], DRAM_SEG, dev_ids[1]);
+        if (n_vram_dev > 1) {
+            test_inter_agent_transfer(thread_on[i],
+                                    ucxt[i][0], VRAM_SEG, dev_ids[0],
+                                    ucxt[i][1], VRAM_SEG, dev_ids[1]);
+            test_inter_agent_transfer(thread_on[i],
+                                    ucxt[i][0], DRAM_SEG, 0,
+                                    ucxt[i][1], VRAM_SEG, dev_ids[1]);
+            test_inter_agent_transfer(thread_on[i],
+                                    ucxt[i][0], VRAM_SEG, 0,
+                                    ucxt[i][1], DRAM_SEG, dev_ids[1]);
+        }
 #endif
     }
 
