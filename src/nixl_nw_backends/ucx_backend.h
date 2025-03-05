@@ -14,12 +14,7 @@
 #include <ucx_utils.h>
 #include <list_elem.h>
 
-#ifdef HAVE_CUDA
 
-#include <cuda_runtime.h>
-#include <cufile.h>
-
-#endif
 
 typedef enum {CONN_CHECK, NOTIF_STR, DISCONNECT} ucx_cb_op_t;
 
