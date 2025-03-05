@@ -48,13 +48,6 @@ p2p_socket = executable('p2p_test',
             include_directories: [inc_dir],
             install: true)
 
-nixl_app  = executable('nixl_test',
-           'nixl_test.cpp',
-           dependencies: [nixl_dep] + cuda_dependencies,
-           include_directories: [inc_dir, '../src/utils/serdes'],
-           link_with: [serdes_lib],
-           install: true)
-
 nixl_ucx_app  = executable('nixl_test',
                 'nixl_test.cpp',
                  dependencies: [nixl_dep],
@@ -62,7 +55,7 @@ nixl_ucx_app  = executable('nixl_test',
                  link_with: [serdes_lib],
                  install: true)
 
-nixl_gds_app = executable('nixl_gds_test', 'gds_backend_test.cpp',
+nixl_gds_app = executable('nixl_gds_test', 'nixl_gds_test.cpp',
                           dependencies: [nixl_dep, cuda_dep],
                           include_directories: [inc_dir, '../src/utils/serdes'],
                           install: true)

@@ -55,7 +55,6 @@ class nixlUcxInitParams : public nixlBackendInitParams
 
 class nixlGdsInitParams : public nixlBackendInitParams
 {
-
     public:
         std::vector<std::string> mount_targets;
         inline nixl_backend_t getType() const { return GPUDIRECTIO;}

@@ -2,73 +2,73 @@
 #include "gds_utils.h"
 
 nixl_status_t gdsUtil::registerFileHandle(int fd, size_t size,
-					  std::string metaInfo,
-					  gdsFileHandle& gds_handle)
+        std::string metaInfo,
+        gdsFileHandle& gds_handle)
 {
-	CUfileError_t  status;
-	CUfileDescr_t  descr;
-	CUfileHandle_t handle;
+    CUfileError_t  status;
+    CUfileDescr_t  descr;
+    CUfileHandle_t handle;
 
-	descr.handle.fd = fd;
-	descr.type = CU_FILE_HANDLE_TYPE_OPAQUE_FD;
+    descr.handle.fd = fd;
+    descr.type = CU_FILE_HANDLE_TYPE_OPAQUE_FD;
 
-	status = cuFileHandleRegister(&handle, &descr);
-	if (status.err != CU_FILE_SUCCESS) {
-            std::cerr << "file register error:"
-		      << std::endl;
-	    return NIXL_ERR_BACKEND;
-	}
+    status = cuFileHandleRegister(&handle, &descr);
+    if (status.err != CU_FILE_SUCCESS) {
+        std::cerr << "file register error:"
+                  << std::endl;
+        return NIXL_ERR_BACKEND;
+    }
 
-	gds_handle.cu_fhandle = handle;
-	gds_handle.fd = fd;
-	gds_handle.metadata = metaInfo;
+    gds_handle.cu_fhandle = handle;
+    gds_handle.fd = fd;
+    gds_handle.metadata = metaInfo;
 
-	return NIXL_SUCCESS;
+    return NIXL_SUCCESS;
 }
 
 nixl_status_t gdsUtil::registerBufHandle(void *ptr, size_t size, int flags)
 {
-	CUfileError_t  status;
+    CUfileError_t  status;
 
-	status = cuFileBufRegister(ptr, size, flags);
-	if (status.err != CU_FILE_SUCCESS) {
-	    std::cerr << "Buffer registration failed\n";
-	    return NIXL_ERR_BACKEND;
-	}
-	return NIXL_SUCCESS;
+    status = cuFileBufRegister(ptr, size, flags);
+    if (status.err != CU_FILE_SUCCESS) {
+        std::cerr << "Buffer registration failed\n";
+        return NIXL_ERR_BACKEND;
+    }
+    return NIXL_SUCCESS;
 }
 
-int gdsUtil::openGdsDriver()
+nixl_status_t gdsUtil::openGdsDriver()
 {
-	CUfileError_t   err;
+    CUfileError_t   err;
 
 
-	err = cuFileDriverOpen();
-        if (err.err != CU_FILE_SUCCESS) {
-            std::cerr <<" Error initializing GPU Direct Storage driver\n";
-	    return -1;
-	}
-	return  0;
+    err = cuFileDriverOpen();
+    if (err.err != CU_FILE_SUCCESS) {
+        std::cerr <<" Error initializing GPU Direct Storage driver\n";
+        return NIXL_ERR_BACKEND;
+    }
+    return NIXL_SUCCESS;
 }
 
 void gdsUtil::closeGdsDriver()
 {
-	cuFileDriverClose();
+    cuFileDriverClose();
 }
 
 void gdsUtil::deregisterFileHandle(gdsFileHandle& handle)
 {
-	cuFileHandleDeregister(handle.cu_fhandle);
+    cuFileHandleDeregister(handle.cu_fhandle);
 }
 
 nixl_status_t gdsUtil::deregisterBufHandle(void *ptr)
 {
-	CUfileError_t  status;
+    CUfileError_t  status;
 
-	status = cuFileBufDeregister(ptr);
-	if (status.err != CU_FILE_SUCCESS) {
-		std::cerr <<"Error De-Registering Buffer\n";
-		return NIXL_ERR_BACKEND;
-	}
-	return NIXL_SUCCESS;
+    status = cuFileBufDeregister(ptr);
+    if (status.err != CU_FILE_SUCCESS) {
+        std::cerr <<"Error De-Registering Buffer\n";
+        return NIXL_ERR_BACKEND;
+    }
+    return NIXL_SUCCESS;
 }
