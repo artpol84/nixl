@@ -50,11 +50,32 @@ endif
 
 ucx_backend_interface = declare_dependency(link_with: ucx_backend_lib)
 
-ucx_mo_backend_lib = library('ucx_mo_backend',
-           'ucx_mo_backend.cpp', 'ucx_mo_backend.h',
-           dependencies: [ucx_utils_dep, nixl_dep, serdes_interface, cuda_dep, ucx_backend_interface ],
-           include_directories: inc_dir,
-           install: true, 
-           cpp_args : compile_flags)
+
+if 'UCX_MO' in static_plugins
+    ucx_mo_backend_lib = static_library('UCX_MO',
+               'ucx_mo_backend.cpp', 'ucx_mo_backend.h', 'ucx_mo_plugin.cpp',
+               dependencies: [ucx_utils_dep, nixl_dep, serdes_interface, cuda_dep, ucx_dep, ucx_backend_lib],
+               include_directories: inc_dir,
+               install: false,
+               cpp_args : compile_flags,
+               name_prefix: 'libplugin_') # Custom prefix for plugin libraries
+               #install_dir: plugin_install_dir)
+else
+    ucx_mo_backend_lib = shared_library(UCX_MO',
+               'ucx_mo_backend.cpp', 'ucx_mo_backend.h', 'ucx_mo_plugin.cpp',
+               dependencies: [ucx_utils_dep, nixl_dep, serdes_interface, cuda_dep, ucx_dep, ucx_backend_lib],
+               include_directories: inc_dir,
+               install: true,
+               cpp_args : compile_flags + ['-fPIC'],
+               name_prefix: 'libplugin_',  # Custom prefix for plugin libraries
+               install_dir: plugin_install_dir)
+
+    if get_option('buildtype') == 'debug'
+        run_command('sh', '-c',
+                    'echo "UCX_MO=' + ucx_backend_lib.full_path() + '" >> ' + plugin_build_dir + '/pluginlist',
+                    check: true
+                )
+    endif
+endif
 
 ucx_mo_backend_interface = declare_dependency(link_with: ucx_mo_backend_lib)
