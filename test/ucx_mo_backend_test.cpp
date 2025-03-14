@@ -452,6 +452,7 @@ void test_inter_agent_transfer(bool p_thread,
         std::string test_str("test");
         std::string tgt_agent("Agent2");
         notif_list_t target_notifs;
+        notif_list_t source_notifs;
 
         cout << "\t gnNotif to Agent2" <<endl;
 
@@ -462,6 +463,10 @@ void test_inter_agent_transfer(bool p_thread,
 
         while(ret == 0){
             ret = ucx2->getNotifs(target_notifs);
+            if (!p_thread) {
+                /* progress UCX1 as well */
+                ucx1->getNotifs(source_notifs);
+            }
         }
 
         assert(ret == 1);

@@ -403,19 +403,17 @@ nixl_status_t nixlUcxMoEngine::retHelper(nixl_status_t ret, nixlBackendEngine *e
 {
     /* if transfer wasn't immediately completed */
     switch(ret) {
-        case NIXL_IN_PROG:
-            req->reqs.push_back(nixlUcxMoRequestH::req_pair_t{eng, int_req});
-            break;
-        case NIXL_SUCCESS:
-            // Nothing to do
-            break;
-        default:
-            // Error. Release all previously initiated ops and exit:
-            cancelRequests(req);
-            delete(req);
-            break;
+    case NIXL_IN_PROG:
+        req->reqs.push_back(nixlUcxMoRequestH::req_pair_t{eng, int_req});
+    case NIXL_SUCCESS:
+        // Nothing to do
+        return NIXL_SUCCESS;
+    default:
+        // Error. Release all previously initiated ops and exit:
+        cancelRequests(req);
+        delete(req);
+        return ret;
     }
-    return ret;
 }
 
 // Data transfer
@@ -562,6 +560,7 @@ nixlUcxMoEngine::checkXfer (nixlBackendReqH *handle)
         switch (ret) {
         case NIXL_SUCCESS:
             /* Mark as completed */
+            it->first->releaseReqH(it->second);
             it = l.erase(it);
             break;
         case NIXL_IN_PROG:
