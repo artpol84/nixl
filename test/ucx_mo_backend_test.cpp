@@ -4,7 +4,6 @@
 #include <cassert>
 
 #include "ucx_mo_backend.h"
-#include "backend_tester.h"
 
 using namespace std;
 
@@ -32,11 +31,7 @@ static string op2string(nixl_xfer_op_t op)
             return string("READ");
         case NIXL_WRITE:
             return string("WRITE");
-        // TODO: update if necessary
-        case NIXL_RD_FLUSH:
-            return string("READ");
-        case NIXL_WR_FLUSH:
-            return string("WRITE");
+            // TODO: update if necessary
         case NIXL_RD_NOTIF:
             return string("READ/NOTIF");
         case NIXL_WR_NOTIF:
@@ -62,42 +57,34 @@ std::string memType2Str(nixl_mem_t mem_type)
     }
 }
 
-
 nixlBackendEngine *createEngine(std::string name, uint32_t ndev, bool p_thread)
 {
-    nixlUcxMoInitParams init;
+    nixlBackendEngine     *ucx_mo;
+    nixlBackendInitParams init;
+    nixl_b_params_t       custom_params;
 
+    custom_params["num_ucx_engines"] = std::to_string(ndev);
     init.enableProgTh = p_thread;
-    init.pthrDelay = 100;
-    init.localAgent = name;
-    init.numHostEngines = ndev; 
+    init.pthrDelay    = 100;
+    init.localAgent   = name;
+    init.customParams = &custom_params;
+    init.type         = "UCX_MO";
 
-    return (nixlBackendEngine*) new nixlUcxMoEngine (&init);
-}
-
-nixlBackendTester *createTester(nixlBackendEngine* engine)
-{
-    nixlBackendTester* ucxt = new nixlBackendTester (engine);
-    assert(!ucxt->getInitErr());
-    if (ucxt->getInitErr()) {
+    ucx_mo = (nixlBackendEngine*) new nixlUcxMoEngine (&init);
+    assert(!ucx_mo->getInitErr());
+    if (ucx_mo->getInitErr()) {
         std::cout << "Failed to initialize worker1" << std::endl;
         exit(1);
     }
-    return ucxt;
+
+    return ucx_mo;
 }
 
 void releaseEngine(nixlBackendEngine *ucx)
 {
     //protected now, should not call
-//    delete ucx;
+    delete ucx;
 }
-void releaseTester(nixlBackendTester *ucxt)
-{
-    delete ucxt;
-}
-
-
-
 
 #ifdef USE_VRAM
 
@@ -230,7 +217,7 @@ void *releaseValidationPtr(nixl_mem_t mem_type, void *addr)
     return NULL;
 }
 
-void createLocalDescs(nixlBackendTester *ucx, nixl_meta_dlist_t &descs,
+void createLocalDescs(nixlBackendEngine *ucx, nixl_meta_dlist_t &descs,
                       int dev_cnt,
                       int desc_cnt, size_t desc_size)
 {
@@ -255,7 +242,7 @@ void createLocalDescs(nixlBackendTester *ucx, nixl_meta_dlist_t &descs,
 }
 
 
-void destroyLocalDescs(nixlBackendTester *ucx, nixl_meta_dlist_t &descs)
+void destroyLocalDescs(nixlBackendEngine *ucx, nixl_meta_dlist_t &descs)
 {
     for(int i = 0; i < descs.descCount(); i++) {
         auto dev_id = descs[i].devId;
@@ -269,10 +256,10 @@ void destroyLocalDescs(nixlBackendTester *ucx, nixl_meta_dlist_t &descs)
     }
 }
 
-void createRemoteDescs(nixlBackendTester *src_ucx,
+void createRemoteDescs(nixlBackendEngine *src_ucx,
                        std::string agent,
                        nixl_meta_dlist_t &src_descs,
-                       nixlBackendTester *dst_ucx,
+                       nixlBackendEngine *dst_ucx,
                        nixl_meta_dlist_t &dst_descs)
 {
     for(int i = 0; i < src_descs.descCount(); i++) {
@@ -288,7 +275,7 @@ void createRemoteDescs(nixlBackendTester *src_ucx,
     }
 }
 
-void destroyRemoteDescs(nixlBackendTester *dst_ucx,
+void destroyRemoteDescs(nixlBackendEngine *dst_ucx,
                         nixl_meta_dlist_t &dst_descs)
 {
     for(int i = 0; i < dst_descs.descCount(); i++) {
@@ -301,13 +288,13 @@ void destroyRemoteDescs(nixlBackendTester *dst_ucx,
 }
 
 
-void performTransfer(nixlBackendTester *ucx1, nixlBackendTester *ucx2,
+void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
                      nixl_meta_dlist_t &req_src_descs,
                      nixl_meta_dlist_t &req_dst_descs,
                      nixl_xfer_op_t op, bool progress_ucx2)
 {
     int ret2;
-    nixl_xfer_state_t ret3;
+    nixl_status_t ret3;
     nixlBackendReqH* handle;
     void *chkptr1, *chkptr2;
 
@@ -322,20 +309,20 @@ void performTransfer(nixlBackendTester *ucx1, nixlBackendTester *ucx2,
     // or an ID that later can be used to check the status as a new method
     // Also maybe we would remove the WRITE and let the backend class decide the op
     ret3 = ucx1->postXfer(req_src_descs, req_dst_descs, op, remote_agent, test_str, handle);
-    assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
+    assert( ret3 == NIXL_SUCCESS || ret3 == NIXL_IN_PROG);
 
 
-    if (ret3 == NIXL_XFER_DONE) {
+    if (ret3 == NIXL_SUCCESS) {
         cout << "\t\tWARNING: Tansfer request completed immmediately - no testing non-inline path" << endl;
     } else {
         cout << "\t\tNOTE: Testing non-inline Transfer path!" << endl;
 
-        while(ret3 == NIXL_XFER_PROC) {
+        while(ret3 == NIXL_IN_PROG) {
             ret3 = ucx1->checkXfer(handle);
             if(progress_ucx2){
                 ucx2->progress();
             }
-            assert( ret3 == NIXL_XFER_DONE || ret3 == NIXL_XFER_PROC);
+            assert( ret3 == NIXL_SUCCESS || ret3 == NIXL_IN_PROG);
         }
         ucx1->releaseReqH(handle);
     }
@@ -388,8 +375,8 @@ void performTransfer(nixlBackendTester *ucx1, nixlBackendTester *ucx2,
 }
 
 void test_inter_agent_transfer(bool p_thread, 
-                nixlBackendTester *ucx1, nixl_mem_t src_mem_type, int src_dev_cnt, 
-                nixlBackendTester *ucx2, nixl_mem_t dst_mem_type, int dst_dev_cnt)
+                nixlBackendEngine *ucx1, nixl_mem_t src_mem_type, int src_dev_cnt, 
+                nixlBackendEngine *ucx2, nixl_mem_t dst_mem_type, int dst_dev_cnt)
 {
     int ret;
     int iter = 10;
@@ -504,7 +491,6 @@ int main()
     bool thread_on[] = {false , true};
 #define THREAD_ON_SIZE (sizeof(thread_on) / sizeof(thread_on[0]))
     nixlBackendEngine *ucx[THREAD_ON_SIZE][2] = { 0 };
-    nixlBackendTester *ucxt[THREAD_ON_SIZE][2] = { 0 };
 
 #define NUM_WORKERS 8
 
@@ -522,28 +508,27 @@ int ndevices = NUM_WORKERS;
             std::stringstream s;
             s << "Agent" << (j + 1);
             ucx[i][j] = createEngine(s.str(), ndevices, thread_on[i]);
-            ucxt[i][j] = createTester(ucx[i][j]);
         }
     }
 
     for(size_t i = 0; i < THREAD_ON_SIZE; i++) {
         test_inter_agent_transfer(thread_on[i], 
-                                ucxt[i][0], DRAM_SEG, ndevices,
-                                ucxt[i][1], DRAM_SEG, ndevices);
+                                ucx[i][0], DRAM_SEG, ndevices,
+                                ucx[i][1], DRAM_SEG, ndevices);
 #ifdef USE_VRAM
         if (n_vram_dev) {
             test_inter_agent_transfer(thread_on[i], 
-                                    ucxt[i][0], VRAM_SEG, n_vram_dev,
-                                    ucxt[i][1], VRAM_SEG, n_vram_dev);
+                                    ucx[i][0], VRAM_SEG, n_vram_dev,
+                                    ucx[i][1], VRAM_SEG, n_vram_dev);
             test_inter_agent_transfer(thread_on[i], 
-                                    ucxt[i][0], VRAM_SEG, n_vram_dev,
-                                    ucxt[i][1], VRAM_SEG, n_vram_dev);
+                                    ucx[i][0], VRAM_SEG, n_vram_dev,
+                                    ucx[i][1], VRAM_SEG, n_vram_dev);
             test_inter_agent_transfer(thread_on[i], 
-                                    ucxt[i][0], VRAM_SEG, n_vram_dev,
-                                    ucxt[i][1], DRAM_SEG, n_vram_dev);
+                                    ucx[i][0], VRAM_SEG, n_vram_dev,
+                                    ucx[i][1], DRAM_SEG, n_vram_dev);
             test_inter_agent_transfer(thread_on[i], 
-                                    ucxt[i][0], DRAM_SEG, n_vram_dev,
-                                    ucxt[i][1], VRAM_SEG, n_vram_dev);
+                                    ucx[i][0], DRAM_SEG, n_vram_dev,
+                                    ucx[i][1], VRAM_SEG, n_vram_dev);
                         
         }
 #endif
@@ -552,7 +537,7 @@ int ndevices = NUM_WORKERS;
     // Allocate UCX engines
     for(int i = 0; i < 2; i++) {
         for(int j = 0; j < 2; j++) {
-            releaseTester(ucxt[i][j]);
+            releaseEngine(ucx[i][j]);
         }
     }
 }
