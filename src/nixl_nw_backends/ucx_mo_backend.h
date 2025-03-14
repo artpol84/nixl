@@ -15,7 +15,6 @@
 #include <nixl_time.h>
 #include <ucx_utils.h>
 #include <list_elem.h>
-#include <backend_tester.h>
 
 class nixlUcxMoConnection : public nixlBackendConnMD {
     private:
@@ -68,8 +67,8 @@ public:
 
 class nixlUcxMoRequestH : public nixlBackendReqH {
 private:
-    typedef std::pair<nixlBackendTester *,nixlBackendReqH *> req_pair_t;
-    typedef std::vector<std::pair<nixlBackendTester *,nixlBackendReqH*>> req_list_t;
+    typedef std::pair<nixlBackendEngine *,nixlBackendReqH *> req_pair_t;
+    typedef std::vector<req_pair_t> req_list_t;
     typedef req_list_t::iterator req_list_it_t;
 
     req_list_t reqs;
@@ -87,7 +86,7 @@ public:
 
 };
 
-class nixlUcxMoEngine : nixlBackendEngine {
+class nixlUcxMoEngine : public nixlBackendEngine {
 private:
     uint32_t _engineCnt;
     uint32_t _gpuCnt;
@@ -100,8 +99,7 @@ private:
 
     // UCX backends data
     std::vector<nixlBackendEngine*> engines;
-    std::vector<nixlBackendTester *> eng_access;
-
+ 
     // Map of agent name to saved nixlUcxConnection info
     typedef std::map<std::string, nixlUcxMoConnection> remote_conn_map_t;
     typedef remote_conn_map_t::iterator remote_comm_it_t;
@@ -122,12 +120,12 @@ private:
 
 
     // Data transfer
-    nixl_status_t retHelper(nixl_xfer_state_t ret, nixlBackendTester *eng,
+    nixl_status_t retHelper(nixl_status_t ret, nixlBackendEngine *eng,
                             nixlUcxMoRequestH *req, nixlBackendReqH *&int_req);
     void cancelRequests(nixlUcxMoRequestH *req);
     
 public:
-    nixlUcxMoEngine(const nixlUcxMoInitParams* init_params);
+    nixlUcxMoEngine(const nixlBackendInitParams* init_params);
     ~nixlUcxMoEngine();
 
     bool supportsRemote () const { return true; }
@@ -160,13 +158,13 @@ protected:
     nixl_status_t unloadMD (nixlBackendMD* input);
 
     // Data transfer
-    nixl_xfer_state_t postXfer (const nixl_meta_dlist_t &local,
+    nixl_status_t postXfer (const nixl_meta_dlist_t &local,
                                 const nixl_meta_dlist_t &remote,
                                 const nixl_xfer_op_t &op,
                                 const std::string &remote_agent,
                                 const std::string &notif_msg,
                                 nixlBackendReqH* &handle);
-    nixl_xfer_state_t checkXfer (nixlBackendReqH* handle);
+    nixl_status_t checkXfer (nixlBackendReqH* handle);
     void releaseReqH(nixlBackendReqH* handle);
 
     int progress();
