@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ucx_backend_inc_dirs = include_directories('./ucx')
+
 subdir('ucx')
 subdir('ucx_mo')
 

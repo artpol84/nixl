@@ -1,11 +1,13 @@
-#include "nixl.h"
 
-// Local includes
-#include <nixl_time.h>
-#include <ucx_mo_backend.h>
-#include <serdes.h>
 #include <stdlib.h>
 #include <cassert>
+
+
+// Local includes
+#include <nixl.h>
+#include <common/nixl_time.h>
+#include <serdes/serdes.h>
+#include <ucx_mo_backend.h>
 
 using namespace std;
 
@@ -131,6 +133,14 @@ nixlUcxMoEngine::nixlUcxMoEngine(const nixlBackendInitParams* init_params):
     }
 }
 
+nixl_status_t
+nixlUcxMoEngine::getSupportedMems (std::vector<nixl_mem_t> &mems) const 
+{
+    mems.push_back(DRAM_SEG);
+    mems.push_back(VRAM_SEG);
+    return NIXL_SUCCESS;
+}
+
 nixlUcxMoEngine::~nixlUcxMoEngine()
 {
     // TODO: won't need the access after rebase
@@ -143,27 +153,33 @@ nixlUcxMoEngine::~nixlUcxMoEngine()
  * Connection management
 *****************************************/
 
-string
-nixlUcxMoEngine::getConnInfo() const 
+nixl_status_t
+nixlUcxMoEngine::getConnInfo(std::string &str) const
 {
     nixlSerDes sd;
+    nixl_status_t status;
 
     // Serialize the number of engines
     size_t sz = engines.size();
     sd.addBuf("Count", &sz, sizeof(sz));
 
     for( auto &e : engines ) {
-        string const s = e->getConnInfo();
+        string s;
+        status = e->getConnInfo(s);
+        if (NIXL_SUCCESS != status) {
+            return status;
+        }
         sd.addStr("Value", s);
     }
 
-    return sd.exportStr();
+    str = sd.exportStr();
+    return NIXL_SUCCESS;
 }
 
 
 nixl_status_t
-nixlUcxMoEngine::loadRemoteConnInfo (const string &remote_agent,
-                                    const string &remote_conn_info)
+nixlUcxMoEngine::loadRemoteConnInfo (const string  &remote_agent,
+                                     const string &remote_conn_info)
 {
     nixlSerDes sd;
     nixlUcxMoConnection conn;
@@ -266,13 +282,15 @@ nixlUcxMoEngine::disconnect(const string &remote_agent)
 
 
 nixl_status_t
-nixlUcxMoEngine::registerMem (const nixlStringDesc &mem,
-                            const nixl_mem_t &nixl_mem,
-                            nixlBackendMD* &out)
+nixlUcxMoEngine::registerMem (const nixlBlobDesc &mem,
+                              const nixl_mem_t &nixl_mem,
+                              nixlBackendMD* &out)
 {
     nixlUcxMoPrivateMetadata *priv = new nixlUcxMoPrivateMetadata;
     int32_t eidx = getEngIdx(nixl_mem, mem.devId);
     nixlSerDes sd;
+    string str;
+    nixl_status_t status;
 
     if (eidx < 0) {
         return NIXL_ERR_INVALID_PARAM;
@@ -282,27 +300,34 @@ nixlUcxMoEngine::registerMem (const nixlStringDesc &mem,
     engines[eidx]->registerMem(mem, nixl_mem, priv->md);
 
     sd.addBuf("EngIdx", &eidx, sizeof(eidx));
-    sd.addStr("RkeyStr", engines[eidx]->getPublicData(priv->md));
+    status = engines[eidx]->getPublicData(priv->md, str);
+    if (NIXL_SUCCESS != status) {
+        return status;
+    }
+    sd.addStr("RkeyStr", str);
     priv->rkeyStr = sd.exportStr();
-    out = (nixlBackendMD*) priv; //typecast?
+    out = (nixlBackendMD*) priv;
 
     return NIXL_SUCCESS;
 }
 
-string
-nixlUcxMoEngine::getPublicData (const nixlBackendMD* meta) const
+nixl_status_t 
+nixlUcxMoEngine::getPublicData (const nixlBackendMD* meta,
+                              std::string &str) const
 {
     const nixlUcxMoPrivateMetadata *priv = (nixlUcxMoPrivateMetadata*) meta;
-    return priv->get();
+    str = priv->get();
+    return NIXL_SUCCESS;
 }
 
-void 
+nixl_status_t 
 nixlUcxMoEngine::deregisterMem (nixlBackendMD* meta)
 {
     nixlUcxMoPrivateMetadata *priv = (nixlUcxMoPrivateMetadata*) meta;
 
     engines[priv->eidx]->deregisterMem(priv->md);
     delete priv;
+    return NIXL_SUCCESS;
 }
 
 nixl_status_t
@@ -314,7 +339,7 @@ nixlUcxMoEngine::loadLocalMD(nixlBackendMD* input,
 }
 
 nixl_status_t
-nixlUcxMoEngine::loadRemoteMD (const nixlStringDesc &input,
+nixlUcxMoEngine::loadRemoteMD (const nixlBlobDesc &input,
                                const nixl_mem_t &nixl_mem,
                                const string &remote_agent,
                                nixlBackendMD* &output)
@@ -323,7 +348,7 @@ nixlUcxMoEngine::loadRemoteMD (const nixlStringDesc &input,
     nixlSerDes sd;
     string rkeyStr;
     nixl_status_t status;
-    nixlStringDesc input_int;
+    nixlBlobDesc input_int;
 
     nixlUcxMoPublicMetadata *md = new nixlUcxMoPublicMetadata;
 
@@ -386,7 +411,8 @@ nixlUcxMoEngine::unloadMD (nixlBackendMD* input)
  * Data movement
 *****************************************/
 
-void nixlUcxMoEngine::cancelRequests(nixlUcxMoRequestH *req)
+void 
+nixlUcxMoEngine::cancelRequests(nixlUcxMoRequestH *req)
 {
     // Iterate over all elements cancelling each one
     for ( auto &p : req->reqs ) {
@@ -398,8 +424,9 @@ void nixlUcxMoEngine::cancelRequests(nixlUcxMoRequestH *req)
 }
 
 
-nixl_status_t nixlUcxMoEngine::retHelper(nixl_status_t ret, nixlBackendEngine *eng,
-                                         nixlUcxMoRequestH *req, nixlBackendReqH *&int_req)
+nixl_status_t
+nixlUcxMoEngine::retHelper(nixl_status_t ret, nixlBackendEngine *eng,
+                           nixlUcxMoRequestH *req, nixlBackendReqH *&int_req)
 {
     /* if transfer wasn't immediately completed */
     switch(ret) {
@@ -416,14 +443,26 @@ nixl_status_t nixlUcxMoEngine::retHelper(nixl_status_t ret, nixlBackendEngine *e
     }
 }
 
+nixl_status_t
+nixlUcxMoEngine::prepXfer (const nixl_xfer_op_t &operation,
+                           const nixl_meta_dlist_t &local,
+                           const nixl_meta_dlist_t &remote,
+                           const std::string &remote_agent,
+                           nixlBackendReqH* &handle,
+                           const nixl_opt_b_args_t *opt_args)
+{
+    return NIXL_SUCCESS;
+}
+
+
 // Data transfer
 nixl_status_t 
-nixlUcxMoEngine::postXfer (const nixl_meta_dlist_t &local,
+nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
+                           const nixl_meta_dlist_t &local,
                            const nixl_meta_dlist_t &remote,
-                           const nixl_xfer_op_t &op,
-                           const string &remote_agent,
-                           const string &notif_msg,
-                           nixlBackendReqH *&out_handle)
+                           const std::string &remote_agent,
+                           nixlBackendReqH* &out_handle,
+                           const nixl_opt_b_args_t *opt_args)
 {
     size_t l_eng_cnt = engines.size();
     size_t r_eng_cnt;
@@ -513,12 +552,11 @@ nixlUcxMoEngine::postXfer (const nixl_meta_dlist_t &local,
                 // Skip unused matrix elements
                 continue;
             }
-            ret = engines[lidx]->postXfer(*dlmatrix[lidx][ridx].first,
-                                             *dlmatrix[lidx][ridx].second,
-                                             op_int,
-                                             getEngName(remote_agent, ridx),
-                                             no_notif_msg,
-                                             int_req);
+            ret = engines[lidx]->postXfer(op_int,
+                                          *dlmatrix[lidx][ridx].first,
+                                          *dlmatrix[lidx][ridx].second,
+                                          getEngName(remote_agent, ridx),
+                                          int_req);
             ret = retHelper(ret, engines[lidx], req, int_req);
             if (NIXL_SUCCESS != ret) {
                 return ret;
@@ -529,8 +567,11 @@ nixlUcxMoEngine::postXfer (const nixl_meta_dlist_t &local,
     switch(op) {
     case NIXL_RD_NOTIF:
     case NIXL_WR_NOTIF:
+        if (opt_args==nullptr) {
+            return NIXL_ERR_INVALID_PARAM;
+        }
         req->notifNeed = true;
-        req->notifMsg = notif_msg;
+        req->notifMsg = opt_args->notifMsg;
         req->remoteAgent = remote_agent;
         break;
     default:
@@ -585,10 +626,11 @@ nixlUcxMoEngine::checkXfer (nixlBackendReqH *handle)
     return out_ret;
 }
 
-void
+nixl_status_t
 nixlUcxMoEngine::releaseReqH(nixlBackendReqH* handle)
 {
     cancelRequests((nixlUcxMoRequestH *)handle);
+    return NIXL_SUCCESS;
 }
 
 int
@@ -602,7 +644,8 @@ nixlUcxMoEngine::progress()
     return ret;
 }
 
-int nixlUcxMoEngine::getNotifs(notif_list_t &notif_list)
+nixl_status_t
+nixlUcxMoEngine::getNotifs(notif_list_t &notif_list)
 {
     return engines[0]->getNotifs(notif_list);
 }
