@@ -149,7 +149,7 @@ void allocateBuffer(nixl_mem_t mem_type, int dev_id, size_t len, void* &addr)
         checkCudaError(cudaSetDevice(dev_id), "Failed to set device");
         checkCudaError(cudaMalloc(&addr, len), "Failed to allocate CUDA buffer 0");
         cudaQueryAddr(addr, is_dev, dev, ctx);
-        std::cout << "CUDA addr: " << std::hex << addr << " dev=" << std::dec << dev 
+        std::cout << "CUDA addr: " << std::hex << addr << " dev=" << std::dec << dev
             << " ctx=" << std::hex << ctx << std::dec << std::endl;
         break;
     }
@@ -287,9 +287,9 @@ void createRemoteDescs(nixlBackendEngine *src_ucx,
         *((nixlBasicDesc*)&desc_m) = (nixlBasicDesc)src_descs[i];
         status = src_ucx->getPublicData(src_descs[i].metadataP, desc_s.metaInfo);
         assert(NIXL_SUCCESS == status);
-        status = dst_ucx->loadRemoteMD (desc_s, src_descs.getType(), 
+        status = dst_ucx->loadRemoteMD (desc_s, src_descs.getType(),
                                         agent, desc_m.metadataP);
-        assert(status == NIXL_SUCCESS);        
+        assert(status == NIXL_SUCCESS);
         dst_descs.addDesc(desc_m);
     }
 }
@@ -388,7 +388,7 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
 
         // Perform correctness check.
         for(size_t i = 0; i < len; i++){
-            assert( ((uint8_t*) chkptr1)[i] == ((uint8_t*) chkptr2)[i]);    
+            assert( ((uint8_t*) chkptr1)[i] == ((uint8_t*) chkptr2)[i]);
         }
 
         releaseValidationPtr(req_src_descs.getType(), chkptr1);
@@ -397,8 +397,8 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
     cout << "OK" << endl;
 }
 
-void test_inter_agent_transfer(bool p_thread, 
-                nixlBackendEngine *ucx1, nixl_mem_t src_mem_type, int src_dev_cnt, 
+void test_inter_agent_transfer(bool p_thread,
+                nixlBackendEngine *ucx1, nixl_mem_t src_mem_type, int src_dev_cnt,
                 nixlBackendEngine *ucx2, nixl_mem_t dst_mem_type, int dst_dev_cnt)
 {
     int iter = 10;
@@ -406,9 +406,9 @@ void test_inter_agent_transfer(bool p_thread,
 
     std::cout << std::endl << std::endl;
     std::cout << "****************************************************" << std::endl;
-    std::cout << "    Inter-agent memory transfer test P-Thr=" <<          
+    std::cout << "    Inter-agent memory transfer test P-Thr=" <<
                         (p_thread ? "ON" : "OFF") << std::endl;
-    std::cout << "         (" << memType2Str(src_mem_type) << " -> " 
+    std::cout << "         (" << memType2Str(src_mem_type) << " -> "
                 << memType2Str(dst_mem_type) << ")" << std::endl;
     std::cout << "****************************************************" << std::endl;
     std::cout << std::endl << std::endl;
@@ -438,18 +438,18 @@ void test_inter_agent_transfer(bool p_thread,
     std::cout << "Synchronous handshake complete\n";
 
     // Number of transfer descriptors
-    int desc_cnt = 16; 
-    // Size of a single descriptor 
-    size_t desc_size = 32 * 1024 * 1024; 
+    int desc_cnt = 16;
+    // Size of a single descriptor
+    size_t desc_size = 32 * 1024 * 1024;
     nixl_meta_dlist_t ucx1_src_descs (src_mem_type);
     nixl_meta_dlist_t ucx2_src_descs (dst_mem_type);
     nixl_meta_dlist_t ucx1_dst_descs (dst_mem_type);
 
-    createLocalDescs(ucx1, ucx1_src_descs, src_dev_cnt, 
+    createLocalDescs(ucx1, ucx1_src_descs, src_dev_cnt,
                      desc_cnt, desc_size);
-    createLocalDescs(ucx2, ucx2_src_descs, dst_dev_cnt, 
+    createLocalDescs(ucx2, ucx2_src_descs, dst_dev_cnt,
                      desc_cnt, desc_size);
-    createRemoteDescs(ucx2, agent2, ucx2_src_descs, 
+    createRemoteDescs(ucx2, agent2, ucx2_src_descs,
                       ucx1, ucx1_dst_descs);
 
 
@@ -543,24 +543,23 @@ int ndevices = NUM_WORKERS;
     }
 
     for(size_t i = 0; i < THREAD_ON_SIZE; i++) {
-        test_inter_agent_transfer(thread_on[i], 
+        test_inter_agent_transfer(thread_on[i],
                                 ucx[i][0], DRAM_SEG, ndevices,
                                 ucx[i][1], DRAM_SEG, ndevices);
 #ifdef USE_VRAM
         if (n_vram_dev) {
-            test_inter_agent_transfer(thread_on[i], 
+            test_inter_agent_transfer(thread_on[i],
                                     ucx[i][0], VRAM_SEG, n_vram_dev,
                                     ucx[i][1], VRAM_SEG, n_vram_dev);
-            test_inter_agent_transfer(thread_on[i], 
+            test_inter_agent_transfer(thread_on[i],
                                     ucx[i][0], VRAM_SEG, n_vram_dev,
                                     ucx[i][1], VRAM_SEG, n_vram_dev);
-            test_inter_agent_transfer(thread_on[i], 
+            test_inter_agent_transfer(thread_on[i],
                                     ucx[i][0], VRAM_SEG, n_vram_dev,
                                     ucx[i][1], DRAM_SEG, n_vram_dev);
-            test_inter_agent_transfer(thread_on[i], 
+            test_inter_agent_transfer(thread_on[i],
                                     ucx[i][0], DRAM_SEG, n_vram_dev,
-                                    ucx[i][1], VRAM_SEG, n_vram_dev);
-                        
+                                    ucx[i][1], VRAM_SEG, n_vram_dev);      
         }
 #endif
     }
