@@ -87,7 +87,7 @@ nixlUcxMoEngine::getEngIdx(nixl_mem_t type, uint32_t devId)
             return -1;
         }
     case DRAM_SEG:
-        break; 
+        break;
     default:
         return -1;
     }
@@ -104,7 +104,7 @@ nixlUcxMoEngine::getEngName(const string &baseName, uint32_t eidx)
 string
 nixlUcxMoEngine::getEngBase(const string &engName)
 {
-    // find the last occurence (agent name may have colon in its name)
+    // find the last occurrence (agent name may have colon in its name)
     if (string::npos == engName.find_last_of(":")) {
         assert(engName.find_last_of(":") != string::npos);
         return engName;
@@ -149,7 +149,7 @@ nixlUcxMoEngine::nixlUcxMoEngine(const nixlBackendInitParams* init_params):
 }
 
 nixl_status_t
-nixlUcxMoEngine::getSupportedMems (std::vector<nixl_mem_t> &mems) const 
+nixlUcxMoEngine::getSupportedMems (std::vector<nixl_mem_t> &mems) const
 {
     mems.push_back(DRAM_SEG);
     mems.push_back(VRAM_SEG);
@@ -326,7 +326,7 @@ nixlUcxMoEngine::registerMem (const nixlBlobDesc &mem,
     return NIXL_SUCCESS;
 }
 
-nixl_status_t 
+nixl_status_t
 nixlUcxMoEngine::getPublicData (const nixlBackendMD* meta,
                               std::string &str) const
 {
@@ -335,7 +335,7 @@ nixlUcxMoEngine::getPublicData (const nixlBackendMD* meta,
     return NIXL_SUCCESS;
 }
 
-nixl_status_t 
+nixl_status_t
 nixlUcxMoEngine::deregisterMem (nixlBackendMD* meta)
 {
     nixlUcxMoPrivateMetadata *priv = (nixlUcxMoPrivateMetadata*) meta;
@@ -394,7 +394,7 @@ nixlUcxMoEngine::loadRemoteMD (const nixlBlobDesc &input,
     for (auto &e : engines) {
         nixlBackendMD *int_md;
         input_int.metaInfo = rkeyStr;
-        status = e->loadRemoteMD(input_int, nixl_mem, 
+        status = e->loadRemoteMD(input_int, nixl_mem,
                                  getEngName(remote_agent, md->eidx),
                                  int_md);
         if (status != NIXL_SUCCESS) {
@@ -426,7 +426,7 @@ nixlUcxMoEngine::unloadMD (nixlBackendMD* input)
  * Data movement
 *****************************************/
 
-void 
+void
 nixlUcxMoEngine::cancelRequests(nixlUcxMoRequestH *req)
 {
     // Iterate over all elements cancelling each one
@@ -471,7 +471,7 @@ nixlUcxMoEngine::prepXfer (const nixl_xfer_op_t &operation,
 
 
 // Data transfer
-nixl_status_t 
+nixl_status_t
 nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
                            const nixl_meta_dlist_t &local,
                            const nixl_meta_dlist_t &remote,
@@ -529,7 +529,6 @@ nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
         size_t ridx = rmd->eidx;
 
         assert( (lidx < l_eng_cnt) && (ridx < r_eng_cnt));
-    
         if (lsize != rsize) {
             // TODO: err output
             return NIXL_ERR_INVALID_PARAM;
