@@ -334,7 +334,7 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
 
 
     if (status == NIXL_SUCCESS) {
-        cout << "\t\tWARNING: Tansfer request completed immmediately - no testing non-inline path" << endl;
+        cout << "\t\tWARNING: Tansfer request completed immediately - no testing non-inline path" << endl;
     } else {
         cout << "\t\tNOTE: Testing non-inline Transfer path!" << endl;
 
