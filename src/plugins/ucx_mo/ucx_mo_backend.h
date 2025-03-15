@@ -44,7 +44,7 @@ class nixlUcxMoConnection : public nixlBackendConnMD {
 };
 
 // A private metadata has to implement get, and has all the metadata
-class nixlUcxMoPrivateMetadata : public nixlBackendMD 
+class nixlUcxMoPrivateMetadata : public nixlBackendMD
 {
 private:
     uint32_t eidx;
@@ -65,7 +65,7 @@ public:
 };
 
 // A public metadata has to implement put, and only has the remote metadata
-class nixlUcxMoPublicMetadata : public nixlBackendMD 
+class nixlUcxMoPublicMetadata : public nixlBackendMD
 {
     uint32_t eidx;
     nixlUcxMoConnection conn;
@@ -115,7 +115,6 @@ private:
 
     // UCX backends data
     std::vector<nixlBackendEngine*> engines;
- 
     // Map of agent name to saved nixlUcxConnection info
     typedef std::map<std::string, nixlUcxMoConnection> remote_conn_map_t;
     typedef remote_conn_map_t::iterator remote_comm_it_t;
@@ -139,7 +138,6 @@ private:
     nixl_status_t retHelper(nixl_status_t ret, nixlBackendEngine *eng,
                             nixlUcxMoRequestH *req, nixlBackendReqH *&int_req);
     void cancelRequests(nixlUcxMoRequestH *req);
-    
 public:
     nixlUcxMoEngine(const nixlBackendInitParams* init_params);
     ~nixlUcxMoEngine();

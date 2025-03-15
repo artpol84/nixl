@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ucx_mo_utils_dep = declare_dependency(link_with: [ucx_utils_lib, ucx_backend_lib], 
+ucx_mo_utils_dep = declare_dependency(link_with: [ucx_utils_lib, ucx_backend_lib],
                                       include_directories: [utils_inc_dirs, ucx_backend_inc_dirs] )
 
 compile_flags = []

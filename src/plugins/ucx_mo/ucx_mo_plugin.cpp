@@ -17,32 +17,26 @@
 
  #include "backend/backend_plugin.h"
  #include "ucx_mo_backend.h"
- 
  // Plugin version information
  static const char* PLUGIN_NAME = "UCX_MO";
  static const char* PLUGIN_VERSION = "1.0.0";
- 
  // Function to create a new UCX backend engine instance
  static nixlBackendEngine* create_engine(const nixlBackendInitParams* init_params)
  {
      return new nixlUcxMoEngine(init_params);
  }
- 
  static void destroy_engine(nixlBackendEngine *engine)
  {
      delete (nixlUcxMoEngine*)engine;
  }
- 
  // Function to get the plugin name
  static const char* get_plugin_name() {
      return PLUGIN_NAME;
  }
- 
  // Function to get the plugin version
  static const char* get_plugin_version() {
      return PLUGIN_VERSION;
  }
- 
  // Function to get backend options
  static nixl_b_params_t get_backend_options() {
      nixl_b_params_t params;
@@ -50,7 +44,6 @@
      params["num_ucx_engines"] = "8";
      return params;
  }
- 
  // Static plugin structure
  static nixlBackendPlugin plugin = {
      NIXL_PLUGIN_API_VERSION,
@@ -60,23 +53,17 @@
      get_plugin_version,
      get_backend_options
  };
- 
  #ifdef STATIC_PLUGIN_UCX
- 
  nixlBackendPlugin* createStaticUcxMoPlugin() {
      return &plugin; // Return the static plugin instance
  }
- 
  #else
- 
  // Plugin initialization function
  extern "C" NIXL_PLUGIN_EXPORT nixlBackendPlugin* nixl_plugin_init() {
      return &plugin;
  }
- 
  // Plugin cleanup function
  extern "C" NIXL_PLUGIN_EXPORT void nixl_plugin_fini() {
      // Cleanup any resources if needed
  }
  #endif
- 
