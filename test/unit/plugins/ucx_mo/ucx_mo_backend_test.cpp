@@ -225,7 +225,7 @@ void createLocalDescs(nixlBackendEngine *ucx, nixl_meta_dlist_t &descs,
     for(int i = 0; i < desc_cnt; i++) {
         nixlBasicDesc desc;
         nixlMetaDesc desc_m;
-        nixlStringDesc desc_s;
+        nixlBlobDesc desc_s;
         void *addr;
 
         desc.len = desc_size;
@@ -263,14 +263,17 @@ void createRemoteDescs(nixlBackendEngine *src_ucx,
                        nixl_meta_dlist_t &dst_descs)
 {
     for(int i = 0; i < src_descs.descCount(); i++) {
-        nixlStringDesc desc_s;
+        nixlBlobDesc desc_s;
         nixlMetaDesc desc_m;
+        nixl_status_t status;
+
         *((nixlBasicDesc*)&desc_s) = (nixlBasicDesc)src_descs[i];
         *((nixlBasicDesc*)&desc_m) = (nixlBasicDesc)src_descs[i];
-        desc_s.metaInfo = src_ucx->getPublicData(src_descs[i].metadataP);
-        int ret = dst_ucx->loadRemoteMD (desc_s, src_descs.getType(), 
-                                         agent, desc_m.metadataP);
-        assert(ret == NIXL_SUCCESS);        
+        status = src_ucx->getPublicData(src_descs[i].metadataP, desc_s.metaInfo);
+        assert(NIXL_SUCCESS == status);
+        status = dst_ucx->loadRemoteMD (desc_s, src_descs.getType(), 
+                                        agent, desc_m.metadataP);
+        assert(status == NIXL_SUCCESS);        
         dst_descs.addDesc(desc_m);
     }
 }
@@ -278,8 +281,10 @@ void createRemoteDescs(nixlBackendEngine *src_ucx,
 void destroyRemoteDescs(nixlBackendEngine *dst_ucx,
                         nixl_meta_dlist_t &dst_descs)
 {
+    nixl_status_t status;
     for(int i = 0; i < dst_descs.descCount(); i++) {
-        dst_ucx->unloadMD (dst_descs[i].metadataP);
+        status = dst_ucx->unloadMD (dst_descs[i].metadataP);
+        assert(status == NIXL_SUCCESS);
     }
 
     while(dst_descs.descCount()) {
@@ -287,14 +292,12 @@ void destroyRemoteDescs(nixlBackendEngine *dst_ucx,
     }
 }
 
-
 void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
                      nixl_meta_dlist_t &req_src_descs,
                      nixl_meta_dlist_t &req_dst_descs,
-                     nixl_xfer_op_t op, bool progress_ucx2)
+                     nixl_xfer_op_t op, bool progress)
 {
-    int ret2;
-    nixl_status_t ret3;
+    nixl_status_t status;
     nixlBackendReqH* handle;
     void *chkptr1, *chkptr2;
 
@@ -304,25 +307,27 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
 
     std::string test_str("test");
     std::cout << "\t" << op2string(op) << "\n";
+    nixl_opt_b_args_t opt_args;
+    opt_args.notifMsg = test_str;
 
     // Posting a request, to be updated to return an async handler,
     // or an ID that later can be used to check the status as a new method
     // Also maybe we would remove the WRITE and let the backend class decide the op
-    ret3 = ucx1->postXfer(req_src_descs, req_dst_descs, op, remote_agent, test_str, handle);
-    assert( ret3 == NIXL_SUCCESS || ret3 == NIXL_IN_PROG);
+    status = ucx1->postXfer(op, req_src_descs, req_dst_descs, remote_agent, handle, &opt_args);
+    assert(status == NIXL_SUCCESS || status == NIXL_IN_PROG);
 
 
-    if (ret3 == NIXL_SUCCESS) {
+    if (status == NIXL_SUCCESS) {
         cout << "\t\tWARNING: Tansfer request completed immmediately - no testing non-inline path" << endl;
     } else {
         cout << "\t\tNOTE: Testing non-inline Transfer path!" << endl;
 
-        while(ret3 == NIXL_IN_PROG) {
-            ret3 = ucx1->checkXfer(handle);
-            if(progress_ucx2){
+        while(status == NIXL_IN_PROG) {
+            status = ucx1->checkXfer(handle);
+            if(progress){
                 ucx2->progress();
             }
-            assert( ret3 == NIXL_SUCCESS || ret3 == NIXL_IN_PROG);
+            assert( (NIXL_SUCCESS == status) || (NIXL_IN_PROG == status) );
         }
         ucx1->releaseReqH(handle);
     }
@@ -334,14 +339,16 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
             notif_list_t target_notifs;
 
             cout << "\t\tChecking notification flow: " << flush;
-            ret2 = 0;
 
-            while(ret2 == 0){
-                ret2 = ucx2->getNotifs(target_notifs);
+            while(!target_notifs.size()){
+                status = ucx2->getNotifs(target_notifs);
+                assert(NIXL_SUCCESS == status);
+                if(progress){
+                    ucx1->progress();
+                }
             }
 
-            assert(ret2 == 1);
-
+            assert(target_notifs.size() == 1);
             assert(target_notifs.front().first == "Agent1");
             assert(target_notifs.front().second == test_str);
 
@@ -378,8 +385,8 @@ void test_inter_agent_transfer(bool p_thread,
                 nixlBackendEngine *ucx1, nixl_mem_t src_mem_type, int src_dev_cnt, 
                 nixlBackendEngine *ucx2, nixl_mem_t dst_mem_type, int dst_dev_cnt)
 {
-    int ret;
     int iter = 10;
+    nixl_status_t status;
 
     std::cout << std::endl << std::endl;
     std::cout << "****************************************************" << std::endl;
@@ -397,12 +404,17 @@ void test_inter_agent_transfer(bool p_thread,
 
     // We get the required connection info from UCX to be put on the central
     // location and ask for it for a remote node
-    std::string conn_info1 = ucx1->getConnInfo();
-    std::string conn_info2 = ucx2->getConnInfo();
+    std::string conn_info1;
+    status = ucx1->getConnInfo(conn_info1);
+    assert(NIXL_SUCCESS == status);
+
+    std::string conn_info2;
+    status = ucx2->getConnInfo(conn_info2);
+    assert(NIXL_SUCCESS == status);
 
     // We assumed we put them to central location and now receiving it on the other process
-    ret = ucx1->loadRemoteConnInfo (agent2, conn_info2);
-    assert(ret == NIXL_SUCCESS);
+    status = ucx1->loadRemoteConnInfo (agent2, conn_info2);
+    assert(NIXL_SUCCESS == status);
     
     // TODO: Causes race condition - investigate conn management implementation
     // ret = ucx2->loadRemoteConnInfo (agent1, conn_info1);
@@ -452,25 +464,23 @@ void test_inter_agent_transfer(bool p_thread,
         std::string test_str("test");
         std::string tgt_agent("Agent2");
         notif_list_t target_notifs;
-        notif_list_t source_notifs;
 
         cout << "\t gnNotif to Agent2" <<endl;
 
         ucx1->genNotif(tgt_agent, test_str);
 
         cout << "\t\tChecking notification flow: " << flush;
-        ret = 0;
 
-        while(ret == 0){
-            ret = ucx2->getNotifs(target_notifs);
+        while(target_notifs.size() == 0){
+            status = ucx2->getNotifs(target_notifs);
+            assert(NIXL_SUCCESS == status);
             if (!p_thread) {
                 /* progress UCX1 as well */
-                ucx1->getNotifs(source_notifs);
+                ucx1->progress();
             }
         }
 
-        assert(ret == 1);
-
+        assert(target_notifs.size() == 1);
         assert(target_notifs.front().first == "Agent1");
         assert(target_notifs.front().second == test_str);
 
