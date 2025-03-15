@@ -431,7 +431,7 @@ void test_inter_agent_transfer(bool p_thread,
     // We assumed we put them to central location and now receiving it on the other process
     status = ucx1->loadRemoteConnInfo (agent2, conn_info2);
     assert(NIXL_SUCCESS == status);
-    
+
     // TODO: Causes race condition - investigate conn management implementation
     // ret = ucx2->loadRemoteConnInfo (agent1, conn_info1);
 
@@ -559,7 +559,7 @@ int ndevices = NUM_WORKERS;
                                     ucx[i][1], DRAM_SEG, n_vram_dev);
             test_inter_agent_transfer(thread_on[i],
                                     ucx[i][0], DRAM_SEG, n_vram_dev,
-                                    ucx[i][1], VRAM_SEG, n_vram_dev);      
+                                    ucx[i][1], VRAM_SEG, n_vram_dev);
         }
 #endif
     }

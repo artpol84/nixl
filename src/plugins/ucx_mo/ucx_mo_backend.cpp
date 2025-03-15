@@ -201,7 +201,6 @@ nixlUcxMoEngine::loadRemoteConnInfo (const string  &remote_agent,
     nixl_status_t status;
     size_t sz;
     remote_comm_it_t it = remoteConnMap.find(remote_agent);
-    
 
     if(it != remoteConnMap.end()) {
         return NIXL_ERR_INVALID_PARAM;
