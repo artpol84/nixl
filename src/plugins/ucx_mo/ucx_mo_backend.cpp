@@ -571,7 +571,6 @@ nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
         }
     }
 
-   
     if (opt_args->hasNotif) {
         req->notifNeed = true;
         req->notifMsg = opt_args->notifMsg;
