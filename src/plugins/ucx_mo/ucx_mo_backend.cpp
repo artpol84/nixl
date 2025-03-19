@@ -33,9 +33,6 @@ using namespace std;
 #ifdef HAVE_CUDA
 
 #include <cuda_runtime.h>
-#include <cufile.h>
-
-
 
 static uint32_t _getNumVramDevices()
 {
@@ -83,7 +80,7 @@ nixlUcxMoEngine::getEngIdx(nixl_mem_t type, uint32_t devId)
     switch (type) {
     case VRAM_SEG:
         assert(devId < _gpuCnt);
-        if (devId < _gpuCnt) {
+        if (!(devId < _gpuCnt)) {
             return -1;
         }
     case DRAM_SEG:
@@ -433,7 +430,6 @@ nixlUcxMoEngine::cancelRequests(nixlUcxMoRequestH *req)
         p.first = NULL;
         p.second = NULL;
     }
-
 }
 
 
