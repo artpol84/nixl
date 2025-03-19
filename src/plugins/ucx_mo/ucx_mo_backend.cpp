@@ -158,7 +158,6 @@ nixlUcxMoEngine::getSupportedMems () const {
 
 nixlUcxMoEngine::~nixlUcxMoEngine()
 {
-    // TODO: won't need the access after rebase
     for( auto &e : engines ) {
         delete e;
     }
@@ -572,6 +571,11 @@ nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
     }
 
     if (opt_args->hasNotif) {
+        // The transfers are performed via parallel UCX workers (read QPs)
+        // This doesn't allows piggybacking the notification command in postXfer
+        // as we need to chose one of the workers to send it,
+        // but we can only be sent after all workers are flushed.
+        // Instead, we will initiate Notification from the CheckXfer
         req->notifNeed = true;
         req->notifMsg = opt_args->notifMsg;
         req->remoteAgent = remote_agent;
@@ -616,6 +620,9 @@ nixlUcxMoEngine::checkXfer (nixlBackendReqH *handle)
 
     if ((NIXL_SUCCESS == out_ret) && req->notifNeed) {
         nixl_status_t ret;
+
+        // Now as all UCX backends (workers) have been flushed,
+        // it is safe to send Notification 
         ret = engines[0]->genNotif(getEngName(req->remoteAgent, 0), req->notifMsg);
         if (NIXL_SUCCESS != ret) {
             /* Mark as completed */
