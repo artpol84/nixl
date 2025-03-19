@@ -40,19 +40,17 @@ static void checkCudaError(cudaError_t result, const char *message) {
 #endif
 
 
-static string op2string(nixl_xfer_op_t op)
+static string op2string(nixl_xfer_op_t op, bool hasNotif)
 {
-    switch(op) {
-        case NIXL_READ:
-            return string("READ");
-        case NIXL_WRITE:
-            return string("WRITE");
-            // TODO: update if necessary
-        case NIXL_RD_NOTIF:
-            return string("READ/NOTIF");
-        case NIXL_WR_NOTIF:
-            return string("WRITE/NOTIF");
-    }
+    if(op == NIXL_READ && !hasNotif)
+        return string("READ");
+    if(op == NIXL_WRITE && !hasNotif)
+        return string("WRITE");
+    if(op == NIXL_READ && hasNotif)
+        return string("READ/NOTIF");
+    if(op == NIXL_WRITE && hasNotif)
+        return string("WRITE/NOTIF");
+
     return string("ERR-OP");
 }
 
@@ -311,7 +309,7 @@ void destroyRemoteDescs(nixlBackendEngine *dst_ucx,
 void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
                      nixl_meta_dlist_t &req_src_descs,
                      nixl_meta_dlist_t &req_dst_descs,
-                     nixl_xfer_op_t op, bool progress)
+                     nixl_xfer_op_t op, bool progress, bool use_notif)
 {
     nixl_status_t status;
     nixlBackendReqH* handle;
@@ -322,9 +320,10 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
     if(ucx1 == ucx2) remote_agent = "Agent1";
 
     std::string test_str("test");
-    std::cout << "\t" << op2string(op) << "\n";
+    std::cout << "\t" << op2string(op, use_notif) << "\n";
     nixl_opt_b_args_t opt_args;
     opt_args.notifMsg = test_str;
+    opt_args.hasNotif = use_notif;
 
     // Posting a request, to be updated to return an async handler,
     // or an ID that later can be used to check the status as a new method
@@ -348,31 +347,25 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
         ucx1->releaseReqH(handle);
     }
 
-    switch (op) {
-        case NIXL_RD_NOTIF:
-        case NIXL_WR_NOTIF: {
-            /* Test notification path */
-            notif_list_t target_notifs;
+    if(use_notif) {
+        /* Test notification path */
+        notif_list_t target_notifs;
 
-            cout << "\t\tChecking notification flow: " << flush;
+        cout << "\t\tChecking notification flow: " << flush;
 
-            while(!target_notifs.size()){
-                status = ucx2->getNotifs(target_notifs);
-                assert(NIXL_SUCCESS == status);
-                if(progress){
-                    ucx1->progress();
-                }
+        while(!target_notifs.size()){
+            status = ucx2->getNotifs(target_notifs);
+            assert(NIXL_SUCCESS == status);
+            if(progress){
+                ucx1->progress();
             }
-
-            assert(target_notifs.size() == 1);
-            assert(target_notifs.front().first == "Agent1");
-            assert(target_notifs.front().second == test_str);
-
-            cout << "OK" << endl;
-            break;
         }
-        default:
-            break;
+
+        assert(target_notifs.size() == 1);
+        assert(target_notifs.front().first == "Agent1");
+        assert(target_notifs.front().second == test_str);
+
+        cout << "OK" << endl;
     }
 
     cout << "\t\tData verification: " << flush;
@@ -453,24 +446,28 @@ void test_inter_agent_transfer(bool p_thread,
                       ucx1, ucx1_dst_descs);
 
 
-    nixl_xfer_op_t ops[] = { NIXL_READ, NIXL_WRITE, NIXL_RD_NOTIF, NIXL_WR_NOTIF };
+    nixl_xfer_op_t ops[] = {  NIXL_READ, NIXL_WRITE };
+    bool use_notifs[] = { true, false };
 
     for (size_t i = 0; i < sizeof(ops)/sizeof(ops[i]); i++) {
-        cout << endl << op2string(ops[i]) << " test (" << iter << ") iterations" <<endl;
-        for(int k = 0; k < iter; k++ ) {
-            /* Init data */
-            for(int i = 0; i < ucx1_src_descs.descCount(); i++) {
-                auto desc = ucx1_src_descs[i];
-                doMemset(src_mem_type, desc.devId, (void*)desc.addr, 0xda, desc.len);
-            }
-            for(int i = 0; i < ucx2_src_descs.descCount(); i++) {
-                auto desc = ucx2_src_descs[i];
-                doMemset(dst_mem_type, desc.devId, (void*)desc.addr, 0xff, desc.len);
-            }
 
-            /* Test */
-            performTransfer(ucx1, ucx2, ucx1_src_descs, ucx1_dst_descs,
-                            ops[i], !p_thread);
+        for(bool use_notif : use_notifs) {
+            cout << endl << op2string(ops[i], use_notif) << " test (" << iter << ") iterations" <<endl;
+            for(int k = 0; k < iter; k++ ) {
+                /* Init data */
+                for(int i = 0; i < ucx1_src_descs.descCount(); i++) {
+                    auto desc = ucx1_src_descs[i];
+                    doMemset(src_mem_type, desc.devId, (void*)desc.addr, 0xda, desc.len);
+                }
+                for(int i = 0; i < ucx2_src_descs.descCount(); i++) {
+                    auto desc = ucx2_src_descs[i];
+                    doMemset(dst_mem_type, desc.devId, (void*)desc.addr, 0xff, desc.len);
+                }
+
+                /* Test */
+                performTransfer(ucx1, ucx2, ucx1_src_descs, ucx1_dst_descs,
+                                ops[i], !p_thread, use_notif);
+            }
         }
     }
 

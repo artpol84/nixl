@@ -53,7 +53,7 @@
      get_plugin_version,
      get_backend_options
  };
- #ifdef STATIC_PLUGIN_UCX
+ #ifdef STATIC_PLUGIN_UCX_MO
  nixlBackendPlugin* createStaticUcxMoPlugin() {
      return &plugin; // Return the static plugin instance
  }

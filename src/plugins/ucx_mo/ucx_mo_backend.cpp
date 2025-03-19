@@ -148,12 +148,12 @@ nixlUcxMoEngine::nixlUcxMoEngine(const nixlBackendInitParams* init_params):
     }
 }
 
-nixl_status_t
-nixlUcxMoEngine::getSupportedMems (std::vector<nixl_mem_t> &mems) const
-{
+nixl_mem_list_t
+nixlUcxMoEngine::getSupportedMems () const {
+    nixl_mem_list_t mems;
     mems.push_back(DRAM_SEG);
     mems.push_back(VRAM_SEG);
-    return NIXL_SUCCESS;
+    return mems;
 }
 
 nixlUcxMoEngine::~nixlUcxMoEngine()
@@ -482,7 +482,6 @@ nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
     size_t r_eng_cnt;
     int des_cnt = local.descCount();
     nixlUcxMoRequestH *req = new nixlUcxMoRequestH;
-    nixl_xfer_op_t op_int;
     remote_comm_it_t it = remoteConnMap.find(remote_agent);
 
     // Input check
@@ -505,12 +504,7 @@ nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
     // Convert the operation type
     switch(op) {
     case NIXL_READ:
-    case NIXL_RD_NOTIF:
-        op_int = NIXL_READ;
-        break;
     case NIXL_WRITE:
-    case NIXL_WR_NOTIF:
-        op_int = NIXL_WRITE;
         break;
     default:
         return NIXL_ERR_INVALID_PARAM;
@@ -565,7 +559,7 @@ nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
                 // Skip unused matrix elements
                 continue;
             }
-            ret = engines[lidx]->postXfer(op_int,
+            ret = engines[lidx]->postXfer(op,
                                           *dlmatrix[lidx][ridx].first,
                                           *dlmatrix[lidx][ridx].second,
                                           getEngName(remote_agent, ridx),
@@ -577,19 +571,13 @@ nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
         }
     }
 
-    switch(op) {
-    case NIXL_RD_NOTIF:
-    case NIXL_WR_NOTIF:
-        if (opt_args==nullptr) {
-            return NIXL_ERR_INVALID_PARAM;
-        }
+   
+    if (opt_args->hasNotif) {
         req->notifNeed = true;
         req->notifMsg = opt_args->notifMsg;
         req->remoteAgent = remote_agent;
-        break;
-    default:
-        break;
     }
+
     if (req->reqs.size()) {
         out_handle = req;
         return NIXL_IN_PROG;

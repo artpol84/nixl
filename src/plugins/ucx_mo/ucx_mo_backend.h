@@ -147,7 +147,7 @@ public:
     bool supportsNotif () const { return true; }
     bool supportsProgTh () const { return pthrOn; }
 
-    nixl_status_t getSupportedMems (std::vector<nixl_mem_t> &mems) const;
+    nixl_mem_list_t getSupportedMems () const;
 
     /* Object management */
     nixl_status_t getPublicData (const nixlBackendMD* meta,
