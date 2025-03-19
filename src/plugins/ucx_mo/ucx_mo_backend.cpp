@@ -324,7 +324,7 @@ nixlUcxMoEngine::registerMem (const nixlBlobDesc &mem,
 
 nixl_status_t
 nixlUcxMoEngine::getPublicData (const nixlBackendMD* meta,
-                              std::string &str) const
+                                std::string &str) const
 {
     const nixlUcxMoPrivateMetadata *priv = (nixlUcxMoPrivateMetadata*) meta;
     str = priv->get();
