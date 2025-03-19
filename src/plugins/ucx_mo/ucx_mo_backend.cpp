@@ -622,7 +622,7 @@ nixlUcxMoEngine::checkXfer (nixlBackendReqH *handle)
         nixl_status_t ret;
 
         // Now as all UCX backends (workers) have been flushed,
-        // it is safe to send Notification 
+        // it is safe to send Notification
         ret = engines[0]->genNotif(getEngName(req->remoteAgent, 0), req->notifMsg);
         if (NIXL_SUCCESS != ret) {
             /* Mark as completed */
