@@ -405,7 +405,7 @@ void performTransfer(nixlBackendEngine *ucx1, nixlBackendEngine *ucx2,
         releaseValidationPtr(req_src_descs.getType(), chkptr1);
         releaseValidationPtr(req_dst_descs.getType(), chkptr2);
     }
-    cout << "OK" << endl;
+    cout << "OK" << endl << flush;
 }
 
 void test_inter_agent_transfer(bool p_thread,
@@ -456,9 +456,9 @@ void test_inter_agent_transfer(bool p_thread,
     nixl_meta_dlist_t ucx2_src_descs (dst_mem_type);
     nixl_meta_dlist_t ucx1_dst_descs (dst_mem_type);
 
-    createLocalDescs(ucx1, ucx1_src_descs, src_dev_cnt, src_dist_f
+    createLocalDescs(ucx1, ucx1_src_descs, src_dev_cnt, src_dist_f,
                      desc_cnt, desc_size);
-    createLocalDescs(ucx2, ucx2_src_descs, dst_dev_cnt, dst_dist_f
+    createLocalDescs(ucx2, ucx2_src_descs, dst_dev_cnt, dst_dist_f,
                      desc_cnt, desc_size);
     createRemoteDescs(ucx2, agent2, ucx2_src_descs,
                       ucx1, ucx1_dst_descs);
@@ -559,22 +559,22 @@ int ndevices = NUM_WORKERS;
 
     for(size_t i = 0; i < THREAD_ON_SIZE; i++) {
         test_inter_agent_transfer(thread_on[i],
-                                ucx[i][0], DRAM_SEG, ndevices, dev_distr_rr
+                                ucx[i][0], DRAM_SEG, ndevices, dev_distr_rr,
                                 ucx[i][1], DRAM_SEG, ndevices, dev_distr_blk);
     
 #ifdef USE_VRAM
         if (n_vram_dev) {
             test_inter_agent_transfer(thread_on[i],
-                                    ucx[i][0], VRAM_SEG, n_vram_dev, dev_distr_rr
+                                    ucx[i][0], VRAM_SEG, n_vram_dev, dev_distr_rr,
                                     ucx[i][1], VRAM_SEG, n_vram_dev, dev_distr_blk);
             test_inter_agent_transfer(thread_on[i],
-                                    ucx[i][0], VRAM_SEG, n_vram_dev, dev_distr_rr
+                                    ucx[i][0], VRAM_SEG, n_vram_dev, dev_distr_rr,
                                     ucx[i][1], VRAM_SEG, n_vram_dev, dev_distr_blk);
             test_inter_agent_transfer(thread_on[i],
-                                    ucx[i][0], VRAM_SEG, n_vram_dev, dev_distr_rr
+                                    ucx[i][0], VRAM_SEG, n_vram_dev, dev_distr_rr,
                                     ucx[i][1], DRAM_SEG, n_vram_dev, dev_distr_bkl);
             test_inter_agent_transfer(thread_on[i],
-                                    ucx[i][0], DRAM_SEG, n_vram_dev, dev_distr_rr
+                                    ucx[i][0], DRAM_SEG, n_vram_dev, dev_distr_rr,
                                     ucx[i][1], VRAM_SEG, n_vram_dev, dev_distr_bkl);
         }
 #endif
