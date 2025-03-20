@@ -615,7 +615,7 @@ nixlUcxEngine::internalMDHelper (const nixl_blob_t &blob,
         return NIXL_ERR_NOT_FOUND;
     }
     conn = (nixlUcxConnection) search->second;
-    
+
     //directly copy underlying conn struct
     md->conn = conn;
 
