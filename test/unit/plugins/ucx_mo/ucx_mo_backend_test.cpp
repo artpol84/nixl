@@ -449,9 +449,9 @@ void test_inter_agent_transfer(bool p_thread,
     std::cout << "Synchronous handshake complete\n";
 
     // Number of transfer descriptors
-    int desc_cnt = 256;
+    int desc_cnt = 128;
     // Size of a single descriptor
-    size_t desc_size = 2 * 1024 * 1024;
+    size_t desc_size = 512 * 1024;
     nixl_meta_dlist_t ucx1_src_descs (src_mem_type);
     nixl_meta_dlist_t ucx2_src_descs (dst_mem_type);
     nixl_meta_dlist_t ucx1_dst_descs (dst_mem_type);
