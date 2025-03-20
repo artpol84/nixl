@@ -17,10 +17,10 @@ ucx_backend_dep = declare_dependency(link_with: ucx_backend_lib, include_directo
 
 if cuda_dep.found()
     cuda_dependencies = [cuda_dep]
-    cpp_args = '-DUSE_VRAM'
+    cpp_args = '-DHAVE_CUDA'
 else
     cuda_dependencies = []
-    cpp_args = '-UUSE_VRAM'
+    cpp_args = '-UHAVE_CUDA'
 endif
 
 ucx_backend_test = executable('ucx_backend_test',
