@@ -561,7 +561,7 @@ int ndevices = NUM_WORKERS;
         test_inter_agent_transfer(thread_on[i],
                                 ucx[i][0], DRAM_SEG, ndevices, dev_distr_rr,
                                 ucx[i][1], DRAM_SEG, ndevices, dev_distr_blk);
-    
+
 #ifdef USE_VRAM
         if (n_vram_dev) {
             test_inter_agent_transfer(thread_on[i],
