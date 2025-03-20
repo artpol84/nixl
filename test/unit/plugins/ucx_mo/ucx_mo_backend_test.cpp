@@ -26,6 +26,7 @@ using namespace std;
 #ifdef USE_VRAM
 
 #include <cuda_runtime.h>
+#include <cuda.h>
 
 int gpu_id = 0;
 
