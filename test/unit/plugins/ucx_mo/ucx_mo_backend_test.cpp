@@ -430,7 +430,7 @@ void test_agent_transfer(bool p_thread,
 
     std::cout << std::endl << std::endl;
     std::cout << "****************************************************" << std::endl;
-    std::cout << ((is_local) ? std::string("IntEr") : std::string("IntrA"))
+    std::cout << ((is_local) ? std::string("IntrA") : std::string("IntEr"))
               << "-agent memory transfer test P-Thr="
               << (p_thread ? "ON" : "OFF") << std::endl;
     std::cout << "         (" << memType2Str(src_mem_type) << " -> "
