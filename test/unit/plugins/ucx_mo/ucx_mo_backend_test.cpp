@@ -543,7 +543,7 @@ void test_agent_transfer(bool p_thread,
     destroyLocalDescs(ucx2, ucx2_src_descs);
 
     // Test one-sided disconnect (initiator only)
-    ucx1->disconnect(agent2);
+    ucx1->disconnect(*agent);
 
     // TODO: Causes race condition - investigate conn management implementation
     //ucx2->disconnect(agent1);
