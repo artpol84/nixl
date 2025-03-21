@@ -424,6 +424,10 @@ void test_agent_transfer(bool p_thread,
     nixl_status_t status;
     bool is_local = (ucx1 == ucx2);
 
+    if (is_local) {
+        assert(ucx1->supportsLocal());
+    }
+
     std::cout << std::endl << std::endl;
     std::cout << "****************************************************" << std::endl;
     std::cout << ((is_local) ? std::string("IntEr") : std::string("IntrA"))
