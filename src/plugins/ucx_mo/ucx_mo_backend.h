@@ -88,8 +88,8 @@ private:
     typedef std::vector<req_pair_t> req_list_t;
     typedef req_list_t::iterator req_list_it_t;
 
-    typedef pair<nixl_meta_dlist_t *,nixl_meta_dlist_t *> dl_pair_t;
-    typedef vector<vector<_dlist_pair_t>> dl_matrix_t;
+    typedef std::pair<nixl_meta_dlist_t *,nixl_meta_dlist_t *> dl_pair_t;
+    typedef std::vector<std::vector<dl_pair_t>> dl_matrix_t;
 
     dl_matrix_t dlMatrix;
     req_list_t reqs;
@@ -99,7 +99,7 @@ private:
     std::string notifMsg;
 public:
     nixlUcxMoRequestH(size_t l_eng_cnt, size_t r_eng_cnt) : 
-        dlMatrix(l_eng_cnt, vector<_dlist_pair_t>(r_eng_cnt, dl_pair_t{ NULL, NULL }))
+        dlMatrix(l_eng_cnt, std::vector<dl_pair_t>(r_eng_cnt, dl_pair_t{ NULL, NULL }))
     {
         notifNeed = false;
     }

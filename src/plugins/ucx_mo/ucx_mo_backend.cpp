@@ -465,7 +465,7 @@ nixlUcxMoEngine::retHelper(nixl_status_t ret, nixlBackendEngine *eng,
 }
 
 nixl_status_t
-nixlUcxMoEngine::prepXfer (const nixl_xfer_op_t &operation,
+nixlUcxMoEngine::prepXfer (const nixl_xfer_op_t &op,
                            const nixl_meta_dlist_t &local,
                            const nixl_meta_dlist_t &remote,
                            const std::string &remote_agent,
@@ -522,23 +522,23 @@ nixlUcxMoEngine::prepXfer (const nixl_xfer_op_t &operation,
         }
 
         /* Allocate internal dlists if needed */
-        if (NULL == dlmatrix[lidx][ridx].first) {
-            dlmatrix[lidx][ridx].first = new nixl_meta_dlist_t (
+        if (NULL == req->dlMatrix[lidx][ridx].first) {
+            req->dlMatrix[lidx][ridx].first = new nixl_meta_dlist_t (
                                                 local.getType(),
                                                 local.isSorted());
 
-            dlmatrix[lidx][ridx].second = new nixl_meta_dlist_t (
+            req->dlMatrix[lidx][ridx].second = new nixl_meta_dlist_t (
                                                 remote.getType(),
                                                 remote.isSorted());
         }
 
         nixlMetaDesc ldesc = local[i];
         ldesc.metadataP = lmd->md;
-        dlmatrix[lidx][ridx].first->addDesc(ldesc);
+        req->dlMatrix[lidx][ridx].first->addDesc(ldesc);
 
         nixlMetaDesc rdesc = remote[i];
         rdesc.metadataP = rmd->int_mds[lidx];
-        dlmatrix[lidx][ridx].second->addDesc(rdesc);
+        req->dlMatrix[lidx][ridx].second->addDesc(rdesc);
     }
 
     handle = req;
@@ -561,8 +561,8 @@ nixlUcxMoEngine::postXfer (const nixl_xfer_op_t &op,
 {
     nixlUcxMoRequestH *req = (nixlUcxMoRequestH *)handle;
 
-    for(size_t lidx = 0; lidx < l_eng_cnt; lidx++) {
-        for(size_t ridx = 0; ridx < r_eng_cnt; ridx++) {
+    for(size_t lidx = 0; lidx < req->dlMatrix.size(); lidx++) {
+        for(size_t ridx = 0; ridx < req->dlMatrix[lidx].size(); ridx++) {
             string no_notif_msg;
             nixlBackendReqH *int_req;
             nixl_status_t ret;
